@@ -1,0 +1,62 @@
+// User management written with only the ten Forma v0 primitives.
+
+role admin
+
+type Email = String matches /.+@.+/
+
+entity Team {
+    name String required label
+}
+
+entity User {
+    name  String required
+    email Email required unique
+    team  Team
+
+    state status Pending | Confirmed | Active | Suspended
+}
+
+action User.confirm:   Pending   -> Confirmed
+action User.activate:  Confirmed -> Active
+action User.suspend:   Active    -> Suspended confirm allow admin
+action User.reinstate: Suspended -> Active allow admin
+
+page Users {
+    allow admin
+
+    list User {
+        columns name, email, team, status
+        search name, email
+        filter status, team
+        sort name asc
+        paginate 20
+        actions create, view, edit, delete, suspend
+    }
+}
+
+page UserCreate {
+    allow admin
+
+    form User {
+        fields name, email, team
+        submit create
+    }
+}
+
+page UserDetail(user User) {
+    allow admin
+
+    detail user {
+        fields name, email, team, status
+        actions edit, delete, confirm, activate, suspend, reinstate
+    }
+}
+
+page UserEdit(user User) {
+    allow admin
+
+    form user {
+        fields name, email, team
+        submit edit
+    }
+}
