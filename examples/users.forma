@@ -13,7 +13,7 @@ entity User {
     email Email required unique
     team  Team
 
-    state status Pending | Confirmed | Active | Suspended
+    state status Pending | Confirmed | Active | Suspended initial Pending
 }
 
 action User.confirm:   Pending   -> Confirmed

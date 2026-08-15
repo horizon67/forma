@@ -1,0 +1,336 @@
+{
+  "version": "forma/v0.3",
+  "roles": [
+    "admin"
+  ],
+  "types": [
+    {
+      "name": "Email",
+      "kind": "scalar",
+      "base": "String",
+      "constraints": [
+        {
+          "kind": "matches",
+          "value": ".+@.+"
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "name": "Team",
+      "fields": [
+        {
+          "name": "name",
+          "type": "String",
+          "required": true,
+          "label": true
+        }
+      ],
+      "label": "name"
+    },
+    {
+      "name": "User",
+      "fields": [
+        {
+          "name": "name",
+          "type": "String",
+          "required": true
+        },
+        {
+          "name": "email",
+          "type": "Email",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "team",
+          "type": "Team",
+          "relation": {
+            "entity": "Team",
+            "label": "name"
+          }
+        }
+      ],
+      "state": {
+        "name": "status",
+        "initial": "Pending",
+        "values": [
+          "Pending",
+          "Confirmed",
+          "Active",
+          "Suspended"
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "entity": "User",
+      "name": "confirm",
+      "sources": [
+        "Pending"
+      ],
+      "destination": "Confirmed"
+    },
+    {
+      "entity": "User",
+      "name": "activate",
+      "sources": [
+        "Confirmed"
+      ],
+      "destination": "Active"
+    },
+    {
+      "entity": "User",
+      "name": "suspend",
+      "sources": [
+        "Active"
+      ],
+      "destination": "Suspended",
+      "confirm": true,
+      "allows": [
+        "admin"
+      ]
+    },
+    {
+      "entity": "User",
+      "name": "reinstate",
+      "sources": [
+        "Suspended"
+      ],
+      "destination": "Active",
+      "allows": [
+        "admin"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "Users",
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "kind": "list",
+          "entity": "User",
+          "fields": [
+            "name",
+            "email",
+            "team",
+            "status"
+          ],
+          "search": [
+            "name",
+            "email"
+          ],
+          "filters": [
+            "status",
+            "team"
+          ],
+          "sort": {
+            "field": "name",
+            "direction": "asc",
+            "tieBreak": "identity"
+          },
+          "pageSize": 20,
+          "actions": [
+            {
+              "name": "create",
+              "kind": "standard",
+              "targetPage": "UserCreate",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "view",
+              "kind": "standard",
+              "targetPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "edit",
+              "kind": "standard",
+              "targetPage": "UserEdit",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "delete",
+              "kind": "standard",
+              "successPage": "Users",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "suspend",
+              "kind": "transition",
+              "successPage": "Users",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            }
+          ],
+          "relationChoices": [
+            {
+              "field": "team",
+              "entity": "Team",
+              "label": "name"
+            }
+          ],
+          "interactionStates": [
+            "loading",
+            "ready",
+            "empty",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UserCreate",
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "kind": "form",
+          "entity": "User",
+          "mode": "create",
+          "fields": [
+            "name",
+            "email",
+            "team"
+          ],
+          "relationChoices": [
+            {
+              "field": "team",
+              "entity": "Team",
+              "label": "name"
+            }
+          ],
+          "interactionStates": [
+            "ready",
+            "invalid",
+            "pending",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UserDetail",
+      "param": {
+        "name": "user",
+        "entity": "User"
+      },
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "kind": "detail",
+          "entity": "User",
+          "binding": "user",
+          "mode": "read",
+          "fields": [
+            "name",
+            "email",
+            "team",
+            "status"
+          ],
+          "actions": [
+            {
+              "name": "edit",
+              "kind": "standard",
+              "targetPage": "UserEdit",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "delete",
+              "kind": "standard",
+              "successPage": "Users",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "confirm",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "activate",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "suspend",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "name": "reinstate",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            }
+          ],
+          "interactionStates": [
+            "loading",
+            "ready",
+            "empty",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UserEdit",
+      "param": {
+        "name": "user",
+        "entity": "User"
+      },
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "kind": "form",
+          "entity": "User",
+          "binding": "user",
+          "mode": "edit",
+          "fields": [
+            "name",
+            "email",
+            "team"
+          ],
+          "relationChoices": [
+            {
+              "field": "team",
+              "entity": "Team",
+              "label": "name"
+            }
+          ],
+          "interactionStates": [
+            "ready",
+            "invalid",
+            "pending",
+            "failure"
+          ]
+        }
+      ]
+    }
+  ]
+}
