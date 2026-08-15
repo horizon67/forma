@@ -207,7 +207,7 @@ v1 syntaxを先に考えず、v0では表現できない現実的なapplication�
 - expression layer、invariant、derived query
 - domain actionのargumentとeffect model
 - aggregate、join、inverse relation、cascade rule
-- identity providerとlogin/logout
+- [表側の会員登録とidentity](public-membership-proposal.md)、identity provider、login/logout、ownership
 - notification、background job、schedule、retry、file
 - schema/data migration
 - i18n copyとdesign intent

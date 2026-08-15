@@ -892,7 +892,8 @@ enforce field, state, and role constraints
 - join、aggregate、derived listをどう表すか
 - domain actionの引数とformをどう統合するか
 - 明示routeが本当に必要か
-- identity providerとlogin/logoutを言語へ入れるか、profileへ残すか
+- [表側の会員登録とidentity](public-membership-proposal.md)をどのsemantic modelで表し、identity providerと
+  login/logoutのどこまでを言語へ入れるか
 - notification、background job、fileを共通effectとして扱えるか
 - page/view identityを使ったversioned profile extensionを、安全なescape hatchとして設けるか
 - derived value、`invariant`、action preconditionを式で表し、statementを持たない境界を保てるか

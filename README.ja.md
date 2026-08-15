@@ -253,6 +253,7 @@ design draft v0.4で、reference実装はその一部です。
 - [開発ロードマップ](docs/roadmap.md)
 - [ユーザー管理の完全例](examples/users.forma)
 - [Architecture Manifest案（検討中）](docs/architecture-manifest.md)
+- [表側の会員登録・identity案（検討中）](docs/public-membership-proposal.md)
 
 Go 1.24以降でcheckerを実行できます。
 

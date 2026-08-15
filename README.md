@@ -282,6 +282,7 @@ of it.
 - [Development roadmap](docs/roadmap.md)
 - [Complete user-management example](examples/users.forma)
 - [Architecture Manifest proposal (exploratory)](docs/architecture-manifest.md)
+- [Public membership and identity proposal (exploratory)](docs/public-membership-proposal.md)
 
 Run the checker from source with Go 1.24 or newer:
 
