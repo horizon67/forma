@@ -2,7 +2,7 @@
 
 **English** | [日本語](README.ja.md)
 
-**A higher-level programming language for building applications.**
+**A language for describing applications themselves at a high level.**
 
 Forma is an experimental programming language for describing software in terms
 of application concepts—entities, states, relationships, actions, pages, lists,
@@ -67,8 +67,8 @@ still split across frontend, backend, database, schema, and test languages, whil
 their specification is scattered among design documents, implementation code,
 API specs, issues, and prompts.
 
-Spec-driven approaches such as Kiro's `design.md` are useful attempts to reduce
-that fragmentation. A prose specification, however, must still be reread,
+Spec-Driven Development (SDD) is a useful attempt to reduce that fragmentation.
+A prose specification, however, must still be reread,
 interpreted, checked against the implementation, and kept synchronized after
 every change. When machines perform most implementation work, asking humans to
 operate both long specifications and generated code is tedious and prone to
@@ -270,10 +270,10 @@ Forma is not intended to:
 Forma is in an early design phase. There is no compiler release yet. The
 unreleased Go front end partially implements the design draft v0.4 surface
 syntax, together with the lexer, parser, syntax AST, name resolution, type
-checking, semantic validation, diagnostics, and `forma/v0.3` core Semantic IR.
+checking, semantic validation, diagnostics, `forma/v0.4` core Semantic IR, and Source Maps.
 
 This does not mean the entire normative draft is implemented. The conformance
-contract, IR source map, target-profile capability check, and artifact
+contract, target-profile capability check, and artifact
 generation and verification protocols remain future work. The normative
 document is design draft v0.4; the reference implementation covers only part
 of it.
@@ -281,14 +281,22 @@ of it.
 - [Forma v0 specification](docs/v0-primitives.md)
 - [Development roadmap](docs/roadmap.md)
 - [Complete user-management example](examples/users.forma)
+- [Order approval and inventory probe](examples/orders.forma)
 - [Architecture Manifest proposal (exploratory)](docs/architecture-manifest.md)
 - [Public membership and identity proposal (exploratory)](docs/public-membership-proposal.md)
+- [Order approval, inventory, and effect proposal (exploratory)](docs/order-approval-proposal.md)
 
 Run the checker from source with Go 1.24 or newer:
 
 ```bash
 go run ./cmd/forma check examples/users.forma
+go run ./cmd/forma check examples/orders.forma
 go test ./...
 ```
+
+The files and directories passed to one `forma check` invocation form one
+compilation unit and one application namespace. Directory structure does not
+create implicit application boundaries. The two examples in this repository
+are independent applications, so check them separately as shown above.
 
 `forma build`, `forma conformance`, and `forma run` remain future work.

@@ -52,7 +52,7 @@ type checker struct {
 	diagnostics []Diagnostic
 }
 
-func check(program *Program) (*SemanticIR, []Diagnostic) {
+func check(program *Program) (*SemanticIR, *SourceMap, []Diagnostic) {
 	c := &checker{
 		program: program, types: map[string]*TypeDecl{}, entities: map[string]*EntityDecl{},
 		pages: map[string]*PageDecl{}, roles: map[string]*RoleDecl{}, actions: map[string]*ActionDecl{},
@@ -69,9 +69,10 @@ func check(program *Program) (*SemanticIR, []Diagnostic) {
 	c.checkPages()
 	SortDiagnostics(c.diagnostics)
 	if len(c.diagnostics) > 0 {
-		return nil, c.diagnostics
+		return nil, nil, c.diagnostics
 	}
-	return c.buildIR(), nil
+	ir, sourceMap := c.buildIR()
+	return ir, sourceMap, nil
 }
 
 func (c *checker) collectDeclarations() {

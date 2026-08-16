@@ -40,6 +40,25 @@ func TestUsersExampleGoldenIR(t *testing.T) {
 	if !bytes.Equal(actual, expected) {
 		t.Fatalf("semantic IR differs from %s\nactual:\n%s", goldenPath, actual)
 	}
+
+	actualSourceMap, err := MarshalSourceMap(result.SourceMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualSourceMap = append(actualSourceMap, '\n')
+	sourceMapGoldenPath := filepath.Join("testdata", "users.sourcemap.json")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(sourceMapGoldenPath, actualSourceMap, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expectedSourceMap, err := os.ReadFile(sourceMapGoldenPath)
+	if err != nil {
+		t.Fatalf("read source map golden file: %v (run with UPDATE_GOLDEN=1)", err)
+	}
+	if !bytes.Equal(actualSourceMap, expectedSourceMap) {
+		t.Fatalf("source map differs from %s\nactual:\n%s", sourceMapGoldenPath, actualSourceMap)
+	}
 }
 
 func TestSemanticDiagnostics(t *testing.T) {
@@ -248,6 +267,226 @@ func TestSourceOrderDoesNotChangeIR(t *testing.T) {
 	}
 }
 
+func TestSourcePathsAndBlankLinesDoNotChangeSemanticIdentity(t *testing.T) {
+	compact := []SourceFile{
+		NewSourceFile("a.forma", "entity Alpha {\n    name String\n}\npage Alphas {\n    list Alpha\n}\n"),
+		NewSourceFile("z.forma", "entity Zeta {\n    name String\n}\npage Zetas {\n    list Zeta\n}\n"),
+	}
+	moved := []SourceFile{
+		NewSourceFile("a.forma", "// moved between files\n\nentity Zeta {\n\n    name String\n}\n\npage Zetas {\n    list Zeta\n}\n"),
+		NewSourceFile("z.forma", "entity Alpha {\n    name String\n}\n\npage Alphas {\n    list Alpha\n}\n"),
+	}
+	first := Compile(compact)
+	second := Compile(moved)
+	if len(first.Diagnostics) != 0 || len(second.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %s %s", diagnosticMessages(first.Diagnostics), diagnosticMessages(second.Diagnostics))
+	}
+	firstJSON, _ := MarshalIR(first.IR)
+	secondJSON, _ := MarshalIR(second.IR)
+	if !bytes.Equal(firstJSON, secondJSON) {
+		t.Fatalf("file moves or blank lines changed Semantic IR\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
+	}
+	if first.SourceMap.Entries[0].Span == second.SourceMap.Entries[0].Span {
+		t.Fatal("source positions should remain separate from stable semantic identity")
+	}
+}
+
+func TestFormSubmitIntentResolvesNavigationPolicies(t *testing.T) {
+	tests := []struct {
+		name         string
+		source       string
+		wantKind     string
+		wantPage     string
+		wantFallback string
+	}{
+		{
+			name: "fixed detail",
+			source: `entity User {
+    name String
+}
+page UserCreate {
+    form User
+}
+page UserDetail(user User) {
+    detail user
+}
+`,
+			wantKind: "page",
+			wantPage: "UserDetail",
+		},
+		{
+			name: "caller list with direct navigation fallback",
+			source: `entity User {
+    name String
+}
+page Users {
+    list User {
+        actions create
+    }
+}
+page UserCreate {
+    form User
+}
+`,
+			wantKind:     "caller-list",
+			wantFallback: "UserCreate",
+		},
+		{
+			name: "same context",
+			source: `entity User {
+    name String
+}
+page UserCreate {
+    form User
+}
+`,
+			wantKind: "same-context",
+			wantPage: "UserCreate",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := Compile([]SourceFile{NewSourceFile("test.forma", test.source)})
+			if len(result.Diagnostics) != 0 {
+				t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+			}
+			var submit *IRSubmitIntent
+			for _, page := range result.IR.Pages {
+				for _, view := range page.Views {
+					if view.Kind == "form" {
+						submit = view.Submit
+					}
+				}
+			}
+			if submit == nil {
+				t.Fatal("form has no SubmitIntent")
+			}
+			if submit.Action != "create" || submit.Success.Kind != test.wantKind || submit.Success.Page != test.wantPage || submit.Success.FallbackPage != test.wantFallback {
+				t.Fatalf("unexpected SubmitIntent: %#v", submit)
+			}
+			if !submit.PreventDuplicateDispatch || !submit.FailureFeedback || !submit.Success.RecheckAccess {
+				t.Fatalf("SubmitIntent omits required runtime semantics: %#v", submit)
+			}
+		})
+	}
+}
+
+func TestSubmitIntentComposesSourceAndDestinationAccess(t *testing.T) {
+	source := `role editor
+role member
+entity User {
+    name String
+}
+page UserCreate {
+    allow editor
+    form User
+}
+page UserDetail(user User) {
+    allow member
+    detail user
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("access.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	var access IRAccess
+	for _, page := range result.IR.Pages {
+		for _, view := range page.Views {
+			if view.Submit != nil {
+				access = view.Submit.Access
+			}
+		}
+	}
+	if len(access.AllOf) != 2 {
+		t.Fatalf("submit access has %d clauses, want 2: %#v", len(access.AllOf), access)
+	}
+	if access.AllOf[0].Source != pageID("UserCreate") || !slices.Equal(access.AllOf[0].AnyOf, []string{"editor"}) {
+		t.Fatalf("unexpected source access clause: %#v", access.AllOf[0])
+	}
+	if access.AllOf[1].Source != pageID("UserDetail") || !slices.Equal(access.AllOf[1].AnyOf, []string{"member"}) {
+		t.Fatalf("unexpected destination access clause: %#v", access.AllOf[1])
+	}
+}
+
+func TestSourceMapTracksStableActionAndSubmitIDs(t *testing.T) {
+	source := `entity User {
+    state status Pending | Active initial Pending
+}
+action User.activate: Pending -> Active
+page UserCreate {
+    form User {
+        submit create
+    }
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("flow.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	entries := map[SemanticID]SourceMapEntry{}
+	for _, entry := range result.SourceMap.Entries {
+		if _, exists := entries[entry.NodeID]; exists {
+			t.Fatalf("duplicate Source Map identity %q", entry.NodeID)
+		}
+		entries[entry.NodeID] = entry
+	}
+	actionEntry, ok := entries[actionID("User", "activate")]
+	if !ok || actionEntry.Span.Start.Line != 4 {
+		t.Fatalf("action Source Map entry = %#v, present %v", actionEntry, ok)
+	}
+	submitID := semanticID("page", "UserCreate", "view", "form", "create", "User", "submit")
+	submitEntry, ok := entries[submitID]
+	if !ok || submitEntry.Span.Start.Line != 7 {
+		t.Fatalf("submit Source Map entry = %#v, present %v", submitEntry, ok)
+	}
+}
+
+func TestSourceMapCoversEveryIRNode(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := Compile([]SourceFile{NewSourceFile("examples/users.forma", string(content))})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	mapped := map[SemanticID]bool{}
+	for _, entry := range result.SourceMap.Entries {
+		mapped[entry.NodeID] = true
+	}
+	ids := semanticIDs(result.IR)
+	if len(ids) != len(mapped) {
+		t.Fatalf("IR has %d semantic nodes but Source Map has %d entries", len(ids), len(mapped))
+	}
+	seen := map[SemanticID]bool{}
+	for _, id := range ids {
+		if seen[id] {
+			t.Fatalf("duplicate Semantic IR identity %q", id)
+		}
+		seen[id] = true
+		if !mapped[id] {
+			t.Errorf("Semantic IR identity %q is missing from Source Map", id)
+		}
+	}
+}
+
+func TestDuplicateSemanticViewIdentityIsRejected(t *testing.T) {
+	source := `entity User {
+    name String
+}
+page Users {
+    list User
+    list User
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("duplicate.forma", source)})
+	if !slices.Contains(diagnosticCodes(result.Diagnostics), "F2001") {
+		t.Fatalf("duplicate semantic views should be rejected:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+}
+
 func TestSyntaxDiagnosticHasStableLocation(t *testing.T) {
 	source := "entity User {\n    name String;\n}\n"
 	result := Compile([]SourceFile{NewSourceFile("broken.forma", source)})
@@ -274,4 +513,54 @@ func diagnosticMessages(diagnostics []Diagnostic) string {
 		messages = append(messages, diagnostic.Error())
 	}
 	return strings.Join(messages, "\n")
+}
+
+func semanticIDs(ir *SemanticIR) []SemanticID {
+	var ids []SemanticID
+	for _, role := range ir.Roles {
+		ids = append(ids, role.ID)
+	}
+	for _, item := range ir.Types {
+		ids = append(ids, item.ID)
+		for _, constraint := range item.Constraints {
+			ids = append(ids, constraint.ID)
+		}
+	}
+	for _, entity := range ir.Entities {
+		ids = append(ids, entity.ID)
+		for _, field := range entity.Fields {
+			ids = append(ids, field.ID)
+			if field.Relation != nil {
+				ids = append(ids, field.Relation.ID)
+			}
+		}
+		if entity.State != nil {
+			ids = append(ids, entity.State.ID)
+		}
+	}
+	for _, action := range ir.Actions {
+		ids = append(ids, action.ID)
+	}
+	for _, page := range ir.Pages {
+		ids = append(ids, page.ID)
+		if page.Param != nil {
+			ids = append(ids, page.Param.ID)
+		}
+		for _, view := range page.Views {
+			ids = append(ids, view.ID)
+			if view.Sort != nil {
+				ids = append(ids, view.Sort.ID)
+			}
+			for _, action := range view.Actions {
+				ids = append(ids, action.ID, action.Access.ID)
+			}
+			for _, relation := range view.Relations {
+				ids = append(ids, relation.ID)
+			}
+			if view.Submit != nil {
+				ids = append(ids, view.Submit.ID, view.Submit.Success.ID, view.Submit.Access.ID)
+			}
+		}
+	}
+	return ids
 }

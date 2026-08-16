@@ -15,7 +15,7 @@ Semantic IR、conformance、profile、artifactの境界を固定する。
 | --- | --- | --- |
 | 言語思想 | 形になっている | AI時代のsource of truth、target非依存、可読性の設計原則を文書化 |
 | v0言語仕様 | design draft | 10 primitives、閉じたmodifier、EBNF、静的検査、runtime semanticsを定義 |
-| reference front-end | 部分実装 | Lexer、Parser、syntax AST、主要Checker、diagnostic、`forma/v0.3` core Semantic IR |
+| reference front-end | 部分実装 | Lexer、Parser、syntax AST、主要Checker、diagnostic、`forma/v0.4` core Semantic IR、Source Map |
 | 完全例 | check可能 | `examples/users.forma`をparse・検査し、golden IRを生成可能 |
 | conformance | 未実装 | contract schema、fixture、adapter、実行protocolが未決定 |
 | target generation | 未実装 | profile manifest、artifact protocol、reference generatorが未決定 |
@@ -52,11 +52,12 @@ Semantic IR、conformance、profile、artifactの境界を固定する。
 ### 実装する
 
 - design draftとParser、AST、Checkerのsurface syntaxを一致させる
+- 明示的なsource集合を1 compilation unitとするapplication境界を固定する（実装済み）
 - 省略された`columns`、`detail fields`、form fieldsを決定的に展開する
 - inherited constraintを合成し、defaultと`required readonly` producerを検査する
-- formを`SubmitIntent`へ解決し、成功後navigationと認可を合成する
+- formを`SubmitIntent`へ解決し、成功後navigationと認可を合成する（実装済み）
 - string/regex escape setを仕様どおり検査する
-- semantic nodeのstable identityとSource Mapを生成する
+- semantic nodeのstable identityとSource Mapを生成する（実装済み）
 - Semantic IRからConformance Contractを決定的に生成する
 - default、projection、action resolution、navigationを人間向けに展開して確認できるようにする
 
@@ -85,6 +86,7 @@ command名と出力形式は未決定である。可読性のために必要なc
 - Target Profile Manifest
   - profile ID/version
   - 対応IR version
+  - 1 buildが対象にする明示的なcompilation unit/source集合
   - 必須・提供capability
   - generatorとtoolchain設定
 - Artifact Protocol
@@ -201,6 +203,10 @@ v1 syntaxを先に考えず、v0では表現できない現実的なapplication�
 - 複数entityをまたぐeffect
 - transaction boundary
 - runtime由来field
+
+この例は[`examples/orders.forma`](../examples/orders.forma)と
+[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)で着手済みである。
+probeの結果、effect syntaxの前に式レイヤの最小形を決める段階を置く。
 
 ### その後に検討する領域
 

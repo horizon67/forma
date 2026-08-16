@@ -1,10 +1,15 @@
 package compiler
 
-func (c *checker) buildIR() *SemanticIR {
-	ir := &SemanticIR{Version: "forma/v0.3"}
+import "sort"
+
+func (c *checker) buildIR() (*SemanticIR, *SourceMap) {
+	ir := &SemanticIR{Version: SemanticIRVersion}
+	sourceMap := newSourceMapBuilder()
 	for _, role := range c.program.Roles {
 		if c.roles[role.Name.Text] == role {
-			ir.Roles = append(ir.Roles, role.Name.Text)
+			id := roleID(role.Name.Text)
+			ir.Roles = append(ir.Roles, IRRole{ID: id, Name: role.Name.Text})
+			sourceMap.add(id, "role", role.Span)
 		}
 	}
 	for _, decl := range c.program.Types {
@@ -12,22 +17,31 @@ func (c *checker) buildIR() *SemanticIR {
 			continue
 		}
 		resolved := c.resolveType(decl.Name.Text, decl.Name.Span)
-		item := IRType{Name: decl.Name.Text, Kind: resolved.Kind, Base: resolved.Base}
+		id := typeID(decl.Name.Text)
+		item := IRType{ID: id, Name: decl.Name.Text, Kind: resolved.Kind, Base: resolved.Base}
+		sourceMap.add(id, "type", decl.Span)
 		if resolved.Kind == "union" {
 			item.Variants = append([]string(nil), resolved.Variants...)
 		}
 		for _, mod := range decl.Mods {
-			item.Constraints = append(item.Constraints, IRConstraint{Kind: mod.Kind, Value: mod.Value})
+			constraintID := semanticID(string(id), "constraint", mod.Kind)
+			item.Constraints = append(item.Constraints, IRConstraint{ID: constraintID, Kind: mod.Kind, Value: mod.Value})
+			sourceMap.add(constraintID, "constraint", mod.Span)
 		}
+		sort.Slice(item.Constraints, func(i, j int) bool { return item.Constraints[i].ID < item.Constraints[j].ID })
 		ir.Types = append(ir.Types, item)
 	}
 	for _, entity := range c.program.Entities {
 		if c.entities[entity.Name.Text] != entity {
 			continue
 		}
-		item := IREntity{Name: entity.Name.Text, Label: c.entityLabels[entity.Name.Text]}
+		id := entityID(entity.Name.Text)
+		item := IREntity{ID: id, Name: entity.Name.Text, Label: c.entityLabels[entity.Name.Text]}
+		sourceMap.add(id, "entity", entity.Span)
 		for _, field := range entity.Fields {
-			fieldIR := IRField{Name: field.Name.Text, Type: field.Type.Name.Text, Collection: field.Type.Collection}
+			fieldID := semanticID(string(id), "field", field.Name.Text)
+			fieldIR := IRField{ID: fieldID, Name: field.Name.Text, Type: field.Type.Name.Text, Collection: field.Type.Collection}
+			sourceMap.add(fieldID, "field", field.Span)
 			for _, mod := range field.Mods {
 				switch mod.Kind {
 				case "required":
@@ -46,16 +60,20 @@ func (c *checker) buildIR() *SemanticIR {
 			}
 			resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
 			if resolved.Kind == "entity" {
-				fieldIR.Relation = &IRRelation{Entity: resolved.Name, Label: c.entityLabels[resolved.Name]}
+				relationID := semanticID(string(fieldID), "relation")
+				fieldIR.Relation = &IRRelation{ID: relationID, Entity: resolved.Name, Label: c.entityLabels[resolved.Name]}
+				sourceMap.add(relationID, "relation", field.Type.Span)
 			}
 			item.Fields = append(item.Fields, fieldIR)
 		}
 		if entity.State != nil {
+			stateID := semanticID(string(id), "state", entity.State.Name.Text)
 			state := &IRState{
-				Name: entity.State.Name.Text, Initial: entity.State.Initial.Text,
+				ID: stateID, Name: entity.State.Name.Text, Initial: entity.State.Initial.Text,
 				Values: namesToStrings(entity.State.Values),
 			}
 			item.State = state
+			sourceMap.add(stateID, "state", entity.State.Span)
 		}
 		ir.Entities = append(ir.Entities, item)
 	}
@@ -63,9 +81,11 @@ func (c *checker) buildIR() *SemanticIR {
 		if c.actions[actionKey(action.Entity.Text, action.Name.Text)] != action {
 			continue
 		}
+		id := actionID(action.Entity.Text, action.Name.Text)
 		item := IRAction{
-			Entity: action.Entity.Text, Name: action.Name.Text, Sources: namesToStrings(action.Sources), Destination: action.Destination.Text,
+			ID: id, Entity: action.Entity.Text, Name: action.Name.Text, Sources: namesToStrings(action.Sources), Destination: action.Destination.Text,
 		}
+		sourceMap.add(id, "action", action.Span)
 		for _, mod := range action.Mods {
 			switch mod.Kind {
 			case "confirm":
@@ -84,24 +104,35 @@ func (c *checker) buildIR() *SemanticIR {
 		if c.pages[page.Name.Text] != page {
 			continue
 		}
-		item := IRPage{Name: page.Name.Text, Allows: namesToStrings(page.Allows)}
+		id := pageID(page.Name.Text)
+		item := IRPage{ID: id, Name: page.Name.Text, Allows: namesToStrings(page.Allows)}
+		sourceMap.add(id, "page", page.Span)
 		if page.Param != nil {
-			item.Param = &IRParameter{Name: page.Param.Name.Text, Entity: page.Param.Type.Text}
+			parameterID := semanticID(string(id), "parameter")
+			item.Param = &IRParameter{ID: parameterID, Name: page.Param.Name.Text, Entity: page.Param.Type.Text}
+			sourceMap.add(parameterID, "parameter", page.Param.Span)
 		}
 		for _, view := range page.Views {
 			info := c.viewInfo[view]
 			if info == nil || info.Entity == nil {
 				continue
 			}
-			item.Views = append(item.Views, c.buildViewIR(info))
+			item.Views = append(item.Views, c.buildViewIR(info, sourceMap))
 		}
 		ir.Pages = append(ir.Pages, item)
 	}
-	return ir
+	sort.Slice(ir.Roles, func(i, j int) bool { return ir.Roles[i].ID < ir.Roles[j].ID })
+	sort.Slice(ir.Types, func(i, j int) bool { return ir.Types[i].ID < ir.Types[j].ID })
+	sort.Slice(ir.Entities, func(i, j int) bool { return ir.Entities[i].ID < ir.Entities[j].ID })
+	sort.Slice(ir.Actions, func(i, j int) bool { return ir.Actions[i].ID < ir.Actions[j].ID })
+	sort.Slice(ir.Pages, func(i, j int) bool { return ir.Pages[i].ID < ir.Pages[j].ID })
+	return ir, sourceMap.build()
 }
 
-func (c *checker) buildViewIR(info *viewInfo) IRView {
-	view := IRView{Kind: string(info.View.Kind), Entity: info.Entity.Name.Text, Mode: info.Mode}
+func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRView {
+	id := viewSemanticID(info)
+	view := IRView{ID: id, Kind: string(info.View.Kind), Entity: info.Entity.Name.Text, Mode: info.Mode}
+	sourceMap.add(id, string(info.View.Kind), info.View.Span)
 	if info.Page.Param != nil && info.View.Subject.Text == info.Page.Param.Name.Text {
 		view.Binding = info.Page.Param.Name.Text
 	}
@@ -122,21 +153,26 @@ func (c *checker) buildViewIR(info *viewInfo) IRView {
 		}
 		if mod, ok := mods["filter"]; ok {
 			view.Filters = namesToStrings(mod.Names)
-			view.Relations = c.relationChoices(info.Entity, mod.Names)
+			view.Relations = c.relationChoices(id, info.Entity, mod.Names)
 		}
 		if mod, ok := mods["sort"]; ok && len(mod.Names) > 0 {
 			direction := mod.Direction
 			if direction == "" {
 				direction = "asc"
 			}
-			view.Sort = &IRSort{Field: mod.Names[0].Text, Direction: direction, TieBreak: "identity"}
+			sortID := semanticID(string(id), "sort")
+			view.Sort = &IRSort{ID: sortID, Field: mod.Names[0].Text, Direction: direction, TieBreak: "identity"}
+			sourceMap.add(sortID, "sort", mod.Span)
 		}
 		if mod, ok := mods["paginate"]; ok {
 			view.PageSize = mod.PageSize
 		}
 		if mod, ok := mods["actions"]; ok {
 			for _, name := range mod.Names {
-				view.Actions = append(view.Actions, c.resolveActionRef(info, name, false))
+				ref := c.resolveActionRef(info, name, false)
+				view.Actions = append(view.Actions, ref)
+				sourceMap.add(ref.ID, "action-reference", name.Span)
+				sourceMap.add(ref.Access.ID, "access", name.Span)
 			}
 		}
 	case ViewDetail:
@@ -146,7 +182,10 @@ func (c *checker) buildViewIR(info *viewInfo) IRView {
 		}
 		if mod, ok := mods["actions"]; ok {
 			for _, name := range mod.Names {
-				view.Actions = append(view.Actions, c.resolveActionRef(info, name, false))
+				ref := c.resolveActionRef(info, name, false)
+				view.Actions = append(view.Actions, ref)
+				sourceMap.add(ref.ID, "action-reference", name.Span)
+				sourceMap.add(ref.Access.ID, "access", name.Span)
 			}
 		}
 	case ViewForm:
@@ -160,20 +199,32 @@ func (c *checker) buildViewIR(info *viewInfo) IRView {
 				}
 			}
 		}
-		view.Relations = c.relationChoicesFromStrings(info.Entity, view.Fields)
+		view.Relations = c.relationChoicesFromStrings(id, info.Entity, view.Fields)
+		submit := c.resolveSubmitIntent(info, false)
+		view.Submit = &submit
+		submitSpan := info.View.Span
+		if mod, ok := mods["submit"]; ok {
+			submitSpan = mod.Span
+		}
+		sourceMap.add(submit.ID, "submit", submitSpan)
+		sourceMap.add(submit.Success.ID, "navigation", submitSpan)
+		sourceMap.add(submit.Access.ID, "access", submitSpan)
+	}
+	for _, relation := range view.Relations {
+		sourceMap.add(relation.ID, "relation-choice", c.fieldSpan(info.Entity, relation.Field))
 	}
 	return view
 }
 
-func (c *checker) relationChoices(entity *EntityDecl, names []Name) []IRChoice {
+func (c *checker) relationChoices(parentID SemanticID, entity *EntityDecl, names []Name) []IRChoice {
 	values := make([]string, 0, len(names))
 	for _, name := range names {
 		values = append(values, name.Text)
 	}
-	return c.relationChoicesFromStrings(entity, values)
+	return c.relationChoicesFromStrings(parentID, entity, values)
 }
 
-func (c *checker) relationChoicesFromStrings(entity *EntityDecl, names []string) []IRChoice {
+func (c *checker) relationChoicesFromStrings(parentID SemanticID, entity *EntityDecl, names []string) []IRChoice {
 	var choices []IRChoice
 	seen := map[string]bool{}
 	for _, name := range names {
@@ -187,11 +238,21 @@ func (c *checker) relationChoicesFromStrings(entity *EntityDecl, names []string)
 			}
 			resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
 			if resolved.Kind == "entity" {
-				choices = append(choices, IRChoice{Field: name, Entity: resolved.Name, Label: c.entityLabels[resolved.Name]})
+				id := semanticID(string(parentID), "relation-choice", name)
+				choices = append(choices, IRChoice{ID: id, Field: name, Entity: resolved.Name, Label: c.entityLabels[resolved.Name]})
 			}
 		}
 	}
 	return choices
+}
+
+func (c *checker) fieldSpan(entity *EntityDecl, name string) Span {
+	for _, field := range entity.Fields {
+		if field.Name.Text == name {
+			return field.Name.Span
+		}
+	}
+	return entity.Span
 }
 
 func namesToStrings(names []Name) []string {

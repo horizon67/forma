@@ -1,0 +1,117 @@
+// Order approval and inventory, written with only the ten Forma v0 primitives.
+// This is a design probe for effect, occurrence, and expression semantics.
+// What v0 cannot express here is recorded in docs/order-approval-proposal.md.
+
+role admin
+role staff
+
+type Sku      = String matches /[A-Z0-9-]+/
+type Quantity = Int min 0
+
+entity Customer {
+    name  String required label
+    email String required unique
+}
+
+entity Product {
+    sku   Sku required unique
+    name  String required label
+    price Decimal required
+}
+
+entity StockItem {
+    product  Product
+    location String required label
+    onHand   Quantity required
+    reserved Quantity required
+}
+
+entity Order {
+    number   String required unique label
+    customer Customer
+    lines    [OrderLine]
+
+    state status Draft | Submitted | Approved | Rejected | Shipped initial Draft
+}
+
+entity OrderLine {
+    order    Order
+    product  Product
+    quantity Quantity required
+}
+
+action Order.submit:  Draft     -> Submitted
+action Order.approve: Submitted -> Approved confirm allow admin
+action Order.reject:  Submitted -> Rejected allow admin
+action Order.ship:    Approved  -> Shipped  allow staff
+
+page Orders {
+    allow admin, staff
+
+    list Order {
+        columns number, customer, status
+        search number
+        filter status, customer
+        sort number asc
+        paginate 20
+        actions create, view, edit, delete, submit, approve, reject, ship
+    }
+}
+
+page OrderCreate {
+    allow staff
+
+    form Order {
+        fields number, customer
+        submit create
+    }
+}
+
+page OrderDetail(order Order) {
+    allow admin, staff
+
+    detail order {
+        fields number, customer, status
+        actions edit, delete, submit, approve, reject, ship
+    }
+}
+
+page OrderEdit(order Order) {
+    allow staff
+
+    form order {
+        fields number, customer
+        submit edit
+    }
+}
+
+page StockItems {
+    allow admin, staff
+
+    list StockItem {
+        columns location, product, onHand, reserved
+        search location
+        filter product
+        sort location asc
+        paginate 20
+        actions view, edit
+    }
+}
+
+page StockItemDetail(item StockItem) {
+    allow admin, staff
+
+    detail item {
+        fields location, product, onHand, reserved
+        actions edit
+    }
+}
+
+page StockItemEdit(item StockItem) {
+    allow admin
+
+    form item {
+        fields location, product, onHand, reserved
+        submit edit
+    }
+}
