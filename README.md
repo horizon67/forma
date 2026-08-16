@@ -85,7 +85,9 @@ Under design
 └── Identity
 ```
 
-Expression, Changes, Occurrence, and Effect are explored in the
+Expression is explored in the
+[minimal expression layer proposal](docs/expression-proposal.md). Changes,
+Occurrence, and Effect are explored in the
 [order approval and inventory probe](docs/order-approval-proposal.md). Identity
 is explored in the
 [public membership and identity proposal](docs/public-membership-proposal.md).
@@ -323,6 +325,8 @@ Forma is in an early design phase. There is no compiler release yet. The
 unreleased Go front end partially implements the design draft v0.4 surface
 syntax, together with the lexer, parser, syntax AST, name resolution, type
 checking, semantic validation, diagnostics, `forma/v0.4` core Semantic IR, and Source Maps.
+It also implements an exploratory, non-v0 slice for named invariants that
+compares two required fields on `self` with `<=` and emits resolved expression IR.
 
 This does not mean the entire normative draft is implemented. The conformance
 contract, target-profile capability check, and artifact
@@ -337,6 +341,7 @@ of it.
 - [Architecture Manifest proposal (exploratory)](docs/architecture-manifest.md)
 - [Public membership and identity proposal (exploratory)](docs/public-membership-proposal.md)
 - [Order approval, inventory, and effect proposal (exploratory)](docs/order-approval-proposal.md)
+- [Minimal expression layer proposal (exploratory)](docs/expression-proposal.md)
 
 Run the checker from source with Go 1.24 or newer:
 

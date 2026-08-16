@@ -60,6 +60,10 @@ func entityID(name string) SemanticID {
 	return semanticID("entity", name)
 }
 
+func invariantID(entity, name string) SemanticID {
+	return semanticID("entity", entity, "invariant", name)
+}
+
 func actionID(entity, name string) SemanticID {
 	return semanticID("action", entity, name)
 }

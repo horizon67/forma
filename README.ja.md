@@ -83,7 +83,7 @@ Under design
 └── Identity
 ```
 
-Expression、Changes、Occurrence、Effectは
+Expressionは[最小式レイヤ案](docs/expression-proposal.md)、Changes、Occurrence、Effectは
 [注文承認・在庫のprobe](docs/order-approval-proposal.md)、Identityは
 [表側の会員登録・identity案](docs/public-membership-proposal.md)で検討しています。これらの名称や
 syntaxは、まだ言語仕様として確定していません。
@@ -294,6 +294,8 @@ Formaは、次のものを目指しません。
 Formaは初期設計段階であり、compilerはまだreleaseされていません。現在の未release Go
 front-endは、design draft v0.4のsurface syntaxを部分実装し、lexer、parser、syntax AST、名前解決、
 型検査、semantic validation、diagnostic、`forma/v0.4` core Semantic IR、Source Mapまで実装しています。
+加えて、v0の規範外で検討中の名前付きInvariantについて、selfのrequired field同士を`<=`で比較する
+最小sliceとResolved Expression IRを実装しています。
 
 規範仕様の全機能が実装済みという意味ではありません。conformance contract、target profile
 capability check、artifact生成・検証protocolは未実装です。規範文書はこれらを含む
@@ -306,6 +308,7 @@ design draft v0.4で、reference実装はその一部です。
 - [Architecture Manifest案（検討中）](docs/architecture-manifest.md)
 - [表側の会員登録・identity案（検討中）](docs/public-membership-proposal.md)
 - [注文承認・在庫・effect案（検討中）](docs/order-approval-proposal.md)
+- [最小式レイヤ案（検討中）](docs/expression-proposal.md)
 
 Go 1.24以降でcheckerを実行できます。
 

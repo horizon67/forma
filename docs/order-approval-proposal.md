@@ -8,8 +8,10 @@ derived value、entity invariant、state以外のaction precondition、複数ent
 transaction boundary、runtime由来fieldが、実例のどこで必要になるかを実測することである。
 
 規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書に現れる`effect`、`on`、`emit`、
-`invariant`、式は現在のParserでは受理されず、primitive、modifier、IR nodeのいずれにするかも
-未決定である。
+Derived Value、Action Preconditionなどの式は現在のParserでは受理されず、最終的なlanguage designも
+未決定である。probe後、reference compilerには規範v0外のexperimental sliceとして、名前付きInvariantと
+selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
+[Minimal Expression Layer Proposal](expression-proposal.md)に記録する。
 
 [`public-membership-proposal.md`](public-membership-proposal.md)がidentityのprobeであるのに対し、
 本書はeffectとoccurrenceのprobeである。両方に共通して必要なものだけをeffect proposalの対象とする。
@@ -42,16 +44,17 @@ errorなしで通ることを確認した。表現できたのは次である。
 つまりv0は、この領域の**構造とlifecycleと認可**をすでに表現できる。足りないのは値の導出、
 不変条件、状態遷移以外の事前条件、そして外部への効果である。
 
-## v0が拒否する記述（実測）
+## probe実施時にv0が拒否した記述（実測）
 
-予想ではなく、現在のcompilerに与えて確認した結果を記録する。
+予想ではなく、probe実施時のcompilerに与えて確認した結果を記録する。これは当時の不足を保存する
+historical resultであり、後から追加したexperimental syntaxの現在地は表の注記とexpression proposalを参照する。
 
 | 書きたかったこと | 結果 |
 | --- | --- |
 | `action Order.resendApproval: Approved -> Approved` | `F2301` transition source and destination must differ |
 | `action Order.resendApproval`（遷移なし） | `F1002` expected `:` after the action name |
 | `lineTotal Decimal = quantity * product.price` | `F1002` expected a field modifier, found `=` |
-| `invariant reserved <= onHand` | `F1101` / `F0001` / `F1002`（式lexerが存在しない） |
+| `invariant reserved <= onHand` | probe時は`F1101` / `F0001` / `F1002`。現在も匿名形はinvalidだが、`invariant stockAvailable: reserved <= onHand`はexperimental sliceで受理する |
 
 最初の2件が重要である。**v0の`action`は、状態を変えないactionを文法レベルで宣言できない。**
 通知の再送は業務上明確に「利用者が意図して実行する操作」だが、`action`の定義が
@@ -63,7 +66,7 @@ errorなしで通ることを確認した。表現できたのは次である。
 | --- | --- | --- |
 | derived value | `Order.total`、`OrderLine.lineTotal` | 式レイヤがない |
 | snapshot / runtime由来field | 注文時点の`unitPrice`を固定する | `default`はliteralのみ。§9で除外 |
-| entity invariant | `reserved <= onHand` | ない |
+| entity invariant | `reserved <= onHand` | 規範v0にはない。reference compilerにself-only `<=`のexperimental sliceだけある |
 | state以外のprecondition | 明細0件では提出不可、在庫不足では承認不可 | `A -> B`しか書けない |
 | 状態を変えないaction | 通知の再送 | `F2301`で拒否される |
 | 複数entityをまたぐchange | 承認が`Order.status`と`StockItem.reserved`を同時に変える | ない |
@@ -190,6 +193,7 @@ identityを二度処理しないことだけであり、外部サービスの配
 
 `effect` / `on` proposalを書くには、少なくともfield参照とrelation traversalを含む式の最小形が
 決まっている必要がある。したがってeffect proposalの前に、式レイヤの範囲を決める段階を1つ置く。
+この最小形の候補は[Minimal Expression Layer Proposal](expression-proposal.md)に分離している。
 
 ## `changes`の意味論として決めること
 

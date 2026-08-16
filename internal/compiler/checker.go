@@ -22,6 +22,13 @@ type resolvedType struct {
 	Variants []string
 }
 
+type resolvedExpressionType struct {
+	Name  string
+	Kind  string
+	Base  string
+	Valid bool
+}
+
 type viewInfo struct {
 	Page   *PageDecl
 	View   *ViewDecl
@@ -38,10 +45,12 @@ type checker struct {
 	roles    map[string]*RoleDecl
 	actions  map[string]*ActionDecl
 
-	resolvedTypes map[string]resolvedType
-	resolving     map[string]bool
-	cycleReported map[string]bool
-	entityLabels  map[string]string
+	resolvedTypes    map[string]resolvedType
+	resolving        map[string]bool
+	cycleReported    map[string]bool
+	entityLabels     map[string]string
+	expressionFields map[*Expression]*FieldDecl
+	expressionTypes  map[*Expression]string
 
 	viewInfo   map[*ViewDecl]*viewInfo
 	createForm map[string][]*viewInfo
@@ -57,7 +66,8 @@ func check(program *Program) (*SemanticIR, *SourceMap, []Diagnostic) {
 		program: program, types: map[string]*TypeDecl{}, entities: map[string]*EntityDecl{},
 		pages: map[string]*PageDecl{}, roles: map[string]*RoleDecl{}, actions: map[string]*ActionDecl{},
 		resolvedTypes: map[string]resolvedType{}, resolving: map[string]bool{}, cycleReported: map[string]bool{},
-		entityLabels: map[string]string{}, viewInfo: map[*ViewDecl]*viewInfo{},
+		entityLabels: map[string]string{}, expressionFields: map[*Expression]*FieldDecl{},
+		expressionTypes: map[*Expression]string{}, viewInfo: map[*ViewDecl]*viewInfo{},
 		createForm: map[string][]*viewInfo{}, editForm: map[string][]*viewInfo{},
 		details: map[string][]*viewInfo{}, lists: map[string][]*viewInfo{},
 	}
@@ -287,6 +297,89 @@ func (c *checker) checkEntities() {
 				c.error(entity.State.Initial.Span, "F2201", fmt.Sprintf("initial state `%s` is not declared by `%s`", entity.State.Initial.Text, entity.State.Name.Text), "use one of the values declared before `initial`")
 			}
 		}
+		seenInvariants := map[string]*InvariantDecl{}
+		for _, invariant := range entity.Invariants {
+			if previous, exists := seenInvariants[invariant.Name.Text]; exists {
+				c.error(invariant.Name.Span, "F2601", fmt.Sprintf("duplicate invariant `%s.%s`", entity.Name.Text, invariant.Name.Text), fmt.Sprintf("the first invariant is at line %d", previous.Name.Span.Start.Line))
+				continue
+			}
+			seenInvariants[invariant.Name.Text] = invariant
+			c.checkInvariant(entity, invariant, fields)
+		}
+	}
+}
+
+func (c *checker) checkInvariant(entity *EntityDecl, invariant *InvariantDecl, fields map[string]*FieldDecl) {
+	if invariant.Predicate == nil || invariant.Predicate.Binary == nil {
+		return
+	}
+	binary := invariant.Predicate.Binary
+	if binary.Operator == "invalid" {
+		return
+	}
+	left := c.checkInvariantOperand(entity, binary.Left, fields)
+	right := c.checkInvariantOperand(entity, binary.Right, fields)
+	if !left.Valid || !right.Valid {
+		return
+	}
+	if left.Name != right.Name {
+		c.error(invariant.Predicate.Span, "F2605", fmt.Sprintf("operator `<=` cannot compare `%s` and `%s`", left.Name, right.Name), "compare fields with the same nominal ordered scalar type")
+		return
+	}
+	if !isOrderedExpressionType(left) || !isOrderedExpressionType(right) {
+		c.error(invariant.Predicate.Span, "F2605", fmt.Sprintf("operator `<=` requires ordered scalar fields, not `%s`", left.Name), "use required fields with the same Int-, Decimal-, Date-, or DateTime-based type")
+		return
+	}
+	c.expressionTypes[invariant.Predicate] = "Bool"
+}
+
+func (c *checker) checkInvariantOperand(entity *EntityDecl, expression *Expression, fields map[string]*FieldDecl) resolvedExpressionType {
+	if expression == nil || expression.Field == nil || len(expression.Field.Path) == 0 {
+		return resolvedExpressionType{}
+	}
+	if len(expression.Field.Path) != 1 {
+		c.error(expression.Span, "F2603", "relation traversal is not allowed in an invariant", "the first invariant slice may reference only fields declared directly by the same entity")
+		return resolvedExpressionType{}
+	}
+	name := expression.Field.Path[0]
+	field, exists := fields[name.Text]
+	if !exists {
+		if entity.State != nil && entity.State.Name.Text == name.Text {
+			return resolvedExpressionType{Name: entity.State.Name.Text, Kind: "state", Valid: true}
+		}
+		c.error(name.Span, "F2602", fmt.Sprintf("unknown field or state `%s.%s`", entity.Name.Text, name.Text), "use a field or named state declared directly by the entity")
+		return resolvedExpressionType{}
+	}
+	resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
+	if resolved.Kind == "invalid" {
+		return resolvedExpressionType{}
+	}
+	if field.Type.Collection {
+		c.error(name.Span, "F2605", fmt.Sprintf("field `%s.%s` is a collection and cannot be used with `<=`", entity.Name.Text, name.Text), "compare fields with the same ordered scalar type")
+		return resolvedExpressionType{}
+	}
+	if resolved.Kind != "scalar" {
+		c.error(name.Span, "F2605", fmt.Sprintf("field `%s.%s` has non-scalar type `%s` and cannot be used with `<=`", entity.Name.Text, name.Text, field.Type.Name.Text), "compare fields with the same ordered scalar type")
+		return resolvedExpressionType{}
+	}
+	if !hasFieldModifier(field, "required") {
+		c.error(name.Span, "F2604", fmt.Sprintf("optional field `%s.%s` cannot be used in an invariant expression", entity.Name.Text, name.Text), "mark the field `required` or wait for explicit absence handling")
+		return resolvedExpressionType{}
+	}
+	c.expressionFields[expression] = field
+	c.expressionTypes[expression] = field.Type.Name.Text
+	return resolvedExpressionType{Name: field.Type.Name.Text, Kind: resolved.Kind, Base: resolved.Base, Valid: true}
+}
+
+func isOrderedExpressionType(value resolvedExpressionType) bool {
+	if !value.Valid || value.Kind != "scalar" {
+		return false
+	}
+	switch value.Base {
+	case "Int", "Decimal", "Date", "DateTime":
+		return true
+	default:
+		return false
 	}
 }
 

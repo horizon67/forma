@@ -38,11 +38,12 @@ type IRConstraint struct {
 }
 
 type IREntity struct {
-	ID     SemanticID `json:"id"`
-	Name   string     `json:"name"`
-	Fields []IRField  `json:"fields,omitempty"`
-	State  *IRState   `json:"state,omitempty"`
-	Label  string     `json:"label,omitempty"`
+	ID         SemanticID    `json:"id"`
+	Name       string        `json:"name"`
+	Fields     []IRField     `json:"fields,omitempty"`
+	State      *IRState      `json:"state,omitempty"`
+	Invariants []IRInvariant `json:"invariants,omitempty"`
+	Label      string        `json:"label,omitempty"`
 }
 
 type IRField struct {
@@ -74,6 +75,23 @@ type IRState struct {
 	Name    string     `json:"name"`
 	Initial string     `json:"initial"`
 	Values  []string   `json:"values"`
+}
+
+type IRInvariant struct {
+	ID        SemanticID   `json:"id"`
+	Name      string       `json:"name"`
+	Predicate IRExpression `json:"predicate"`
+}
+
+type IRExpression struct {
+	ID         SemanticID    `json:"id"`
+	Kind       string        `json:"kind"`
+	ResultType string        `json:"resultType"`
+	Operator   string        `json:"operator,omitempty"`
+	Binding    string        `json:"binding,omitempty"`
+	Field      SemanticID    `json:"field,omitempty"`
+	Left       *IRExpression `json:"left,omitempty"`
+	Right      *IRExpression `json:"right,omitempty"`
 }
 
 type IRAction struct {

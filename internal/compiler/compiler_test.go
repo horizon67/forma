@@ -230,6 +230,313 @@ func TestStateInitialValueIsIndependentOfPresentationOrder(t *testing.T) {
 	}
 }
 
+func TestInvariantBuildsResolvedIRAndSourceMap(t *testing.T) {
+	source := `type Quantity = Int min 0
+entity StockItem {
+    onHand   Quantity required
+    reserved Quantity required
+
+    invariant stockAvailable: reserved <= onHand
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("stock.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	if len(result.IR.Entities) != 1 || len(result.IR.Entities[0].Invariants) != 1 {
+		t.Fatalf("expected one resolved invariant: %#v", result.IR.Entities)
+	}
+
+	invariant := result.IR.Entities[0].Invariants[0]
+	wantInvariantID := invariantID("StockItem", "stockAvailable")
+	if invariant.ID != wantInvariantID || invariant.Name != "stockAvailable" {
+		t.Fatalf("unexpected invariant identity: %#v", invariant)
+	}
+	predicate := invariant.Predicate
+	if predicate.ID != semanticID(string(wantInvariantID), "expression") || predicate.Kind != "binary-expression" || predicate.Operator != "less-than-or-equal" || predicate.ResultType != "Bool" {
+		t.Fatalf("unexpected invariant predicate: %#v", predicate)
+	}
+	if predicate.Left == nil || predicate.Right == nil {
+		t.Fatalf("invariant predicate operands are missing: %#v", predicate)
+	}
+	if predicate.Left.Kind != "field-reference" || predicate.Left.Binding != "self" || predicate.Left.ResultType != "Quantity" || predicate.Left.Field != semanticID("entity", "StockItem", "field", "reserved") {
+		t.Fatalf("unexpected left field reference: %#v", predicate.Left)
+	}
+	if predicate.Right.Kind != "field-reference" || predicate.Right.Binding != "self" || predicate.Right.ResultType != "Quantity" || predicate.Right.Field != semanticID("entity", "StockItem", "field", "onHand") {
+		t.Fatalf("unexpected right field reference: %#v", predicate.Right)
+	}
+
+	entries := map[SemanticID]SourceMapEntry{}
+	for _, entry := range result.SourceMap.Entries {
+		if _, exists := entries[entry.NodeID]; exists {
+			t.Fatalf("duplicate Source Map identity %q", entry.NodeID)
+		}
+		entries[entry.NodeID] = entry
+	}
+	wantKinds := map[SemanticID]string{
+		wantInvariantID:                           "invariant",
+		predicate.ID:                              "binary-expression",
+		semanticID(string(predicate.ID), "left"):  "field-reference",
+		semanticID(string(predicate.ID), "right"): "field-reference",
+	}
+	for id, kind := range wantKinds {
+		entry, exists := entries[id]
+		if !exists {
+			t.Errorf("Source Map is missing %q", id)
+			continue
+		}
+		if entry.Kind != kind || entry.Span.Start.Line != 6 {
+			t.Errorf("Source Map entry %q = %#v, want kind %q on line 6", id, entry, kind)
+		}
+	}
+
+	ids := semanticIDs(result.IR)
+	if len(ids) != len(result.SourceMap.Entries) {
+		t.Fatalf("IR has %d semantic nodes but Source Map has %d entries", len(ids), len(result.SourceMap.Entries))
+	}
+	for _, id := range ids {
+		if _, exists := entries[id]; !exists {
+			t.Errorf("Semantic IR identity %q is missing from Source Map", id)
+		}
+	}
+}
+
+func TestInvariantDiagnostics(t *testing.T) {
+	tests := []struct {
+		name    string
+		source  string
+		code    string
+		message string
+	}{
+		{
+			name: "duplicate name",
+			source: `type Quantity = Int
+entity StockItem {
+    onHand Quantity required
+    reserved Quantity required
+    invariant stockAvailable: reserved <= onHand
+    invariant stockAvailable: onHand <= reserved
+}
+`,
+			code: "F2601", message: "duplicate invariant",
+		},
+		{
+			name: "unknown field",
+			source: `type Quantity = Int
+entity StockItem {
+    onHand Quantity required
+    invariant stockAvailable: missing <= onHand
+}
+`,
+			code: "F2602", message: "unknown field or state",
+		},
+		{
+			name: "relation traversal",
+			source: `type Quantity = Int
+entity Product {
+    onHand Quantity required
+}
+entity OrderLine {
+    product Product required
+    quantity Quantity required
+    invariant withinStock: quantity <= product.onHand
+}
+`,
+			code: "F2603", message: "relation traversal is not allowed",
+		},
+		{
+			name: "optional field",
+			source: `type Quantity = Int
+entity StockItem {
+    onHand Quantity required
+    reserved Quantity
+    invariant stockAvailable: reserved <= onHand
+}
+`,
+			code: "F2604", message: "optional field",
+		},
+		{
+			name: "different nominal types",
+			source: `type Quantity = Int
+type Capacity = Int
+entity StockItem {
+    onHand Capacity required
+    reserved Quantity required
+    invariant stockAvailable: reserved <= onHand
+}
+`,
+			code: "F2605", message: "cannot compare `Quantity` and `Capacity`",
+		},
+		{
+			name: "unordered fields",
+			source: `entity User {
+    firstName String required
+    lastName String required
+    invariant nameOrder: firstName <= lastName
+}
+`,
+			code: "F2605", message: "requires ordered scalar fields",
+		},
+		{
+			name: "state is not ordered",
+			source: `entity StockItem {
+    onHand Int required
+    state status Low | Ready initial Low
+    invariant stateOrder: status <= onHand
+}
+`,
+			code: "F2605", message: "cannot compare `status` and `Int`",
+		},
+		{
+			name: "to-one relation is not scalar",
+			source: `entity Product {
+    onHand Int required
+}
+entity OrderLine {
+    product Product required
+    onHand Int required
+    invariant relationOrder: product <= onHand
+}
+`,
+			code: "F2605", message: "has non-scalar type `Product`",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := Compile([]SourceFile{NewSourceFile("invariant.forma", test.source)})
+			if !slices.Contains(diagnosticCodes(result.Diagnostics), test.code) {
+				t.Fatalf("missing diagnostic %s:\n%s", test.code, diagnosticMessages(result.Diagnostics))
+			}
+			if !strings.Contains(diagnosticMessages(result.Diagnostics), test.message) {
+				t.Fatalf("diagnostics do not contain %q:\n%s", test.message, diagnosticMessages(result.Diagnostics))
+			}
+		})
+	}
+}
+
+func TestChainedInvariantComparisonHasDedicatedDiagnostic(t *testing.T) {
+	source := `entity Range {
+    minimum Int required
+    value Int required
+    maximum Int required
+    invariant bounded: minimum <= value <= maximum
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("chained-comparison.forma", source)})
+	for _, diagnostic := range result.Diagnostics {
+		if diagnostic.Code != "F1003" {
+			continue
+		}
+		if diagnostic.Message != "comparison operators cannot be chained" {
+			t.Fatalf("unexpected chained-comparison message: %#v", diagnostic)
+		}
+		if !strings.Contains(diagnostic.Hint, "two named invariants") || !strings.Contains(diagnostic.Hint, "`and` is not implemented") {
+			t.Fatalf("unexpected chained-comparison hint: %#v", diagnostic)
+		}
+		return
+	}
+	t.Fatalf("missing dedicated chained-comparison diagnostic:\n%s", diagnosticMessages(result.Diagnostics))
+}
+
+func TestInvariantCollectionIsNotReportedAsOptional(t *testing.T) {
+	source := `entity OrderLine {
+    quantity Int required
+}
+entity Order {
+    lines [OrderLine]
+    total Int required
+    invariant nonEmpty: lines <= total
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("collection-invariant.forma", source)})
+	if !slices.Contains(diagnosticCodes(result.Diagnostics), "F2605") {
+		t.Fatalf("collection operand should be rejected as non-scalar:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	if slices.Contains(diagnosticCodes(result.Diagnostics), "F2604") {
+		t.Fatalf("collection operand must not be reported as optional:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+}
+
+func TestInvariantSupportsBuiltInOrderedScalarTypes(t *testing.T) {
+	source := `entity Measurement {
+    intLeft Int required
+    intRight Int required
+    decimalLeft Decimal required
+    decimalRight Decimal required
+    dateLeft Date required
+    dateRight Date required
+    dateTimeLeft DateTime required
+    dateTimeRight DateTime required
+    invariant intOrder: intLeft <= intRight
+    invariant decimalOrder: decimalLeft <= decimalRight
+    invariant dateOrder: dateLeft <= dateRight
+    invariant dateTimeOrder: dateTimeLeft <= dateTimeRight
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("ordered-scalars.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("ordered built-in scalar types should be valid:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	if len(result.IR.Entities) != 1 || len(result.IR.Entities[0].Invariants) != 4 {
+		t.Fatalf("expected four resolved invariants: %#v", result.IR.Entities)
+	}
+}
+
+func TestInvariantKeywordRemainsContextualForScalarAndCollectionFields(t *testing.T) {
+	source := `entity Rule {
+    invariant Bool required
+}
+entity RuleSet {
+    invariant [Rule]
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("contextual-invariant.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("contextual field names should remain valid:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	if len(result.IR.Entities) != 2 {
+		t.Fatalf("expected two entities: %#v", result.IR.Entities)
+	}
+	for _, entity := range result.IR.Entities {
+		if len(entity.Fields) != 1 || entity.Fields[0].Name != "invariant" {
+			t.Fatalf("field named invariant was not preserved: %#v", entity)
+		}
+		if entity.Name == "RuleSet" && !entity.Fields[0].Collection {
+			t.Fatalf("collection field named invariant was not preserved: %#v", entity.Fields[0])
+		}
+	}
+}
+
+func TestInvariantDeclarationOrderDoesNotChangeIR(t *testing.T) {
+	firstSource := `type Quantity = Int
+entity StockItem {
+    onHand Quantity required
+    reserved Quantity required
+    invariant stockAvailable: reserved <= onHand
+    invariant reservationBounded: reserved <= onHand
+}
+`
+	secondSource := `type Quantity = Int
+entity StockItem {
+    onHand Quantity required
+    reserved Quantity required
+    invariant reservationBounded: reserved <= onHand
+    invariant stockAvailable: reserved <= onHand
+}
+`
+	first := Compile([]SourceFile{NewSourceFile("first.forma", firstSource)})
+	second := Compile([]SourceFile{NewSourceFile("second.forma", secondSource)})
+	if len(first.Diagnostics) != 0 || len(second.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %s %s", diagnosticMessages(first.Diagnostics), diagnosticMessages(second.Diagnostics))
+	}
+	firstJSON, _ := MarshalIR(first.IR)
+	secondJSON, _ := MarshalIR(second.IR)
+	if !bytes.Equal(firstJSON, secondJSON) {
+		t.Fatalf("invariant declaration order changed IR\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
+	}
+}
+
 func TestCrossFileResolution(t *testing.T) {
 	sources := []SourceFile{
 		NewSourceFile("domain.forma", `type Email = String matches /.+@.+/
@@ -537,6 +844,10 @@ func semanticIDs(ir *SemanticIR) []SemanticID {
 		if entity.State != nil {
 			ids = append(ids, entity.State.ID)
 		}
+		for _, invariant := range entity.Invariants {
+			ids = append(ids, invariant.ID)
+			ids = appendExpressionSemanticIDs(ids, invariant.Predicate)
+		}
 	}
 	for _, action := range ir.Actions {
 		ids = append(ids, action.ID)
@@ -561,6 +872,17 @@ func semanticIDs(ir *SemanticIR) []SemanticID {
 				ids = append(ids, view.Submit.ID, view.Submit.Success.ID, view.Submit.Access.ID)
 			}
 		}
+	}
+	return ids
+}
+
+func appendExpressionSemanticIDs(ids []SemanticID, expression IRExpression) []SemanticID {
+	ids = append(ids, expression.ID)
+	if expression.Left != nil {
+		ids = appendExpressionSemanticIDs(ids, *expression.Left)
+	}
+	if expression.Right != nil {
+		ids = appendExpressionSemanticIDs(ids, *expression.Right)
 	}
 	return ids
 }

@@ -15,7 +15,7 @@ Semantic IR、conformance、profile、artifactの境界を固定する。
 | --- | --- | --- |
 | 言語思想 | 形になっている | AI時代のsource of truth、target非依存、可読性の設計原則を文書化 |
 | v0言語仕様 | design draft | 10 primitives、閉じたmodifier、EBNF、静的検査、runtime semanticsを定義 |
-| reference front-end | 部分実装 | Lexer、Parser、syntax AST、主要Checker、diagnostic、`forma/v0.4` core Semantic IR、Source Map |
+| reference front-end | 部分実装 | v0 front-endに加え、self-only Invariant `field <= field`のexperimental sliceとResolved Expression IRを実装 |
 | 完全例 | check可能 | `examples/users.forma`をparse・検査し、golden IRを生成可能 |
 | conformance | 未実装 | contract schema、fixture、adapter、実行protocolが未決定 |
 | target generation | 未実装 | profile manifest、artifact protocol、reference generatorが未決定 |
@@ -206,7 +206,9 @@ v1 syntaxを先に考えず、v0では表現できない現実的なapplication�
 
 この例は[`examples/orders.forma`](../examples/orders.forma)と
 [Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)で着手済みである。
-probeの結果、effect syntaxの前に式レイヤの最小形を決める段階を置く。
+probeの結果、effect syntaxの前に式レイヤの最小形を決める段階を置く。その候補を
+[Minimal Expression Layer Proposal](expression-proposal.md)にまとめている。selfのrequired field同士を
+`<=`で比較する最初のcompiler sliceは実装済みで、次は決定的な式評価器とConformance oracleである。
 
 ### その後に検討する領域
 

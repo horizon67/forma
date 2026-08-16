@@ -22,6 +22,7 @@ const (
 	tokenEqual
 	tokenPipe
 	tokenArrow
+	tokenLessEqual
 )
 
 type token struct {

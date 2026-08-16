@@ -70,6 +70,15 @@ func (l *lexer) scanToken() {
 		l.single(tokenEqual, start)
 	case '|':
 		l.single(tokenPipe, start)
+	case '<':
+		if l.peek(1) == '=' {
+			l.advance()
+			l.advance()
+			l.emit(tokenLessEqual, start, "")
+		} else {
+			l.invalid(start, "unexpected `<`", "the first expression slice supports only the `<=` comparison")
+			l.advance()
+		}
 	case '-':
 		if l.peek(1) == '>' {
 			l.advance()

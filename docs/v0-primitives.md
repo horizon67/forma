@@ -890,6 +890,10 @@ model providerや具体的なframeworkはprofileの選択であり、言語全�
 主要な静的検査、`forma/v0.4` core Semantic IR、golden IR、Source Mapまで実装済みである。ただしdesign draft
 v0.4に対して、少なくとも次は未実装である。
 
+reference front-endはこの規範v0に加え、[Minimal Expression Layer Proposal](expression-proposal.md)を
+検証するexperimental syntaxとして、selfのrequired field同士を`<=`で比較する名前付きInvariantも受理する。
+これはv0の10 primitives、EBNF、完了条件へは含めず、式評価器とConformance oracleもまだ未実装である。
+
 - §5.7の省略projectionを展開したlist/detail IR
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
 - v0で閉じたstring/regex escape setの厳密な検査
@@ -958,6 +962,7 @@ enforce field, state, and role constraints
 - notification、background job、fileを共通effectとして扱えるか
 - page/view identityを使ったversioned profile extensionを、安全なescape hatchとして設けるか
 - derived value、`invariant`、action preconditionを式で表し、statementを持たない境界を保てるか
+  （[Minimal Expression Layer Proposal](expression-proposal.md)）
 - 表示文言と設計意図を`title`やdoc commentとしてsourceとSemantic IRに載せるか
 - 複数entityをまたぐ副作用を、手続き型へ退行せずどのeffect modelで表すか
 - 状態を変えないactionを宣言できるようにするか。現在は§12の遷移検査が拒否する
@@ -970,4 +975,5 @@ enforce field, state, and role constraints
 v1の式レイヤはまだ決定事項ではない。まず注文・明細・在庫のような実例を`examples/`へ書き、
 導出値、invariant、state以外のaction preconditionだけで何が表現でき、どこからeffectが必要に
 なるかを確認してからEBNFを定める。この実例は[`examples/orders.forma`](../examples/orders.forma)と
-[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)で着手した。
+[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)で着手し、そこから抽出した
+最小形を[Minimal Expression Layer Proposal](expression-proposal.md)にまとめた。

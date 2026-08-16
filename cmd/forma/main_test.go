@@ -39,6 +39,29 @@ func TestCheckCommandRendersDiagnostic(t *testing.T) {
 	}
 }
 
+func TestCheckCommandAcceptsSelfOnlyInvariant(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "stock.forma")
+	source := `type Quantity = Int min 0
+entity StockItem {
+    onHand Quantity required
+    reserved Quantity required
+    invariant stockAvailable: reserved <= onHand
+}
+`
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"check", path}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if got := stdout.String(); got != "checked 1 file: no errors\n" {
+		t.Fatalf("unexpected stdout: %q", got)
+	}
+}
+
 func TestCheckRequiresAnExplicitCompilationUnit(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	exitCode := run([]string{"check"}, &stdout, &stderr)

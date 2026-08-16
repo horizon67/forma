@@ -75,6 +75,16 @@ func (c *checker) buildIR() (*SemanticIR, *SourceMap) {
 			item.State = state
 			sourceMap.add(stateID, "state", entity.State.Span)
 		}
+		for _, invariant := range entity.Invariants {
+			id := invariantID(entity.Name.Text, invariant.Name.Text)
+			expressionID := semanticID(string(id), "expression")
+			item.Invariants = append(item.Invariants, IRInvariant{
+				ID: id, Name: invariant.Name.Text,
+				Predicate: c.buildExpressionIR(entity, invariant.Predicate, expressionID, sourceMap),
+			})
+			sourceMap.add(id, "invariant", invariant.Span)
+		}
+		sort.Slice(item.Invariants, func(i, j int) bool { return item.Invariants[i].ID < item.Invariants[j].ID })
 		ir.Entities = append(ir.Entities, item)
 	}
 	for _, action := range c.program.Actions {
@@ -127,6 +137,28 @@ func (c *checker) buildIR() (*SemanticIR, *SourceMap) {
 	sort.Slice(ir.Actions, func(i, j int) bool { return ir.Actions[i].ID < ir.Actions[j].ID })
 	sort.Slice(ir.Pages, func(i, j int) bool { return ir.Pages[i].ID < ir.Pages[j].ID })
 	return ir, sourceMap.build()
+}
+
+func (c *checker) buildExpressionIR(entity *EntityDecl, expression *Expression, id SemanticID, sourceMap *sourceMapBuilder) IRExpression {
+	item := IRExpression{ID: id, ResultType: c.expressionTypes[expression]}
+	switch expression.Kind {
+	case "binary":
+		item.Kind = "binary-expression"
+		item.Operator = expression.Binary.Operator
+		left := c.buildExpressionIR(entity, expression.Binary.Left, semanticID(string(id), "left"), sourceMap)
+		right := c.buildExpressionIR(entity, expression.Binary.Right, semanticID(string(id), "right"), sourceMap)
+		item.Left = &left
+		item.Right = &right
+		sourceMap.add(id, "binary-expression", expression.Span)
+	case "field":
+		item.Kind = "field-reference"
+		item.Binding = "self"
+		if field := c.expressionFields[expression]; field != nil {
+			item.Field = semanticID(string(entityID(entity.Name.Text)), "field", field.Name.Text)
+		}
+		sourceMap.add(id, "field-reference", expression.Span)
+	}
+	return item
 }
 
 func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRView {

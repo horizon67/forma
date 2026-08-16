@@ -120,18 +120,25 @@ func (p *parser) parseEntityDecl() *EntityDecl {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.unexpected("a field or state declaration")
+			p.unexpected("a field, state, or invariant declaration")
 			p.synchronizeLine()
 			continue
 		}
-		if p.peek().Value == "state" {
+		switch p.peek().Value {
+		case "state":
 			state := p.parseStateDecl()
 			if decl.State != nil {
 				p.report(state.Span, "F2201", fmt.Sprintf("entity `%s` declares more than one state", decl.Name.Text), "keep a single named state declaration")
 			} else {
 				decl.State = state
 			}
-		} else {
+		case "invariant":
+			if next := p.peekAhead(1); next.Kind == tokenIdent && (startsLower(next.Value) || p.peekAhead(2).Kind == tokenColon) {
+				decl.Invariants = append(decl.Invariants, p.parseInvariantDecl())
+			} else {
+				decl.Fields = append(decl.Fields, p.parseFieldDecl())
+			}
+		default:
 			decl.Fields = append(decl.Fields, p.parseFieldDecl())
 		}
 	}
@@ -139,6 +146,49 @@ func (p *parser) parseEntityDecl() *EntityDecl {
 	decl.Span = mergeSpan(start, end.Span)
 	p.consumeOptionalNewline()
 	return decl
+}
+
+func (p *parser) parseInvariantDecl() *InvariantDecl {
+	start := p.advance().Span
+	name := p.consumeName("after `invariant`")
+	p.consume(tokenColon, "`:` after the invariant name")
+	left := p.parseFieldExpression("as the left invariant operand")
+	operator := p.consume(tokenLessEqual, "`<=` between invariant operands")
+	right := p.parseFieldExpression("as the right invariant operand")
+	if p.check(tokenLessEqual) {
+		p.report(p.peek().Span, "F1003", "comparison operators cannot be chained", "declare two named invariants, one for each comparison; boolean `and` is not implemented yet")
+		p.synchronizeLine()
+	} else {
+		p.finishLine()
+	}
+	expressionSpan := mergeSpan(left.Span, right.Span)
+	predicate := &Expression{
+		Kind: "binary",
+		Binary: &BinaryExpression{
+			Operator: "less-than-or-equal",
+			Left:     left,
+			Right:    right,
+			Span:     expressionSpan,
+		},
+		Span: expressionSpan,
+	}
+	if operator.Kind == tokenInvalid {
+		predicate.Binary.Operator = "invalid"
+	}
+	return &InvariantDecl{Name: name, Predicate: predicate, Span: mergeSpan(start, p.previous().Span)}
+}
+
+func (p *parser) parseFieldExpression(context string) *Expression {
+	first := p.consumeName(context)
+	path := []Name{first}
+	for p.match(tokenDot) {
+		path = append(path, p.consumeName("after `.` in the field path"))
+	}
+	span := first.Span
+	if len(path) > 1 {
+		span = mergeSpan(span, path[len(path)-1].Span)
+	}
+	return &Expression{Kind: "field", Field: &FieldExpression{Path: path, Span: span}, Span: span}
 }
 
 func (p *parser) parseFieldDecl() *FieldDecl {
@@ -510,6 +560,14 @@ func (p *parser) advance() token {
 func (p *parser) atEnd() bool { return p.peek().Kind == tokenEOF }
 
 func (p *parser) peek() token { return p.tokens[p.current] }
+
+func (p *parser) peekAhead(ahead int) token {
+	index := p.current + ahead
+	if index >= len(p.tokens) {
+		return p.tokens[len(p.tokens)-1]
+	}
+	return p.tokens[index]
+}
 
 func (p *parser) previous() token {
 	if p.current == 0 {

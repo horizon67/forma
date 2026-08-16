@@ -28,10 +28,11 @@ type TypeModifier struct {
 }
 
 type EntityDecl struct {
-	Name   Name
-	Fields []*FieldDecl
-	State  *StateDecl
-	Span   Span
+	Name       Name
+	Fields     []*FieldDecl
+	State      *StateDecl
+	Invariants []*InvariantDecl
+	Span       Span
 }
 
 type TypeRef struct {
@@ -64,6 +65,31 @@ type StateDecl struct {
 	Values  []Name
 	Initial Name
 	Span    Span
+}
+
+type InvariantDecl struct {
+	Name      Name
+	Predicate *Expression
+	Span      Span
+}
+
+type Expression struct {
+	Kind   string
+	Field  *FieldExpression
+	Binary *BinaryExpression
+	Span   Span
+}
+
+type FieldExpression struct {
+	Path []Name
+	Span Span
+}
+
+type BinaryExpression struct {
+	Operator string
+	Left     *Expression
+	Right    *Expression
+	Span     Span
 }
 
 type ActionDecl struct {
