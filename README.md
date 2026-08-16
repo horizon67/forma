@@ -247,8 +247,10 @@ Forma is not intended to:
 Forma is in an early design phase. There is no compiler release yet. The
 unreleased Go front end partially implements the design draft v0.4 grammar,
 parser, name resolution, type checking, semantic validation, stable identities,
-Resolved Intent, and Source Maps. It also contains an exploratory non-v0
-self-only invariant slice.
+Resolved Intent, Source Maps, and a minimal admin-flow Acceptance Facts and
+Generation Request slice. The first controlled agent run implemented that
+admin flow in a standalone Go repository and verified all 43 Acceptance Facts.
+The front end also contains an exploratory non-v0 self-only invariant slice.
 
 The Go admin generator and target-neutral conformance adapter under
 `experiments/` are now **frozen meaning-discovery prototypes**. They helped
@@ -258,11 +260,13 @@ adapter will be built as the next step.
 
 - [Forma v0 specification](docs/v0-primitives.md)
 - [Agent generation model](docs/agent-generation.md)
+- [Implementation Policy Manifest proposal](docs/implementation-policy-manifest-proposal.md)
 - [Development roadmap](docs/roadmap.md)
 - [Language design principles](docs/language-design-principles.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
 - [Minimal expression proposal](docs/expression-proposal.md)
+- [Active admin agent-generation experiment](experiments/admin-agent-e2e/README.md)
 - [Frozen admin generation prototype](experiments/admin-e2e/README.md)
 - [Frozen conformance prototype](experiments/conformance/README.md)
 
@@ -272,6 +276,8 @@ Run the checker from source with Go 1.24 or newer:
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma resolve examples/users.forma
+go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
+go run ./cmd/forma verify internal/agentrequest/testdata/admin.request.json experiments/admin-agent-e2e/target/generation-feedback.json
 go test ./...
 ```
 
@@ -279,6 +285,7 @@ The files and directories passed to one `forma check` invocation form one
 compilation unit. The two examples are independent applications and should be
 checked separately.
 
-`forma resolve` now emits canonical Resolved Intent JSON. The next tooling
-milestones are the Generation Request and agent feedback loop. Framework-specific
-`forma build --profile` is no longer on the core roadmap.
+`forma resolve` emits canonical Resolved Intent JSON, and `forma request` emits
+the current full Generation Request slice. `forma verify` validates agent
+feedback against the immutable request. The next milestone is an incremental
+change to the existing target repository and an automated repair loop.

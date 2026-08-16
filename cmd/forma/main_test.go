@@ -28,6 +28,47 @@ func TestResolveCommand(t *testing.T) {
 	}
 }
 
+func TestRequestCommand(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"request", path}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	var request struct {
+		Schema          string `json:"schema"`
+		ResolvedIntent  any    `json:"resolvedIntent"`
+		AcceptanceFacts struct {
+			Facts []any `json:"facts"`
+		} `json:"acceptanceFacts"`
+		Verification struct {
+			RequiredFactIDs []string `json:"requiredFactIds"`
+		} `json:"verification"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &request); err != nil {
+		t.Fatalf("request output is not JSON: %v\n%s", err, stdout.String())
+	}
+	if request.Schema != "forma/generation-request/v0alpha1" || request.ResolvedIntent == nil {
+		t.Fatalf("generation request = %#v", request)
+	}
+	if len(request.AcceptanceFacts.Facts) == 0 || len(request.AcceptanceFacts.Facts) != len(request.Verification.RequiredFactIDs) {
+		t.Fatalf("fact coverage policy does not cover request: %#v", request)
+	}
+}
+
+func TestVerifyCommand(t *testing.T) {
+	requestPath := filepath.Join("..", "..", "internal", "agentrequest", "testdata", "admin.request.json")
+	feedbackPath := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target", "generation-feedback.json")
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"verify", requestPath, feedbackPath}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if got := stdout.String(); got != "verified 43 acceptance facts: all passed\n  12 distinct tests, max 8 facts per test\n" {
+		t.Fatalf("unexpected stdout: %q", got)
+	}
+}
+
 func TestCheckCommand(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")
 	var stdout, stderr bytes.Buffer

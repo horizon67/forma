@@ -1,0 +1,236 @@
+{
+  "schema": "forma/generation-feedback/v0alpha1",
+  "stage": "test",
+  "status": "succeeded",
+  "factCoverage": [
+    {
+      "factId": "fact/entity/User/field/team/relation/resolved",
+      "testReferences": ["internal/web/server_test.go#TestRelationUsesTeamLabel"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail",
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/actions",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/feedback",
+      "testReferences": ["internal/web/server_test.go#TestDetailEmptyAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/fields",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/records/visible",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/feedback",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/fields",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "testReferences": ["internal/web/server_test.go#TestEditIsAppliedAtMostOnce"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/navigation",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/email",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/name",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan",
+      "testReferences": ["internal/web/server_test.go#TestEditValidationAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure",
+        "internal/store/store_test.go#TestUpdateUserEnforcesUniqueEmail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestAdminList"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestEditUser"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList",
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/access/allowed/admin",
+      "testReferences": ["internal/web/server_test.go#TestUserDetail"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/access/denied/anonymous",
+      "testReferences": ["internal/web/server_test.go#TestAccessDenied"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList",
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/actions",
+      "testReferences": ["internal/web/server_test.go#TestAdminList"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/feedback",
+      "testReferences": ["internal/web/server_test.go#TestListEmptyAndFailure"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/fields",
+      "testReferences": ["internal/web/server_test.go#TestAdminList"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/plan",
+      "testReferences": ["internal/web/server_test.go#TestListQueryCapabilities"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/status",
+      "testReferences": ["internal/web/server_test.go#TestListQueryCapabilities"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/team",
+      "testReferences": ["internal/web/server_test.go#TestListQueryCapabilities"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/page-boundary",
+      "testReferences": ["internal/web/server_test.go#TestListPagination"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/records/visible",
+      "testReferences": ["internal/web/server_test.go#TestAdminList"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/search",
+      "testReferences": ["internal/web/server_test.go#TestListQueryCapabilities"],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/sort",
+      "testReferences": ["internal/web/server_test.go#TestListQueryCapabilities"],
+      "result": "passed"
+    }
+  ],
+  "command": "go test ./...",
+  "summary": "The repository-native admin list, detail, and edit flows pass all mapped acceptance facts."
+}

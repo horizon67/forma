@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
 )
 
@@ -25,7 +26,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	command := args[0]
-	if command != "check" && command != "resolve" {
+	if command == "verify" {
+		return runVerify(args[1:], stdout, stderr)
+	}
+	if command != "check" && command != "resolve" && command != "request" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		printUsage(stderr)
 		return 2
@@ -76,11 +80,67 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if command == "request" {
+		request, err := agentrequest.BuildFull(result)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
+			return 1
+		}
+		content, err := agentrequest.Marshal(request)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: marshal Generation Request: %v\n", err)
+			return 1
+		}
+		if _, err := stdout.Write(append(content, '\n')); err != nil {
+			fmt.Fprintf(stderr, "forma: write Generation Request: %v\n", err)
+			return 1
+		}
+		return 0
+	}
 	label := "files"
 	if len(paths) == 1 {
 		label = "file"
 	}
 	fmt.Fprintf(stdout, "checked %d %s: no errors\n", len(paths), label)
+	return 0
+}
+
+func runVerify(arguments []string, stdout, stderr io.Writer) int {
+	if len(arguments) != 2 {
+		fmt.Fprintln(stderr, "forma: verify requires <request.json> and <feedback.json>")
+		return 2
+	}
+	requestContent, err := os.ReadFile(arguments[0])
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: read %s: %v\n", arguments[0], err)
+		return 2
+	}
+	request, err := agentrequest.UnmarshalRequest(requestContent)
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: %v\n", err)
+		return 1
+	}
+	feedbackContent, err := os.ReadFile(arguments[1])
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: read %s: %v\n", arguments[1], err)
+		return 2
+	}
+	feedback, err := agentrequest.UnmarshalFeedback(feedbackContent)
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: %v\n", err)
+		return 1
+	}
+	if err := agentrequest.ValidateCoverage(request, feedback); err != nil {
+		fmt.Fprintf(stderr, "forma: %v\n", err)
+		return 1
+	}
+	if feedback.Status != "succeeded" {
+		fmt.Fprintf(stderr, "forma: Generation Feedback status is %s\n", feedback.Status)
+		return 1
+	}
+	summary := agentrequest.SummarizeCoverage(feedback)
+	fmt.Fprintf(stdout, "verified %d acceptance facts: all passed\n", len(request.AcceptanceFacts.Facts))
+	fmt.Fprintf(stdout, "  %d distinct tests, max %d facts per test\n", summary.DistinctTests, summary.MaxFactsPerTest)
 	return 0
 }
 
@@ -136,8 +196,12 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "Usage:")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma request <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma verify <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
 	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
 	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
+	fmt.Fprintln(writer, "  request  emit a full Generation Request for a coding agent")
+	fmt.Fprintln(writer, "  verify   validate Generation Feedback against an immutable request")
 }

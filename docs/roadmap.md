@@ -24,10 +24,10 @@ Forma source
 | --- | --- | --- |
 | 言語思想 | 方針修正済み | AI coding agentを必須の実行主体とし、Formaはpromptより強い入力を作る |
 | v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義 |
-| reference front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Map |
-| CLI | 最小実装 | `forma check`とcanonical JSONを出力する`forma resolve` |
-| Generation Request | 未実装 | stable fact ID、coverage照合、source差分を含むschemaを実装する |
-| agent execution | 未実装 | repository inspection、編集、build/test feedback loopが必要 |
+| reference front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Map、admin-flow Acceptance Facts |
+| CLI | 最小実装 | `forma check`、`forma resolve`、`forma request`、coverageを検査する`forma verify` |
+| Generation Request | 最小slice | `v0alpha1` full request、stable fact ID、immutable requestに対するcoverage集合照合。incremental changeは未実装 |
+| agent execution | 初回実測済み | standalone Go repositoryへ管理画面flowを実装し43/43 factsを確認。自動repair loopは未実装 |
 | incremental update | 未実装 | intent差分を既存repositoryへ適用する実験が必要 |
 | Go admin/conformance | 凍結prototype | 意味抽出のprobeとして保存。正式generator/profile architectureにはしない |
 
@@ -71,6 +71,7 @@ intentを作る。
 - Source Mapを別出力にして、nodeを現在のForma sourceへ戻せるようにする
 - sourceの省略から導出したprojection、access、Submit Intentを説明可能にする
 - Resolved Intentのversioningと互換性方針を定める
+- [x] list/detail/editの正常系・拒否系Acceptance Factsをstable ID付きで出力する
 
 ### Exit criteria
 
@@ -100,16 +101,25 @@ intentを作る。
 各Acceptance Factはstable IDを持つ構造化nodeとし、散文promptにはしない。agentが作るtestは対応する
 fact IDを参照し、requestのfact ID集合とtest coverageの集合を機械的に照合する。
 
+最小のfull requestは`forma request`として実装済みである。
+[`../experiments/admin-agent-e2e`](../experiments/admin-agent-e2e/README.md)のlist/detail/edit flowを
+golden化し、通常のstandalone Go repositoryへの初回agent実装と43 factsのcoverage照合まで完了した。
+incremental requested changeと、独立agentまたは実在repositoryでの再現確認が次の段階である。
+次のincremental experimentでは
+[`implementation-policy-manifest-proposal.md`](implementation-policy-manifest-proposal.md)の最小policyを
+同乗させ、「何を作るか」と「何を使って作るか」を分離したまま検証する。
+
 repositoryのframework、library、file構成はFormaがprofileとして再定義しない。agentが既存codeとpolicyから
 読み取り、必要な実装を選ぶ。
 
 ### 最初の実験
 
-1. User signup/signin flowを持つ小さなrepositoryを用意する。
-2. 管理側のUser list/detail/edit flowを同じrepositoryへ追加する。
-3. Resolved IntentとAcceptance Factsだけをapplication要求としてagentへ渡す。
-4. agentがrepository固有のcodeとtestを作り、既存build/testを通す。
-5. agentがFormaに存在しない要求を推測した箇所を記録する。
+1. [x] repository規約を持つ小さなstandalone Go repositoryを用意する。
+2. [x] 管理側のUser list/detail/edit flowを追加する。
+3. [x] Resolved IntentとAcceptance Factsを正本としてagentへ渡す。
+4. [x] repository固有のcodeとtestを作り、既存build/testを通す。
+5. [x] Formaに存在しない実装判断と、意味の不足を分けて記録する。
+6. User signup/signin flowとidentity axisは別probeとして実施する。
 
 ### Exit criteria
 
@@ -136,12 +146,13 @@ Generation Request
 
 ### 実装する
 
-- stage、status、command、diagnostic、関連intent nodeを持つfeedback envelope
+- [x] stage、status、command、diagnostic、関連intent node、fact coverageを持つ`v0alpha1` feedback型
+- [x] required fact IDとcoverageの完全一致、未知・重複・未参照を拒否するvalidator
+- [x] immutableなrequestとfeedback JSONを検査する`forma verify`
 - compiler errorとrepository build/test failureの分離
 - Source Mapを使ったForma declarationへの関連付け
 - agentが意味を勝手に弱めず、実装を修正するretry policy
-- fact ID、repository固有test reference、resultを持つcoverage report
-- requestとcoverageのfact ID集合が完全一致することの機械的検査
+- [x] fact ID、repository固有test reference、resultを持つcoverage report
 
 ### Exit criteria
 

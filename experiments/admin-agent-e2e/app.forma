@@ -1,0 +1,50 @@
+// Agent-generation experiment input. No target framework or route is named.
+
+role admin
+
+type Email = String matches /.+@.+/
+type Plan = Free | Pro | Enterprise
+
+entity Team {
+    name String required label
+}
+
+entity User {
+    name  String required label
+    email Email required unique
+    team  Team
+    plan  Plan required
+
+    state status Pending | Confirmed | Active | Suspended initial Pending
+}
+
+page Users {
+    allow admin
+
+    list User {
+        columns name, email, team, plan, status
+        search name, email
+        filter team, plan, status
+        sort name asc
+        paginate 20
+        actions view, edit
+    }
+}
+
+page UserDetail(user User) {
+    allow admin
+
+    detail user {
+        fields name, email, team, plan, status
+        actions edit
+    }
+}
+
+page UserEdit(user User) {
+    allow admin
+
+    form user {
+        fields name, email, team, plan
+        submit edit
+    }
+}

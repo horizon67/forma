@@ -2,6 +2,10 @@
 
 Formaの実験は、language semanticsとagent generation boundaryを実例から確認するために置く。
 
+## Active experiment
+
+- [`admin-agent-e2e`](admin-agent-e2e/README.md) — Resolved IntentとAcceptance Factsをcoding agentへ渡し、standalone targetで43 factsを検証
+
 ## Frozen prototypes
 
 - [`admin-e2e`](admin-e2e/README.md)

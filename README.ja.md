@@ -223,7 +223,9 @@ Formaは次を目指しません。
 
 Formaは初期設計段階で、compilerは未releaseです。現在のGo front-endはdesign draft v0.4のgrammar、
 parser、名前解決、型検査、semantic validation、stable identity、Resolved Intent、Source Mapを部分実装
-しています。v0外のself-only Invariant sliceも実験的に含みます。
+し、管理画面flow向けの最小Acceptance Facts／Generation Request sliceも実装しています。最初のcontrolled
+agent runではstandalone Go repositoryへ管理画面を実装し、43件すべてのAcceptance Factsを検証しました。
+v0外のself-only Invariant sliceも実験的に含みます。
 
 `experiments/`配下のGo管理画面generatorとtarget-neutral conformance adapterは、今後の正式architecture
 ではなく、**意味を発見するための凍結済みprototype**です。front-endに不足していた情報の確認には
@@ -231,11 +233,13 @@ parser、名前解決、型検査、semantic validation、stable identity、Reso
 
 - [Forma v0仕様](docs/v0-primitives.md)
 - [Agent generation model](docs/agent-generation.md)
+- [Implementation Policy Manifest案](docs/implementation-policy-manifest-proposal.md)
 - [開発ロードマップ](docs/roadmap.md)
 - [言語設計原則](docs/language-design-principles.md)
 - [ユーザー管理の完全例](examples/users.forma)
 - [注文承認・在庫probe](examples/orders.forma)
 - [最小式レイヤ案](docs/expression-proposal.md)
+- [進行中の管理画面agent-generation experiment](experiments/admin-agent-e2e/README.md)
 - [凍結済み管理画面生成prototype](experiments/admin-e2e/README.md)
 - [凍結済みconformance prototype](experiments/conformance/README.md)
 
@@ -245,12 +249,14 @@ Go 1.24以上でcheckerを実行できます。
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma resolve examples/users.forma
+go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
+go run ./cmd/forma verify internal/agentrequest/testdata/admin.request.json experiments/admin-agent-e2e/target/generation-feedback.json
 go test ./...
 ```
 
 1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。二つのexampleは独立した
 applicationなので、上記のように個別に検査します。
 
-`forma resolve`はcanonicalなResolved Intent JSONを出力できます。次のtooling milestoneは
-Generation Requestとagent feedback loopです。framework固有の`forma build --profile`は
-core roadmapから外します。
+`forma resolve`はcanonicalなResolved Intent JSON、`forma request`は現在のfull Generation Request
+sliceを出力します。`forma verify`はimmutableなrequestに対してagent feedbackを検査します。次のmilestone
+は既存target repositoryへのincremental changeと、自動repair loopです。

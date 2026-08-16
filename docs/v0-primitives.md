@@ -628,6 +628,11 @@ Acceptance Factsは言語仕様を置き換えるものではなく、agentがta
 それらから決定的に導出したstable fact IDを持つ。上記の箇条書きは人間向け表示であり、正式な交換形式を
 散文にはしない。
 
+Acceptance Factsのversionはserialization shapeだけでなく、Resolved Intentからfact kind、ID、input、
+expectedを導出する規則も固定する。導出結果を変える変更ではversionを更新する。verifierがrequestの
+Resolved Intent、Acceptance Facts、Source Map versionをsupportしない場合はcurrent builderで再解釈せず、
+matching Forma versionを要求する明示的なerrorを返す。
+
 ### 8.3 Generation Request
 
 Resolved Intent、Acceptance Facts、Source Map、requested changeをmachine-readableなGeneration Requestへ
@@ -641,8 +646,11 @@ Forma coreはframework別profile manifest、capability matrix、共通runtime ad
 
 agentはrepositoryを編集し、既存のbuild、test、lintを実行する。failureはstage、command、diagnostic、
 関連intent nodeを持つstructured feedbackとして返す。各repository固有testは対応するfact IDを参照し、
-feedbackはfact ID、test reference、resultを持つcoverageを返す。`succeeded`の前に、requestとcoverageの
-fact ID集合が完全一致し、すべてpassedであることをorchestration layerが機械的に検査する。
+feedbackはfact ID、`repository/relative/path#test-identifier`形式のtest reference、resultを持つcoverageを
+返す。orchestration layerはcompilerが生成したrequestをimmutableに保持し、agentから返されたcopyを検証の
+正本にしない。`succeeded`の前に、Resolved Intentから再導出したcanonical factsとrequestの複製情報を照合し、
+canonical factsとcoverageのfact ID集合が完全一致し、すべてpassedであることをorchestration layerが
+機械的に検査する。
 agentはfailureを解消するために実装を変更してよいが、
 Forma constraintやAcceptance Factを黙って弱めてはならない。
 
@@ -880,9 +888,9 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 | --- | --- | --- |
 | Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.4`として部分実装 |
 | Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.2`として実装済み |
-| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | schema要件を定義。kindごとの詳細は未実装 |
-| Generation Request | intent、facts、source map、requested change | 未決定 |
-| Generation Feedback | stage、command、diagnostic、関連intent node、fact coverage、status | schema要件を定義。未実装 |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha1`のadmin-flow sliceを実装 |
+| Generation Request | intent、facts、source map、requested change、verification policy | `forma/generation-request/v0alpha1`のfull requestを実装 |
+| Generation Feedback | stage、command、diagnostic、関連intent node、fact coverage、status | `v0alpha1`型、`forma verify`、管理画面43 factsの初回target runを実装。自動repair loopは未実装 |
 
 framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の
 schemaへ固定しない。model provider、prompt template、tool listもagent execution設定であり、language
@@ -891,8 +899,8 @@ versionのblockerではない。
 ### 14.2 現行reference front-endとの差分
 
 現在のGo front-endはdesign draft v0.4のsurface syntaxを部分実装し、Lexer、Parser、syntax AST、
-主要な静的検査、core Resolved Intent、golden output、Source Mapまで実装済みである。ただしdesign draft
-v0.4に対して、少なくとも次は未実装である。
+主要な静的検査、core Resolved Intent、golden output、Source Map、admin-flow Acceptance Facts、full
+Generation Requestまで実装済みである。ただしdesign draft v0.4に対して、少なくとも次は未実装である。
 
 reference front-endはこの規範v0に加え、[Minimal Expression Layer Proposal](expression-proposal.md)を
 検証するexperimental syntaxとして、selfのrequired field同士を`<=`で比較する名前付きInvariantも受理する。
@@ -901,7 +909,8 @@ reference front-endはこの規範v0に加え、[Minimal Expression Layer Propos
 - §5.7の省略projectionを展開したlist/detail intent
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
 - v0で閉じたstring/regex escape setの厳密な検査
-- Acceptance Facts、Generation Request、Generation Feedback
+- state transitionなどadmin CRUD外のAcceptance Fact kind
+- incremental Generation Requestと、自動repairを行うGeneration Feedback loop
 
 したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.4 Resolved Intent schemaの
 完成形ではない。
@@ -975,8 +984,9 @@ enforce field, state, and role constraints
 - observable domain occurrenceをactionから導出するか、明示するか
   （[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)）
 - `forma diagram`でstate machineやentity graphを生成し、図をsource of truthにせず利用できるか
-- coding agentが[repositoryとarchitecture context](architecture-manifest.md)をどこまで自動で読み取り、
-  どこから明示的なuser constraintを必要とするか
+- coding agentがrepositoryとarchitecture contextをどこまで自動で読み取り、どこから明示的なuser
+  constraintを必要とするか。検証可能なconstraintの最小形は
+  [Implementation Policy Manifest Proposal](implementation-policy-manifest-proposal.md)でprobeする
 
 v1の式レイヤはまだ決定事項ではない。まず注文・明細・在庫のような実例を`examples/`へ書き、
 導出値、invariant、state以外のaction preconditionだけで何が表現でき、どこからeffectが必要に

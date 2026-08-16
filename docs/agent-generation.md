@@ -1,6 +1,6 @@
 # Agent Generation Model
 
-Status: architectural direction — request schema is still exploratory
+Status: architectural direction — minimal admin-flow request schema implemented as `v0alpha1`
 
 Formaのend-to-end実行モデルでは、AI coding agentは任意のgenerator implementationではなく、
 application codeを作る主体である。
@@ -115,7 +115,8 @@ request、browser testなどへ変換する。Forma自身はHTTP statusやDOM se
 Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromptではない。期待する意味はForma
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
-各factは少なくとも次を持つ。詳細なkindごとのschemaは最初のagent generation experimentで固定する。
+各factは少なくとも次を持つ。管理画面list/detail/edit向けの最小kindは
+`forma/acceptance-facts/v0alpha1`として実装し、追加domainのkindは実例から拡張する。
 
 ```text
 AcceptanceFact
@@ -141,14 +142,26 @@ GenerationRequest
   acceptanceFacts
   sourceMap
   requestedChange
+  verification
+    feedbackSchema
+    requiredFactIds
+    requireTestReference
+    rejectUnknownFacts
 ```
 
 `requestedChange`は初回生成ならapplication全体、更新なら前回から変化したintent nodeを表す。
 target repositoryそのものはrequestへ複製せず、agentへworkspaceとして渡す。architecture constraintsや
-禁止事項が必要なら、repositoryのpolicy fileまたは明示的なuser instructionとして同時に渡す。
+禁止事項が必要なら、repositoryのpolicy fileまたは明示的なuser instructionとして同時に渡す。これらを
+genericかつ検証可能なentryとして構造化する案は
+[`implementation-policy-manifest-proposal.md`](implementation-policy-manifest-proposal.md)に記録する。
 
 model名、prompt template、tool listをForma language semanticsへ含めない。それらはagent executionの
 設定であり、Generation Requestの意味ではない。
+
+Generation RequestはForma orchestration layerがcompilerから受け取り、agent実行中もimmutableな入力として
+保持する。完了判定にagentから返されたrequestのcopyを使用してはならない。`requiredFactIds`はagentが作業対象を
+確認するための複製であり、coverage検証時の正本ではない。検証側は保持しているResolved IntentからAcceptance
+Factsを再導出し、request内のfactsおよび`requiredFactIds`と一致することを先に確認する。
 
 ## Feedback loop
 
@@ -169,9 +182,30 @@ GenerationFeedback
 ```
 
 Generation Requestは、各factをrepository固有testへ変換し、そのtestまたはsidecar manifestからfact IDを
-参照できるようagentへ要求する。`succeeded`と判定する前にForma orchestration layerは、request内のfact ID
-集合と`factCoverage`の集合が完全に一致し、未知・重複・未参照factがなく、すべて`passed`であることを
-機械的に照合する。この照合はtarget固有adapterではなくID集合とtest結果の検査である。
+参照できるようagentへ要求する。`succeeded`と判定する前にForma orchestration layerは、保持したrequestの
+Resolved Intentから再導出したcanonical fact ID集合と`factCoverage`の集合が完全に一致し、未知・重複・
+未参照factがなく、すべて`passed`であることを機械的に照合する。この照合はtarget固有adapterではなく
+ID集合とtest結果の検査である。
+
+`testReferences`の最小交換形式は`repository/relative/path#test-identifier`とする。空文字、絶対path、正規化
+されていないpath、同一fact内の重複参照は拒否する。1つのintegrationまたはE2E testが複数factを同時に検査する
+ことは正当なので、異なるfact間で同じtest referenceを共有してよい。
+
+現在のreference CLIでは、orchestration layerが保持したrequestとagentのfeedbackを次のように照合する。
+
+```bash
+forma verify request.json generation-feedback.json
+```
+
+このcommandはJSON schemaの未知field、request内のfacts/policy改竄、coverage集合の不一致、不正なtest
+reference、未成功resultを拒否する。またdistinct test数と1 testあたりの最大fact数を表示し、coverageの
+集中を可視化する。repositoryのtest command自体はagent execution側が実行する。
+
+`AcceptanceFacts.version`はJSON shapeだけでなく、Resolved Intentからfactを導出する規則のversionでもある。
+fact kind、ID、input、expected、導出対象を変える場合はこのversionを更新する。同様にResolved Intentと
+Source Mapも各versionへ対応する。現在のverifierがrequestのversionをsupportしない場合、canonical比較を
+実行せず、matching Forma versionで検証するよう明示的に拒否する。将来過去versionをsupportする場合は、
+versionに対応するbuilderへdispatchする。
 
 この機構はfactの変換漏れを防ぐが、test内容がfactを忠実に検査していることまで証明しない。その確認には
 repositoryのreviewと、将来必要ならtest mutationなど別の検証を使う。
