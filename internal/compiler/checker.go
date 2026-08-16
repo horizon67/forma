@@ -61,7 +61,7 @@ type checker struct {
 	diagnostics []Diagnostic
 }
 
-func check(program *Program) (*SemanticIR, *SourceMap, []Diagnostic) {
+func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 	c := &checker{
 		program: program, types: map[string]*TypeDecl{}, entities: map[string]*EntityDecl{},
 		pages: map[string]*PageDecl{}, roles: map[string]*RoleDecl{}, actions: map[string]*ActionDecl{},
@@ -81,7 +81,7 @@ func check(program *Program) (*SemanticIR, *SourceMap, []Diagnostic) {
 	if len(c.diagnostics) > 0 {
 		return nil, nil, c.diagnostics
 	}
-	ir, sourceMap := c.buildIR()
+	ir, sourceMap := c.buildIntent()
 	return ir, sourceMap, nil
 }
 

@@ -2,11 +2,31 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestResolveCommand(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"resolve", path}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	var intent struct {
+		Version string `json:"version"`
+		Pages   []any  `json:"pages"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &intent); err != nil {
+		t.Fatalf("resolve output is not JSON: %v\n%s", err, stdout.String())
+	}
+	if intent.Version != "forma/resolved-intent/v0.4" || len(intent.Pages) == 0 {
+		t.Fatalf("resolved intent = %#v", intent)
+	}
+}
 
 func TestCheckCommand(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")

@@ -42,8 +42,8 @@ canonical semantic nodeへ一意に正規化でき、formatterが一つの表記
 
 ### 4. 暗黙性を閉じ、説明可能にする
 
-defaultと自動解決は、閉じた規則から決定的に導出できる場合だけ許す。導出結果はSemantic IRへ記録し、
-compilerから人間向けに表示できなければならない。target profileやAI generatorに推測させない。
+defaultと自動解決は、閉じた規則から決定的に導出できる場合だけ許す。導出結果はResolved Intentへ記録し、
+compilerから人間向けに表示できなければならない。coding agentにapplication semanticsを推測させない。
 
 ### 5. 依存を明示的に追跡できるようにする
 
@@ -54,14 +54,13 @@ compilerから人間向けに表示できなければならない。target profi
 ### 6. 変更の意味を読めるようにする
 
 小さなtext変更が常に小さな影響になるとは限らない。permissionの1語変更が多くの利用者へ影響する
-こともある。重要なのは影響を小さく見せることではなく、Semantic IRとconformance contractの差分から
+こともある。重要なのは影響を小さく見せることではなく、Resolved IntentとAcceptance Factsの差分から
 正確な影響を確認できることである。
 
 ### 7. 高水準でも原因を追えるようにする
 
-diagnostic、conformance failure、generated artifact上の重要なbehaviorは、対応するForma declarationへ
-戻れなければならない。抽象化はtarget codeを読まなくてよくするためのもので、原因を隠すためのものでは
-ない。
+diagnostic、repositoryのbuild/test failure、実装上の重要なbehaviorは、対応するForma declarationへ
+戻れなければならない。抽象化は原因を隠すためのものではない。
 
 ## `examples/users.forma`の可読性監査
 
@@ -81,7 +80,7 @@ diagnostic、conformance failure、generated artifact上の重要なbehaviorは�
 | 標準actionとdomain actionの混在 | 解決規則は閉じているが、読者は参照先を確認することがある | 構文は維持し、解決済み表示をcompiler projectionへ含める |
 | `form User` / `form user` | entityとbindingの区別はcaseだけでなく、page parameterと`submit create/edit`から確認できる | 新しいform mode構文は追加せず維持 |
 | `submit create/edit` | modeと整合する冗長な記述が誤読と誤指定を検査できる | canonical exampleでは明示する |
-| 標準actionの成功後navigation | source上は省略されるが、仕様から一意に解決されSemantic IRへ記録される | 維持し、人間向けの展開表示をfront-end要件にする |
+| 標準actionの成功後navigation | source上は省略されるが、仕様から一意に解決されResolved Intentへ記録される | 維持し、人間向けの展開表示をfront-end要件にする |
 
 今回の監査では、10個のプリミティブを増やす必要はなかった。変更したのは、作成時の挙動を決める
 初期stateを明示することだけである。
@@ -93,8 +92,8 @@ diagnostic、conformance failure、generated artifact上の重要なbehaviorは�
 - 省略されるのは実装詳細か、利用者から観測できるapplication semanticsか。
 - 宣言だけを読んで、適用されるconstraintとdependencyを予測できるか。
 - compilerは省略された意味と参照解決の理由を表示できるか。
-- target frameworkの用語がSemantic IRへ漏れていないか。
+- target frameworkの用語がResolved Intentへ漏れていないか。
 - 同じ変更を数か月後にreviewしても、意味の差分を説明できるか。
 
-判断に迷う場合は、同じSemantic IRを表す候補を複数作り、説明、誤り発見、変更、影響予測、再読の
+判断に迷う場合は、同じResolved Intentを表す候補を複数作り、説明、誤り発見、変更、影響予測、再読の
 taskで比較する。主観的な「美しさ」だけを採用理由にしない。

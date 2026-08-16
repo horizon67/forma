@@ -3,6 +3,7 @@
 role admin
 
 type Email = String
+type Plan = Free | Pro | Enterprise
 
 entity Team {
     name String required label
@@ -12,6 +13,7 @@ entity User {
     name  String required label
     email Email required
     team  Team
+    plan  Plan required
 
     state status Pending | Confirmed | Active | Suspended initial Pending
 }
@@ -20,7 +22,7 @@ page Users {
     allow admin
 
     list User {
-        columns name, email, team, status
+        columns name, email, team, plan, status
         actions view, edit
     }
 }
@@ -29,7 +31,7 @@ page UserDetail(user User) {
     allow admin
 
     detail user {
-        fields name, email, team, status
+        fields name, email, team, plan, status
         actions edit
     }
 }
@@ -38,7 +40,7 @@ page UserEdit(user User) {
     allow admin
 
     form user {
-        fields name, email, team
+        fields name, email, team, plan
         submit edit
     }
 }

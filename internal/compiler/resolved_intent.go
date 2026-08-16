@@ -1,14 +1,15 @@
 package compiler
 
-const SemanticIRVersion = "forma/v0.4"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.4"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
 // not.
 type SemanticID string
 
-// SemanticIR is the target-neutral, fully resolved Forma program.
-type SemanticIR struct {
+// ResolvedIntent is the target-neutral, fully resolved application intent that
+// a coding agent must implement. It contains no repository-specific lowering.
+type ResolvedIntent struct {
 	Version  string     `json:"version"`
 	Roles    []IRRole   `json:"roles,omitempty"`
 	Types    []IRType   `json:"types,omitempty"`
@@ -131,7 +132,6 @@ type IRView struct {
 	Sort              *IRSort         `json:"sort,omitempty"`
 	PageSize          int             `json:"pageSize,omitempty"`
 	Actions           []IRActionRef   `json:"actions,omitempty"`
-	Relations         []IRChoice      `json:"relationChoices,omitempty"`
 	Submit            *IRSubmitIntent `json:"submit,omitempty"`
 	InteractionStates []string        `json:"interactionStates"`
 }
@@ -140,48 +140,36 @@ type IRSort struct {
 	ID        SemanticID `json:"id"`
 	Field     string     `json:"field"`
 	Direction string     `json:"direction"`
-	TieBreak  string     `json:"tieBreak"`
 }
 
 type IRActionRef struct {
-	ID                       SemanticID `json:"id"`
-	Name                     string     `json:"name"`
-	Kind                     string     `json:"kind"`
-	TargetPage               string     `json:"targetPage,omitempty"`
-	SuccessPage              string     `json:"successPage,omitempty"`
-	Access                   IRAccess   `json:"access"`
-	PreventDuplicateDispatch bool       `json:"preventDuplicateDispatch"`
-	FailureFeedback          bool       `json:"failureFeedback"`
-}
-
-type IRChoice struct {
-	ID     SemanticID `json:"id"`
-	Field  string     `json:"field"`
-	Entity string     `json:"entity"`
-	Label  string     `json:"label"`
+	ID          SemanticID `json:"id"`
+	Name        string     `json:"name"`
+	Kind        string     `json:"kind"`
+	TargetPage  string     `json:"targetPage,omitempty"`
+	SuccessPage string     `json:"successPage,omitempty"`
+	Access      IRAccess   `json:"access"`
 }
 
 // IRSubmitIntent is the fully resolved mutation represented by a form. The
-// target must not infer the action, success navigation, authorization, or
-// interaction guarantees from the surrounding view.
+// target must not infer the action, success navigation, or authorization from
+// the surrounding view. Universal execution guarantees are emitted as
+// Acceptance Facts rather than repeated as implementation-shaped booleans.
 type IRSubmitIntent struct {
-	ID                       SemanticID         `json:"id"`
-	Action                   string             `json:"action"`
-	Success                  IRNavigationIntent `json:"success"`
-	Access                   IRAccess           `json:"access"`
-	PreventDuplicateDispatch bool               `json:"preventDuplicateDispatch"`
-	FailureFeedback          bool               `json:"failureFeedback"`
+	ID      SemanticID         `json:"id"`
+	Action  string             `json:"action"`
+	Success IRNavigationIntent `json:"success"`
+	Access  IRAccess           `json:"access"`
 }
 
 // IRNavigationIntent is either a fixed page or one of the two closed v0
 // runtime policies. FallbackPage is used when caller-list has no caller, such
 // as a directly navigated form.
 type IRNavigationIntent struct {
-	ID            SemanticID `json:"id"`
-	Kind          string     `json:"kind"`
-	Page          string     `json:"page,omitempty"`
-	FallbackPage  string     `json:"fallbackPage,omitempty"`
-	RecheckAccess bool       `json:"recheckAccess"`
+	ID           SemanticID `json:"id"`
+	Kind         string     `json:"kind"`
+	Page         string     `json:"page,omitempty"`
+	FallbackPage string     `json:"fallbackPage,omitempty"`
 }
 
 // IRAccess is a conjunction of requirements. Each roles requirement is an

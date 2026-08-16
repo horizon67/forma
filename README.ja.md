@@ -4,11 +4,10 @@
 
 **アプリケーションそのものを高水準に記述する言語。**
 
-Formaは、framework固有の実装方法ではなく、entity、state、relation、action、page、list、form
-といったアプリケーション概念によってソフトウェアを記述する、実験的なプログラミング言語です。
+Formaは、coding agentへ渡す自然言語promptを、型付き・検査可能・review可能な言語へ置き換えます。
 
-> Formaのsourceは、アプリケーションが「何であるか」を表現します。
-> compilerはその意味を決定し、target generatorが実装へ変換します。
+> 人間はFormaでapplication intentを決めます。compilerはその意味を解決し、AI coding agentが
+> 通常のsoftware repositoryへ実装します。
 
 ```forma
 type Email = String matches /.+@.+/
@@ -23,6 +22,8 @@ entity User {
 action User.activate: Confirmed -> Active
 
 page Users {
+    allow admin
+
     list User {
         columns name, email, status
         search name, email
@@ -34,14 +35,38 @@ page Users {
 }
 ```
 
-`list User`は「ユーザーの集合を提示する」という意味です。HTMLのtable、React component、
-database queryを指定するものではありません。target profileが、宣言されたアプリケーションの
-意味を保ちながら、platformに適した実装を選択します。
+`list User`は「Userの集合を利用者へ提示する」という意味です。HTML table、React component、endpoint、
+query builderを指定するものではありません。coding agentが対象repositoryを読み、解決済みintentを
+保つ実装を選びます。
 
-## Formaが記述するアプリケーション
+## 中心となる実行モデル
 
-1つのcompilation unitが、1つのForma applicationを表します。現行v0では、そのapplicationを
-次の構成要素で記述します。
+AI生成はFormaで選択可能なbackendではありません。end-to-endの中心となる実行モデルです。
+
+```text
+Forma source
+  → parse / check / resolve
+  → Resolved Intent + Acceptance Facts
+  → Generation Request
+  → AI coding agent + target repository
+  → 通常のapplication code
+  → build / test
+  → failureをagentへfeedback
+```
+
+決定的なForma front-endの責務は、意味を確定するところまでです。その意味をframework固有fileへ
+loweringしません。coding agentはmachine-readableなrequestを受け取り、実際のrepositoryにある
+architecture、library、convention、testを使って実装します。
+
+この境界がFormaの独自性です。
+
+> 従来のDSLはcode generatorを作る。FormaはAIがcodeを作るための、promptより強い入力を作る。
+
+責務境界とrequest/feedback loopは[Agent Generation Model](docs/agent-generation.md)にまとめています。
+
+## Formaが記述するもの
+
+1つのcompilation unitが1つのapplication namespaceを表します。現在のv0設計には次の概念があります。
 
 ```text
 Application
@@ -62,13 +87,11 @@ Application
     └── Role
 ```
 
-Relationは独立したprimitiveではなく、entity型のFieldとして表します。Actionは現在、entityの
-許可された状態遷移を表します。正確なsyntaxとsemanticsは
+Relationは独立primitiveではなくentity型のFieldとして表します。Actionは現在、許可されたentityの
+state transitionを表します。正確なsyntaxとsemanticsは
 [Forma v0仕様](docs/v0-primitives.md)に定めています。
 
-### 設計中の構成要素
-
-実例から必要性を検証している、未実装の構成要素もあります。
+次の概念はまだ設計中です。
 
 ```text
 Under design
@@ -77,180 +100,26 @@ Under design
 │   ├── Invariant
 │   └── Precondition
 ├── Changes
-│   └── Atomic postconditions
 ├── Occurrence
 ├── Effect
 └── Identity
 ```
 
-Expressionは[最小式レイヤ案](docs/expression-proposal.md)、Changes、Occurrence、Effectは
-[注文承認・在庫のprobe](docs/order-approval-proposal.md)、Identityは
-[表側の会員登録・identity案](docs/public-membership-proposal.md)で検討しています。これらの名称や
-syntaxは、まだ言語仕様として確定していません。
+[最小式レイヤ案](docs/expression-proposal.md)、
+[注文承認・在庫probe](docs/order-approval-proposal.md)、
+[表側の会員登録案](docs/public-membership-proposal.md)で実例から検討しています。
 
 ## なぜFormaなのか
 
-アプリケーションのsource codeには、性質の異なる2種類の情報が含まれています。
+AI coding agentは、すでに次のような高水準の要求を受け取っています。
 
-1. そのアプリケーションに固有の意思決定
-2. frameworkやruntimeが要求する実装上の仕組み
+> nameとemailで検索できる、page size 20のUser一覧を追加して。
 
-Formaは、前者の密度を最大化し、後者の記述量を最小化することを目指します。
+自然言語promptは便利ですが、永続的なapplication sourceとしては弱いものです。名前解決や型がなく、
+省略と意思決定の区別も曖昧で、後のpromptが以前の意味を再解釈できます。散文の仕様書にも同じ同期問題が
+あり、人間は継続的に読み直して実装と比較しなければなりません。
 
-上の例でdeveloperが決めたのは、どのentityを表示するか、どのfieldを見せて検索可能にするか、
-どのfieldで絞り込めるか、そしてlogical page sizeです。requestのencoding、data fetching、
-loading/failure state、queryの組み立て、widget、cache更新、routingは実装上の仕組みです。
-
-従来の実装では、これらをfrontend、backend、database、API contract、testの間で連携させる
-必要があります。Formaでは、それらを一つのapplication-level declarationから生じる結果として
-扱います。
-
-## なぜ今Formaなのか
-
-AI-assisted developmentによって、人間とsource codeの関係は変わりました。developerが実装コードを
-一行ずつ書く機会は減り、生成された大量のコードをすべて読むことも現実的ではなくなっています。
-それでも現在の開発では、frontend、backend、database、schema、testなどに異なる言語が使われ、
-アプリケーションの仕様は設計書、実装コード、API spec、issue、promptへ分散したままです。
-
-Spec-Driven Development（SDD、仕様駆動開発）は、この分散を減らす有効な試みです。しかし、散文の
-仕様書はそれ自体を継続的に読み、実装との対応を確認し、変更のたびに同期しなければなりません。
-機械が実装の大部分を担う時代に、人間が長い仕様書と生成コードの両方を運用し続けるのは退屈で、
-driftも起こりやすい作業です。
-
-Formaの仮説は、必要なのが「さらに詳しい仕様書」ではなく、設計図として読め、programとしてparse・
-検査・実行できる、より高水準な言語ではないか、というものです。人間が保守するのは短く意味密度の
-高いForma sourceです。compilerはそこから意味を確定し、AIを含むtarget generatorが実装を作り、
-conformanceが生成結果を検証します。
-
-```text
-人間が読む・reviewする       Forma source
-機械が生成し保守する         target code
-両者の意味の一致を検証する   compiler + conformance
-```
-
-Formaは自然言語promptを保存する仕組みでも、設計書から一度だけscaffoldを作る仕組みでもありません。
-散在していた設計図、実装上の意思、検査可能なspecを、一つの実行可能なapplication languageへ
-集約することを目指します。
-
-## 思想
-
-### コードはモデルに似ているべき
-
-アプリケーションコードは、developerが実際に考えている概念に近い形であるべきです。
-Userにはstateがあり、Orderにはlifecycleがあり、Pageには検索可能なListがあり、Actionが
-systemを変化させます。これらの概念を言語で直接表現できるようにします。
-
-### 抽象度を一段上げる
-
-既存のプログラミング言語は、machine instruction、memory address、CPU registerを抽象化して
-きました。Formaはさらに一段上へ進み、より大きなアプリケーションの意味を言語に組み込みます。
-
-### 複雑さは抽象化の下に置く
-
-Formaは、ソフトウェアが単純だとは考えません。繰り返し現れる実装上の複雑さを言語概念の背後へ
-移し、compilerとruntimeが一貫して処理できるようにします。
-
-### Syntax sugarではなくsemanticsを優先する
-
-Formaは、Ruby、Go、TypeScriptを短く書くためのsyntaxではありません。`entity`、`state`、
-`action`、`list`、`page`は、compilerが理解するアプリケーション上の意味を持ちます。
-
-### 一つのsourceから複数のtargetへ
-
-Forma sourceは特定のframeworkに結び付きません。同じアプリケーションモデルを、観測可能な
-振る舞いを保ったまま、異なるtarget profileへ変換できることを目指します。
-
-### 人間が読むsourceはFormaだけ
-
-生成されたReact、Ruby、Goなどのtarget codeは、人間が継続的に編集するsourceではありません。
-そのためForma source自体が、diff、review、検索、履歴管理に耐える、アプリケーション唯一の
-source of truthでなければなりません。図が有用な場合も、UMLなどを別の入力として管理するのではなく、
-Forma sourceから常に再生成できるviewとして扱います。
-
-Formaでまだ表現できない要求を、生成コードへの手修正で補ってはいけません。宣言済みのintentを
-profileが実装できない場合はcompile errorとし、言語自体で表現できない要求はv0のscope外として
-明示します。将来のescape hatchも、version管理されたprofileまたはextensionとしてsource側に
-残る形だけを認めます。
-
-### 人間が正確に、長く読める
-
-Forma sourceは、短いことや自然言語のように見えることより、applicationの意味を正確に読めることを
-優先します。target frameworkを知らなくても、何が存在し、誰が何を見て変更でき、どのconstraintと
-state transitionが適用され、変更によって何が変わるかを説明できなければなりません。
-
-実装詳細は省略しますが、意味上重要な事実は隠しません。同じ概念は同じ形で表し、暗黙のdefaultと
-参照解決は閉じた規則から決定的に導出し、compilerが展開して説明できるようにします。詳しい判断基準は
-[Forma Language Design Principles](docs/language-design-principles.md)にまとめています。
-
-### 意味は固定し、実装の形は固定しない
-
-決定性が必要なのは、構文、名前解決、型、認可、遷移、navigation、conformance上の期待値です。
-component分割、ファイル配置、framework APIの使い方まで同一である必要はありません。target
-generatorがAIを利用して生成コードが変化しても、解決済みSemantic IRの意味を変えず、同じ
-conformance contractを通過することを要求します。
-
-## 一つの宣言から複数の結果へ
-
-次のstate transitionを考えます。
-
-```forma
-action User.activate: Confirmed -> Active
-```
-
-これは一つの`if`文を短く書いたものではありません。次のアプリケーションルールを宣言します。
-
-> UserはConfirmed stateからだけActiveになれる。
-
-このルールから、targetはauthoritativeなbackend guard、frontendでのaction availability、
-API contract、stateの再取得、正常・不正遷移のtest、documentationを生成できます。一つのForma
-宣言が複数の生成物へ影響するのは、それがcode templateではなく「意味」を表すためです。
-
-## アーキテクチャ
-
-Formaは、target-neutralなSemantic IRと、そこから決定的に導出されるconformance contractを
-中心に設計します。
-
-```text
-自然言語（任意）
-      │
-      ▼ AI（任意）
- Forma source
-      │
-      ▼ deterministic front-end
-Lexer / Parser / AST / Checker
-      │
-      ▼
-Semantic IR + Conformance Contract
-      │
-      ▼ target profile + generator（AI可）
-Generated Application
-      │
-      ▼ build + deterministic conformance
-Accepted Artifact
-```
-
-compilerは、type、relation、state transition、permission、action、navigationを解決してから、
-target profileにcomponent、transport、persistence、runtime behaviorの選択を委ねます。
-
-決定性の境界は、Forma sourceからSemantic IRとconformance contractまでです。
-
-```text
-Forma source + front-end version -> Semantic IR + Conformance Contract
-```
-
-target generatorはAIを利用でき、生成コードは実行ごとに異なって構いません。ただし、生成物は
-人間が編集するsourceではなく、破棄・再生成可能なartifactです。正しさはコードの同一性ではなく、
-build成功と、決定的に生成されたconformance contractへの適合で判定します。
-
-## FormaとAI
-
-AI-assisted developmentによって、developerは既存のプログラミング言語より高い抽象度で
-アプリケーション変更を説明できることが明らかになりました。
-
-> ユーザー一覧に、名前とメールアドレスの検索とページングを追加して。
-
-現在はcoding agentが、この指示を多数のframework固有コードへ展開します。Formaは、同じ
-高水準の指示を、永続的でreview可能かつ機械的に検査できるsource codeにできるかを探究します。
+Formaは同じ要求を、parse・検査・diff・reviewできるsourceへ変えます。
 
 ```forma
 page Users {
@@ -261,65 +130,127 @@ page Users {
 }
 ```
 
-AIは、自然言語からFormaへの翻訳、target profileの作成、Semantic IRからtarget artifactへの
-生成を支援できます。一方、Formaのsyntax、semantics、validation、Semantic IR、conformance
-contractはAIに依存せず決定的に扱います。
+compilerはcoding agentがrepositoryを変更する前に、field名のtypo、type mismatch、不正なstate
+transition、未解決action、矛盾したpermissionを検出します。その後、参照と決定的なdefaultをすべて
+解決したapplicationの意味を出力します。
 
-AI target generatorへ渡すのは未検査のForma sourceではありません。解決済みSemantic IR、
-versioned target profile、出力契約を渡します。生成物はbuildとconformanceを通過した場合だけ
-採用し、失敗した場合はdiagnosticとともに再生成します。
+## Resolved Intent
+
+compilerの主出力は、lowering用の中間表現ではなく**Resolved Intent**です。coding agentが実装すべき
+application intentを、target-neutralかつmachine-readableに列挙します。
+
+解決済みentity、field、constraint、state、action、permission、page、capability、navigation、stableな
+semantic identityを含みます。React component、HTTP verb、SQL、directory、package名、framework APIは
+含みません。loading widget、relation picker、submission tokenなどの実現機構も含みません。
+
+Source Mapは各resolved nodeをForma sourceへ結び、compilerとrepositoryのfailureを人間がreviewできる
+Forma上の位置へ戻します。
+
+## Acceptance Facts
+
+Formaは、実装後に成立すべきstructuredかつtarget-neutralな事実も導出します。以下はその人間向け表示です。
+
+```text
+- User.activateはConfirmedからだけ成功する
+- adminはUsers pageを閲覧できる
+- Usersはnameとemailで検索できる
+- Usersのlogical page sizeは20
+- 不正なtransitionはstateを変えずに拒否される
+```
+
+coding agentはこれを、対象repositoryで通常使われているunit、integration、request、browser testへ
+変換します。Forma自身はframework adapterを持たず、HTTP statusやDOM selectorを標準化しません。
+
+各factはstable IDを持ち、repository固有testは対応するIDを参照します。generation成功時には、requestの
+fact ID集合とtestがcoverした集合の一致、および全factの成功を機械的に検査します。
+
+期待する意味はForma front-endが決定します。repository固有の実装方法と観測方法だけをagentが決めます。
+
+## Formaとtarget repository
+
+target repositoryは破棄専用artifactではなく、通常のapplication sourceです。coding agentは既存systemへ
+機能を追加し、手書きcodeを保ち、既存architectureに従ってincrementalに変更できます。人間も引き続き
+repositoryで作業できます。
+
+FormaはFormaに記述されたapplication intentを所有し、repositoryは実装を所有します。意味の変更を
+target codeだけへ加えるとdriftするため、次のagent requestまでにForma sourceへ反映します。Formaは
+生成fileのbyte-identical性を要求しません。
+
+具体的な実装判断はagentとrepositoryが所有します。
+
+- componentとUI構造
+- route、API、transport
+- database schema、persistence、migration
+- frameworkとlibraryの使用方法
+- file layoutと命名
+- target固有test
+- 既存codeへのincremental integration
+
+## 設計原則
+
+- framework語彙から逆算せず、application intentを直接表す。
+- 一つの概念に一つのcanonical formを持つ。
+- 実装詳細は省略しても、意味を決める事実は省略しない。
+- defaultと参照を決定的に解決し、理由を説明可能にする。
+- semantic identityからdependencyと変更影響を追跡できるようにする。
+- 実装shapeはrepository contextを読んだcoding agentへ任せる。
+- build/test feedbackは実装修正に使い、intentの再定義には使わない。
+
+詳細なreview基準は[Forma Language Design Principles](docs/language-design-principles.md)にあります。
 
 ## 目標
 
-- アプリケーションの意思決定を、高い意味密度で表現する
-- domain ruleと利用者に見えるcapabilityを、明示的かつ検査可能にする
-- frontend、backend、persistence、testを通じて一貫した振る舞いを生成する
-- Forma sourceをtarget frameworkから独立させる
-- LLMに依存せず、意味と合否判定を再現可能にする
-- target codeを編集不要な生成artifactとして扱う
+- 壊れやすいcoding promptを、型付きで永続的なapplication intentへ置き換える。
+- domain ruleと利用者に見えるcapabilityを明示し、検査可能にする。
+- stableなResolved Intentとmachine-readableなGeneration Requestを出力する。
+- 新規・既存repositoryの両方へcoding agentが実装できるようにする。
+- build/test failureを反復的な修正loopへ戻す。
+- framework別generatorを保有せず、Forma変更をincrementalに適用する。
 
-## 目標にしないこと
+## 非目標
 
-Formaは、次のものを目指しません。
+Formaは次を目指しません。
 
-- あらゆる低水準言語やsystems programming languageを置き換える
-- すべてのtarget frameworkの全機能を公開する
-- 自然言語を実行可能なsyntaxとして使う
-- 構文解析、意味解決、conformance oracleをLLMの判断に委ねる
-- 生成されたtarget codeを手編集し、Forma sourceと真実を二重化する
-- framework固有のshortcut集になる
+- built-inの決定的lowererで各frameworkを生成すること
+- target profile capability matrixやframework adapter suiteを保守すること
+- route、SQL、component、directory、test frameworkを標準化すること
+- application codeのbyte-identicalな再生成を要求すること
+- 未検査の自然言語を実行syntaxにすること
+- parse、名前解決、型検査、Forma semanticsをLLMへ委ねること
+- すべての低水準・systems programming languageを置き換えること
 
-## 現在の状況
+## 現在地
 
-Formaは初期設計段階であり、compilerはまだreleaseされていません。現在の未release Go
-front-endは、design draft v0.4のsurface syntaxを部分実装し、lexer、parser、syntax AST、名前解決、
-型検査、semantic validation、diagnostic、`forma/v0.4` core Semantic IR、Source Mapまで実装しています。
-加えて、v0の規範外で検討中の名前付きInvariantについて、selfのrequired field同士を`<=`で比較する
-最小sliceとResolved Expression IRを実装しています。
+Formaは初期設計段階で、compilerは未releaseです。現在のGo front-endはdesign draft v0.4のgrammar、
+parser、名前解決、型検査、semantic validation、stable identity、Resolved Intent、Source Mapを部分実装
+しています。v0外のself-only Invariant sliceも実験的に含みます。
 
-規範仕様の全機能が実装済みという意味ではありません。conformance contract、target profile
-capability check、artifact生成・検証protocolは未実装です。規範文書はこれらを含む
-design draft v0.4で、reference実装はその一部です。
+`experiments/`配下のGo管理画面generatorとtarget-neutral conformance adapterは、今後の正式architecture
+ではなく、**意味を発見するための凍結済みprototype**です。front-endに不足していた情報の確認には
+役立ちましたが、次に二つ目のframework generatorや共通runtime adapterを作ることはしません。
 
 - [Forma v0仕様](docs/v0-primitives.md)
+- [Agent generation model](docs/agent-generation.md)
 - [開発ロードマップ](docs/roadmap.md)
+- [言語設計原則](docs/language-design-principles.md)
 - [ユーザー管理の完全例](examples/users.forma)
-- [注文承認・在庫のprobe](examples/orders.forma)
-- [Architecture Manifest案（検討中）](docs/architecture-manifest.md)
-- [表側の会員登録・identity案（検討中）](docs/public-membership-proposal.md)
-- [注文承認・在庫・effect案（検討中）](docs/order-approval-proposal.md)
-- [最小式レイヤ案（検討中）](docs/expression-proposal.md)
+- [注文承認・在庫probe](examples/orders.forma)
+- [最小式レイヤ案](docs/expression-proposal.md)
+- [凍結済み管理画面生成prototype](experiments/admin-e2e/README.md)
+- [凍結済みconformance prototype](experiments/conformance/README.md)
 
-Go 1.24以降でcheckerを実行できます。
+Go 1.24以上でcheckerを実行できます。
 
 ```bash
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
+go run ./cmd/forma resolve examples/users.forma
 go test ./...
 ```
 
-1回の`forma check`へ渡したfile/directory集合は、1つのcompilation unit、1つのapplicationとして
-まとめて検査されます。directory構造からapplication境界は推測しません。このrepositoryの2つの
-exampleは独立したapplicationなので、上記のように個別に指定します。
+1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。二つのexampleは独立した
+applicationなので、上記のように個別に検査します。
 
-`forma build`、`forma conformance`、`forma run`は今後実装します。
+`forma resolve`はcanonicalなResolved Intent JSONを出力できます。次のtooling milestoneは
+Generation Requestとagent feedback loopです。framework固有の`forma build --profile`は
+core roadmapから外します。

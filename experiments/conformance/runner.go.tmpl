@@ -1,0 +1,263 @@
+// Code generated from the target-neutral Forma conformance runner. DO NOT EDIT.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"reflect"
+	"sort"
+	"testing"
+)
+
+type conformanceContract struct {
+	Schema    string             `json:"schema"`
+	IntentVersion string             `json:"intentVersion"`
+	Fixture   conformanceFixture `json:"fixture"`
+	Cases     []conformanceCase  `json:"cases"`
+}
+
+type conformanceFixture struct {
+	Entities []conformanceFixtureEntity `json:"entities"`
+}
+
+type conformanceFixtureEntity struct {
+	ID      string                     `json:"id"`
+	Name    string                     `json:"name"`
+	Records []conformanceFixtureRecord `json:"records"`
+}
+
+type conformanceFixtureRecord struct {
+	ID     string             `json:"id"`
+	Values []conformanceValue `json:"values"`
+}
+
+type conformanceValue struct {
+	Field string `json:"field"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type conformanceCase struct {
+	ID        string                 `json:"id"`
+	Operation conformanceOperation   `json:"operation"`
+	Expect    conformanceExpectation `json:"expect"`
+}
+
+type conformanceOperation struct {
+	Kind      string               `json:"kind"`
+	View      string               `json:"view"`
+	Principal conformancePrincipal `json:"principal"`
+	Subject   *conformanceSubject  `json:"subject"`
+	Input     []conformanceValue   `json:"input"`
+}
+
+type conformancePrincipal struct {
+	Kind  string   `json:"kind"`
+	Roles []string `json:"roles"`
+}
+
+type conformanceSubject struct {
+	Entity   string `json:"entity"`
+	Name     string `json:"name"`
+	Identity string `json:"identity"`
+}
+
+type conformanceExpectation struct {
+	Outcome       string                `json:"outcome"`
+	Violation     *conformanceViolation `json:"violation"`
+	Stored        string                `json:"stored"`
+	Subjects      []conformanceSubject  `json:"subjects"`
+	PreserveInput []string              `json:"preserveInput"`
+}
+
+type conformanceViolation struct {
+	Kind  string `json:"kind"`
+	Field string `json:"field"`
+}
+
+type conformanceObservation struct {
+	Outcome        string
+	Violation      *conformanceViolation
+	StoredValues   []conformanceValue
+	Subjects       []conformanceSubject
+	PresentedInput []conformanceValue
+}
+
+type conformanceAdapter interface {
+	Execute(conformanceFixture, conformanceOperation) (conformanceObservation, error)
+}
+
+func runFormaConformance(t *testing.T, adapterFactory func() conformanceAdapter) {
+	t.Helper()
+	content, err := os.ReadFile("conformance.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract conformanceContract
+	if err := json.Unmarshal(content, &contract); err != nil {
+		t.Fatal(err)
+	}
+	if contract.Schema != "forma/conformance/v0alpha1" || contract.IntentVersion == "" {
+		t.Fatalf("unsupported conformance contract %q for Resolved Intent %q", contract.Schema, contract.IntentVersion)
+	}
+	seen := map[string]bool{}
+	for _, testCase := range contract.Cases {
+		testCase := testCase
+		t.Run(testCase.ID, func(t *testing.T) {
+			if seen[testCase.ID] {
+				t.Fatalf("duplicate conformance case %q", testCase.ID)
+			}
+			seen[testCase.ID] = true
+			if err := validateConformanceCase(testCase); err != nil {
+				t.Fatal(err)
+			}
+			observation, err := adapterFactory().Execute(contract.Fixture, testCase.Operation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertConformanceObservation(t, contract.Fixture, testCase, observation)
+		})
+	}
+}
+
+func assertConformanceObservation(
+	t *testing.T,
+	fixture conformanceFixture,
+	testCase conformanceCase,
+	observation conformanceObservation,
+) {
+	t.Helper()
+	if observation.Outcome != testCase.Expect.Outcome {
+		t.Fatalf("outcome = %q, want %q", observation.Outcome, testCase.Expect.Outcome)
+	}
+	if !reflect.DeepEqual(observation.Violation, testCase.Expect.Violation) {
+		t.Fatalf("violation = %#v, want %#v", observation.Violation, testCase.Expect.Violation)
+	}
+	switch testCase.Expect.Stored {
+	case "":
+	case "unchanged":
+		want := fixtureSubjectValues(t, fixture, testCase.Operation.Subject)
+		if !reflect.DeepEqual(valueMap(observation.StoredValues), valueMap(want)) {
+			t.Fatalf("stored values = %#v, want unchanged %#v", observation.StoredValues, want)
+		}
+	case "input":
+		stored := valueMap(observation.StoredValues)
+		for _, value := range testCase.Operation.Input {
+			storedValue, exists := stored[value.Field]
+			if !exists {
+				t.Errorf("stored input %s is missing", value.Field)
+				continue
+			}
+			if storedValue != value.Value {
+				t.Errorf("stored input %s = %q, want %q", value.Field, storedValue, value.Value)
+			}
+		}
+	default:
+		t.Fatalf("unsupported stored expectation %q", testCase.Expect.Stored)
+	}
+	if testCase.Expect.Subjects != nil {
+		got := sortedSubjects(observation.Subjects)
+		want := sortedSubjects(testCase.Expect.Subjects)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("subjects = %#v, want %#v", got, want)
+		}
+	}
+	input := valueMap(testCase.Operation.Input)
+	presented := valueMap(observation.PresentedInput)
+	for _, field := range testCase.Expect.PreserveInput {
+		presentedValue, exists := presented[field]
+		if !exists {
+			t.Errorf("presented input %s is missing", field)
+			continue
+		}
+		if presentedValue != input[field] {
+			t.Errorf("presented input %s = %q, want %q", field, presentedValue, input[field])
+		}
+	}
+}
+
+func validateConformanceCase(testCase conformanceCase) error {
+	switch testCase.Operation.Kind {
+	case "query-view", "submit-form":
+	default:
+		return fmt.Errorf("unsupported conformance operation %q", testCase.Operation.Kind)
+	}
+	switch testCase.Operation.Principal.Kind {
+	case "anonymous":
+		if len(testCase.Operation.Principal.Roles) != 0 {
+			return fmt.Errorf("anonymous principal must not declare roles")
+		}
+	case "roles":
+		if len(testCase.Operation.Principal.Roles) == 0 {
+			return fmt.Errorf("roles principal must declare at least one role")
+		}
+	default:
+		return fmt.Errorf("unsupported principal kind %q", testCase.Operation.Principal.Kind)
+	}
+	switch testCase.Expect.Stored {
+	case "", "unchanged", "input":
+	default:
+		return fmt.Errorf("unsupported stored expectation %q", testCase.Expect.Stored)
+	}
+	return nil
+}
+
+func sortedSubjects(subjects []conformanceSubject) []conformanceSubject {
+	result := append([]conformanceSubject(nil), subjects...)
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Entity != result[j].Entity {
+			return result[i].Entity < result[j].Entity
+		}
+		if result[i].Identity != result[j].Identity {
+			return result[i].Identity < result[j].Identity
+		}
+		return result[i].Name < result[j].Name
+	})
+	return result
+}
+
+func TestFormaConformanceRunnerRejectsUnknownVocabulary(t *testing.T) {
+	tests := []struct {
+		name     string
+		testCase conformanceCase
+	}{
+		{name: "stored", testCase: conformanceCase{Operation: conformanceOperation{Kind: "query-view", Principal: conformancePrincipal{Kind: "anonymous"}}, Expect: conformanceExpectation{Stored: "unknown"}}},
+		{name: "operation", testCase: conformanceCase{Operation: conformanceOperation{Kind: "unknown", Principal: conformancePrincipal{Kind: "anonymous"}}}},
+		{name: "principal", testCase: conformanceCase{Operation: conformanceOperation{Kind: "query-view", Principal: conformancePrincipal{Kind: "unknown"}}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := validateConformanceCase(test.testCase); err == nil {
+				t.Fatal("unknown conformance vocabulary was accepted")
+			}
+		})
+	}
+}
+
+func fixtureSubjectValues(t *testing.T, fixture conformanceFixture, subject *conformanceSubject) []conformanceValue {
+	t.Helper()
+	if subject == nil {
+		t.Fatal("unchanged expectation has no subject")
+	}
+	for _, entity := range fixture.Entities {
+		if entity.ID != subject.Entity {
+			continue
+		}
+		for _, record := range entity.Records {
+			if record.ID == subject.Identity {
+				return record.Values
+			}
+		}
+	}
+	t.Fatalf("fixture subject %s %s is missing", subject.Entity, subject.Identity)
+	return nil
+}
+
+func valueMap(values []conformanceValue) map[string]string {
+	result := make(map[string]string, len(values))
+	for _, value := range values {
+		result[value.Field] = value.Value
+	}
+	return result
+}

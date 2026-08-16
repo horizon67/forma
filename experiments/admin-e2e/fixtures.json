@@ -21,6 +21,7 @@
           "name": "Alice Tanaka",
           "email": "alice@example.com",
           "team": "team-platform",
+          "plan": "Pro",
           "status": "Active"
         }
       },
@@ -30,6 +31,7 @@
           "name": "Bob Sato",
           "email": "bob@example.com",
           "team": "team-design",
+          "plan": "Free",
           "status": "Pending"
         }
       },
@@ -39,6 +41,7 @@
           "name": "Carol Ito",
           "email": "carol@example.com",
           "team": "",
+          "plan": "Enterprise",
           "status": "Suspended"
         }
       }

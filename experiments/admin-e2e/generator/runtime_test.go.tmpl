@@ -28,7 +28,7 @@ func TestGeneratedAdminFlow(t *testing.T) {
 
 	response := request(t, client, http.MethodGet, server.URL+"/users", "", "admin")
 	assertStatus(t, response, http.StatusOK)
-	assertBodyContains(t, response, "Alice Tanaka", "alice@example.com", "Platform", "Active")
+	assertBodyContains(t, response, "Alice Tanaka", "alice@example.com", "Platform", "Pro", "Active")
 
 	response = request(t, client, http.MethodGet, server.URL+"/users/user-alice", "", "admin")
 	assertStatus(t, response, http.StatusOK)
@@ -39,7 +39,7 @@ func TestGeneratedAdminFlow(t *testing.T) {
 	assertBodyContains(t, response, `name="email" type="text"`, `value="team-platform" selected`,
 		`name="_forma_submission"`, `data-prevent-duplicate="true"`, `data-pending-label="Saving…"`)
 
-	invalid := url.Values{"name": {"Alice Submitted"}, "email": {""}, "team": {"team-design"}}
+	invalid := url.Values{"name": {"Alice Submitted"}, "email": {""}, "team": {"team-design"}, "plan": {"Pro"}}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", invalid)
 	response = request(t, client, http.MethodPost, server.URL+"/users/user-alice/edit", invalid.Encode(), "admin")
 	assertStatus(t, response, http.StatusUnprocessableEntity)
@@ -53,13 +53,13 @@ func TestGeneratedAdminFlow(t *testing.T) {
 	assertStatus(t, response, http.StatusOK)
 	assertBodyContains(t, response, "Alice Tanaka", "Platform")
 
-	invalidRelation := url.Values{"name": {"Alice Submitted"}, "email": {"alice@example.com"}, "team": {"team-missing"}}
+	invalidRelation := url.Values{"name": {"Alice Submitted"}, "email": {"alice@example.com"}, "team": {"team-missing"}, "plan": {"Pro"}}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", invalidRelation)
 	response = request(t, client, http.MethodPost, server.URL+"/users/user-alice/edit", invalidRelation.Encode(), "admin")
 	assertStatus(t, response, http.StatusUnprocessableEntity)
 	assertBodyContains(t, response, "Team is not selectable")
 
-	form := url.Values{"name": {"Alice Tanaka Updated"}, "email": {"alice@example.com"}, "team": {"team-design"}}
+	form := url.Values{"name": {"Alice Tanaka Updated"}, "email": {"alice@example.com"}, "team": {"team-design"}, "plan": {"Enterprise"}}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", form)
 	response = request(t, client, http.MethodPost, server.URL+"/users/user-alice/edit", form.Encode(), "admin")
 	assertStatus(t, response, http.StatusSeeOther)
@@ -70,7 +70,7 @@ func TestGeneratedAdminFlow(t *testing.T) {
 
 	response = request(t, client, http.MethodGet, server.URL+"/users/user-alice?updated=1", "", "admin")
 	assertStatus(t, response, http.StatusOK)
-	assertBodyContains(t, response, "Alice Tanaka Updated", "Design", "Changes saved.")
+	assertBodyContains(t, response, "Alice Tanaka Updated", "Design", "Enterprise", "Changes saved.")
 
 	response = request(t, client, http.MethodGet, server.URL+"/users", "", "anonymous")
 	assertStatus(t, response, http.StatusForbidden)
@@ -161,15 +161,6 @@ func TestUnionFieldUsesClosedChoices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app.spec.Fields["plan"] = fieldSpec{
-		Name: "plan", Label: "Plan", Type: "Plan", Required: true,
-		Variants: []string{"Free", "Pro", "Enterprise"},
-	}
-	app.spec.FieldOrder = append(app.spec.FieldOrder, "plan")
-	app.spec.Edit.Fields = append(app.spec.Edit.Fields, "plan")
-	if !app.store.update("User", "user-alice", map[string]string{"plan": "Free"}) {
-		t.Fatal("fixture user is missing")
-	}
 	server := httptest.NewServer(app.handler())
 	defer server.Close()
 	client := server.Client()
@@ -179,7 +170,7 @@ func TestUnionFieldUsesClosedChoices(t *testing.T) {
 
 	response := request(t, client, http.MethodGet, server.URL+"/users/user-alice/edit", "", "admin")
 	assertStatus(t, response, http.StatusOK)
-	assertBodyContains(t, response, `name="plan"`, `value="Free" selected`, `value="Pro"`, `value="Enterprise"`)
+	assertBodyContains(t, response, `name="plan"`, `value="Free"`, `value="Pro" selected`, `value="Enterprise"`)
 
 	invalid := url.Values{
 		"name": {"Alice Tanaka"}, "email": {"alice@example.com"}, "team": {"team-platform"}, "plan": {"Unknown"},
@@ -190,14 +181,14 @@ func TestUnionFieldUsesClosedChoices(t *testing.T) {
 	assertBodyContains(t, response, "Plan is not an allowed value")
 
 	valid := url.Values{
-		"name": {"Alice Tanaka"}, "email": {"alice@example.com"}, "team": {"team-platform"}, "plan": {"Pro"},
+		"name": {"Alice Tanaka"}, "email": {"alice@example.com"}, "team": {"team-platform"}, "plan": {"Enterprise"},
 	}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", valid)
 	response = request(t, client, http.MethodPost, server.URL+"/users/user-alice/edit", valid.Encode(), "admin")
 	assertStatus(t, response, http.StatusSeeOther)
 	response.Body.Close()
 	item, ok := app.store.get("User", "user-alice")
-	if !ok || item.Values["plan"] != "Pro" {
+	if !ok || item.Values["plan"] != "Enterprise" {
 		t.Fatalf("saved union value = %#v", item.Values)
 	}
 
@@ -223,7 +214,7 @@ func TestCompletedSubmissionReplaysSuccessRedirect(t *testing.T) {
 		return http.ErrUseLastResponse
 	}
 
-	form := url.Values{"name": {"Alice Once"}, "email": {"alice@example.com"}, "team": {"team-platform"}}
+	form := url.Values{"name": {"Alice Once"}, "email": {"alice@example.com"}, "team": {"team-platform"}, "plan": {"Pro"}}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", form)
 	body := form.Encode()
 	response := request(t, client, http.MethodPost, server.URL+"/users/user-alice/edit", body, "admin")
@@ -246,7 +237,7 @@ func TestMissingSubmissionTokenReturnsConflict(t *testing.T) {
 	server := httptest.NewServer(app.handler())
 	defer server.Close()
 
-	form := url.Values{"name": {"Alice"}, "email": {"alice@example.com"}, "team": {"team-platform"}}
+	form := url.Values{"name": {"Alice"}, "email": {"alice@example.com"}, "team": {"team-platform"}, "plan": {"Pro"}}
 	response := request(t, server.Client(), http.MethodPost, server.URL+"/users/user-alice/edit", form.Encode(), "admin")
 	assertStatus(t, response, http.StatusConflict)
 	assertBodyContains(t, response, "This form expired. Review the values and save again.",
@@ -265,7 +256,7 @@ func TestEvictedSubmissionPreservesInputAndCanBeRetried(t *testing.T) {
 		return http.ErrUseLastResponse
 	}
 
-	form := url.Values{"name": {"Alice from old tab"}, "email": {"alice@example.com"}, "team": {"team-design"}}
+	form := url.Values{"name": {"Alice from old tab"}, "email": {"alice@example.com"}, "team": {"team-design"}, "plan": {"Pro"}}
 	addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", form)
 	for index := 0; index < maxSubmissionTokensPerScope; index++ {
 		addSubmissionToken(t, client, server.URL+"/users/user-alice/edit", "admin", url.Values{})

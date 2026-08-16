@@ -1,6 +1,6 @@
 {
-  "version": "forma/source-map/v0.1",
-  "irVersion": "forma/v0.4",
+  "version": "forma/source-map/v0.2",
+  "intentVersion": "forma/resolved-intent/v0.4",
   "entries": [
     {
       "nodeId": "action/User/activate",
@@ -237,23 +237,6 @@
           "offset": 897,
           "line": 43,
           "column": 6
-        }
-      }
-    },
-    {
-      "nodeId": "page/UserCreate/view/form/create/User/relation-choice/team",
-      "kind": "relation-choice",
-      "span": {
-        "file": "examples/users.forma",
-        "start": {
-          "offset": 240,
-          "line": 14,
-          "column": 5
-        },
-        "end": {
-          "offset": 244,
-          "line": 14,
-          "column": 9
         }
       }
     },
@@ -615,23 +598,6 @@
       }
     },
     {
-      "nodeId": "page/UserEdit/view/form/edit/User/relation-choice/team",
-      "kind": "relation-choice",
-      "span": {
-        "file": "examples/users.forma",
-        "start": {
-          "offset": 240,
-          "line": 14,
-          "column": 5
-        },
-        "end": {
-          "offset": 244,
-          "line": 14,
-          "column": 9
-        }
-      }
-    },
-    {
       "nodeId": "page/UserEdit/view/form/edit/User/submit",
       "kind": "submit",
       "span": {
@@ -883,23 +849,6 @@
           "offset": 753,
           "line": 33,
           "column": 29
-        }
-      }
-    },
-    {
-      "nodeId": "page/Users/view/list/User/relation-choice/team",
-      "kind": "relation-choice",
-      "span": {
-        "file": "examples/users.forma",
-        "start": {
-          "offset": 240,
-          "line": 14,
-          "column": 5
-        },
-        "end": {
-          "offset": 244,
-          "line": 14,
-          "column": 9
         }
       }
     },

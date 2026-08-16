@@ -1,5 +1,5 @@
 {
-  "version": "forma/v0.4",
+  "version": "forma/resolved-intent/v0.4",
   "roles": [
     {
       "id": "role/admin",
@@ -140,22 +140,13 @@
             "email",
             "team"
           ],
-          "relationChoices": [
-            {
-              "id": "page/UserCreate/view/form/create/User/relation-choice/team",
-              "field": "team",
-              "entity": "Team",
-              "label": "name"
-            }
-          ],
           "submit": {
             "id": "page/UserCreate/view/form/create/User/submit",
             "action": "create",
             "success": {
               "id": "page/UserCreate/view/form/create/User/submit/success",
               "kind": "page",
-              "page": "UserDetail",
-              "recheckAccess": true
+              "page": "UserDetail"
             },
             "access": {
               "id": "page/UserCreate/view/form/create/User/submit/access",
@@ -173,14 +164,10 @@
                   ]
                 }
               ]
-            },
-            "preventDuplicateDispatch": true,
-            "failureFeedback": true
+            }
           },
           "interactionStates": [
-            "ready",
             "invalid",
-            "pending",
             "failure"
           ]
         }
@@ -233,9 +220,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/UserDetail/view/detail/User/action/delete",
@@ -258,9 +243,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/UserDetail/view/detail/User/action/confirm",
@@ -277,9 +260,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/UserDetail/view/detail/User/action/activate",
@@ -296,9 +277,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/UserDetail/view/detail/User/action/suspend",
@@ -321,9 +300,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/UserDetail/view/detail/User/action/reinstate",
@@ -346,14 +323,10 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             }
           ],
           "interactionStates": [
-            "loading",
-            "ready",
             "empty",
             "failure"
           ]
@@ -383,22 +356,13 @@
             "email",
             "team"
           ],
-          "relationChoices": [
-            {
-              "id": "page/UserEdit/view/form/edit/User/relation-choice/team",
-              "field": "team",
-              "entity": "Team",
-              "label": "name"
-            }
-          ],
           "submit": {
             "id": "page/UserEdit/view/form/edit/User/submit",
             "action": "edit",
             "success": {
               "id": "page/UserEdit/view/form/edit/User/submit/success",
               "kind": "page",
-              "page": "UserDetail",
-              "recheckAccess": true
+              "page": "UserDetail"
             },
             "access": {
               "id": "page/UserEdit/view/form/edit/User/submit/access",
@@ -416,14 +380,10 @@
                   ]
                 }
               ]
-            },
-            "preventDuplicateDispatch": true,
-            "failureFeedback": true
+            }
           },
           "interactionStates": [
-            "ready",
             "invalid",
-            "pending",
             "failure"
           ]
         }
@@ -457,8 +417,7 @@
           "sort": {
             "id": "page/Users/view/list/User/sort",
             "field": "name",
-            "direction": "asc",
-            "tieBreak": "identity"
+            "direction": "asc"
           },
           "pageSize": 20,
           "actions": [
@@ -484,9 +443,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/Users/view/list/User/action/view",
@@ -509,9 +466,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/Users/view/list/User/action/edit",
@@ -535,9 +490,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/Users/view/list/User/action/delete",
@@ -554,9 +507,7 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
+              }
             },
             {
               "id": "page/Users/view/list/User/action/suspend",
@@ -579,22 +530,10 @@
                     ]
                   }
                 ]
-              },
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            }
-          ],
-          "relationChoices": [
-            {
-              "id": "page/Users/view/list/User/relation-choice/team",
-              "field": "team",
-              "entity": "Team",
-              "label": "name"
+              }
             }
           ],
           "interactionStates": [
-            "loading",
-            "ready",
             "empty",
             "failure"
           ]

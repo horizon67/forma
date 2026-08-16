@@ -5,10 +5,10 @@ import (
 	"sort"
 )
 
-// Result contains a checked program, its semantic IR, sources, and diagnostics.
+// Result contains a checked program, its resolved intent, sources, and diagnostics.
 type Result struct {
 	Program     *Program
-	IR          *SemanticIR
+	Intent      *ResolvedIntent
 	SourceMap   *SourceMap
 	Sources     map[string]SourceFile
 	Diagnostics []Diagnostic
@@ -30,16 +30,16 @@ func Compile(sources []SourceFile) Result {
 	if len(result.Diagnostics) > 0 {
 		return result
 	}
-	ir, sourceMap, diagnostics := check(result.Program)
-	result.IR = ir
+	intent, sourceMap, diagnostics := check(result.Program)
+	result.Intent = intent
 	result.SourceMap = sourceMap
 	result.Diagnostics = diagnostics
 	return result
 }
 
-// MarshalIR returns stable, indented JSON for golden tests and compiler tooling.
-func MarshalIR(ir *SemanticIR) ([]byte, error) {
-	return json.MarshalIndent(ir, "", "  ")
+// MarshalIntent returns stable, indented JSON for golden tests and compiler tooling.
+func MarshalIntent(intent *ResolvedIntent) ([]byte, error) {
+	return json.MarshalIndent(intent, "", "  ")
 }
 
 // MarshalSourceMap returns stable, indented JSON for compiler tooling.

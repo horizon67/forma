@@ -1,12 +1,14 @@
 package generator
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/horizon67/forma/experiments/conformance"
 	"github.com/horizon67/forma/internal/compiler"
 )
 
@@ -20,13 +22,13 @@ func TestBuildSpecLowersAdminPresentations(t *testing.T) {
 	if !reflect.DeepEqual(spec.Roles, []string{"admin"}) {
 		t.Fatalf("roles = %#v", spec.Roles)
 	}
-	if !reflect.DeepEqual(spec.List.Fields, []string{"name", "email", "team", "status"}) {
+	if !reflect.DeepEqual(spec.List.Fields, []string{"name", "email", "team", "plan", "status"}) {
 		t.Fatalf("list fields = %#v", spec.List.Fields)
 	}
-	if !reflect.DeepEqual(spec.Detail.Fields, []string{"name", "email", "team", "status"}) {
+	if !reflect.DeepEqual(spec.Detail.Fields, []string{"name", "email", "team", "plan", "status"}) {
 		t.Fatalf("detail fields = %#v", spec.Detail.Fields)
 	}
-	if !reflect.DeepEqual(spec.Edit.Fields, []string{"name", "email", "team"}) {
+	if !reflect.DeepEqual(spec.Edit.Fields, []string{"name", "email", "team", "plan"}) {
 		t.Fatalf("edit fields = %#v", spec.Edit.Fields)
 	}
 	if spec.EntityLabel != "name" {
@@ -35,7 +37,7 @@ func TestBuildSpecLowersAdminPresentations(t *testing.T) {
 	if !reflect.DeepEqual(actionNames(spec.List.Actions), []string{"view", "edit"}) || !reflect.DeepEqual(actionNames(spec.Detail.Actions), []string{"edit"}) {
 		t.Fatalf("actions were not preserved: list=%v detail=%v", spec.List.Actions, spec.Detail.Actions)
 	}
-	for _, action := range append(append([]compiler.IRActionRef(nil), spec.List.Actions...), spec.Detail.Actions...) {
+	for _, action := range append(append([]ActionSpec(nil), spec.List.Actions...), spec.Detail.Actions...) {
 		if action.Kind != "standard" || !action.PreventDuplicateDispatch || !action.FailureFeedback {
 			t.Fatalf("action contract was not preserved: %#v", action)
 		}
@@ -66,63 +68,38 @@ func TestBuildSpecLowersAdminPresentations(t *testing.T) {
 	if field := spec.Fields["team"]; field.RelationEntity != "Team" || spec.RelatedLabels["Team"] != "name" {
 		t.Fatalf("team relation = %#v, labels = %#v", field, spec.RelatedLabels)
 	}
+	if field := spec.Fields["plan"]; !field.Required || !reflect.DeepEqual(field.Variants, []string{"Free", "Pro", "Enterprise"}) {
+		t.Fatalf("plan field = %#v", field)
+	}
 	if field := spec.Fields["status"]; !field.State || !field.Required ||
 		!reflect.DeepEqual(field.Variants, []string{"Pending", "Confirmed", "Active", "Suspended"}) {
 		t.Fatalf("state field = %#v", field)
 	}
 }
 
-func TestBuildSpecRejectsUnrealizedActionContract(t *testing.T) {
+func TestBuildSpecRejectsUnrealizedNavigationIntent(t *testing.T) {
 	tests := []struct {
 		name   string
-		mutate func(*compiler.SemanticIR)
+		mutate func(*compiler.ResolvedIntent)
 		want   string
 	}{
 		{
-			name: "action duplicate dispatch",
-			mutate: func(ir *compiler.SemanticIR) {
-				findViewAction(t, ir, "list", "view").PreventDuplicateDispatch = false
-			},
-			want: "requires action interaction contract",
-		},
-		{
-			name: "action failure feedback",
-			mutate: func(ir *compiler.SemanticIR) {
-				findViewAction(t, ir, "list", "view").FailureFeedback = false
-			},
-			want: "requires action interaction contract",
-		},
-		{
 			name: "action target",
-			mutate: func(ir *compiler.SemanticIR) {
+			mutate: func(ir *compiler.ResolvedIntent) {
 				findViewAction(t, ir, "list", "view").TargetPage = "Missing"
 			},
 			want: "does not realize target page Missing",
 		},
 		{
 			name: "action success",
-			mutate: func(ir *compiler.SemanticIR) {
+			mutate: func(ir *compiler.ResolvedIntent) {
 				findViewAction(t, ir, "list", "edit").SuccessPage = "Missing"
 			},
 			want: "does not realize success page Missing",
 		},
 		{
-			name: "submit duplicate dispatch",
-			mutate: func(ir *compiler.SemanticIR) {
-				findEditSubmit(t, ir).PreventDuplicateDispatch = false
-			},
-			want: "requires submit interaction contract",
-		},
-		{
-			name: "submit failure feedback",
-			mutate: func(ir *compiler.SemanticIR) {
-				findEditSubmit(t, ir).FailureFeedback = false
-			},
-			want: "requires submit interaction contract",
-		},
-		{
 			name: "submit navigation",
-			mutate: func(ir *compiler.SemanticIR) {
+			mutate: func(ir *compiler.ResolvedIntent) {
 				findEditSubmit(t, ir).Success.Page = "Missing"
 			},
 			want: "does not realize submit navigation",
@@ -136,8 +113,8 @@ func TestBuildSpecRejectsUnrealizedActionContract(t *testing.T) {
 			if len(result.Diagnostics) != 0 {
 				t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 			}
-			test.mutate(result.IR)
-			_, err := BuildSpec(result.IR, testProfile())
+			test.mutate(result.Intent)
+			_, err := BuildSpec(result.Intent, testProfile())
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("action contract error = %v, want %q", err, test.want)
 			}
@@ -157,7 +134,7 @@ func TestBuildSpecRejectsPublicEditWithBoundedSubmissionTokens(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "declare allow roles for a bounded submission principal scope") {
 		t.Fatalf("public edit error = %v", err)
 	}
@@ -169,7 +146,7 @@ func TestBuildSpecReflectsFormaEditFieldChange(t *testing.T) {
 	if editPage < 0 {
 		t.Fatal("UserEdit page not found")
 	}
-	changedTail := strings.Replace(source[editPage:], "fields name, email, team", "fields name, email", 1)
+	changedTail := strings.Replace(source[editPage:], "fields name, email, team, plan", "fields name, email", 1)
 	if changedTail == source[editPage:] {
 		t.Fatal("UserEdit fields were not changed")
 	}
@@ -191,10 +168,21 @@ func TestGenerateWritesReplaceableStandaloneArtifact(t *testing.T) {
 	if err := Generate(options); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"go.mod", "main.go", "main_test.go", markerName} {
+	for _, name := range generatedArtifactFiles() {
 		if _, err := os.Stat(filepath.Join(output, name)); err != nil {
 			t.Errorf("generated %s: %v", name, err)
 		}
+	}
+	contractContent, err := os.ReadFile(filepath.Join(output, "conformance.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract conformance.Contract
+	if err := json.Unmarshal(contractContent, &contract); err != nil {
+		t.Fatal(err)
+	}
+	if contract.Schema != conformance.Schema || len(contract.Cases) != 7 {
+		t.Fatalf("generated conformance contract = %#v", contract)
 	}
 	before := readArtifact(t, output)
 	if err := Generate(options); err == nil || !strings.Contains(err.Error(), "already exists") {
@@ -218,10 +206,10 @@ func TestBuildSpecRejectsDroppedIntent(t *testing.T) {
 		replacement string
 		want        string
 	}{
-		{name: "search", old: "columns name, email, team, status", replacement: "columns name, email, team, status\n        search name", want: "search intent"},
-		{name: "filter", old: "columns name, email, team, status", replacement: "columns name, email, team, status\n        filter status", want: "filter intent"},
-		{name: "sort", old: "columns name, email, team, status", replacement: "columns name, email, team, status\n        sort name asc", want: "sort intent"},
-		{name: "paginate", old: "columns name, email, team, status", replacement: "columns name, email, team, status\n        paginate 20", want: "paginate intent"},
+		{name: "search", old: "columns name, email, team, plan, status", replacement: "columns name, email, team, plan, status\n        search name", want: "search intent"},
+		{name: "filter", old: "columns name, email, team, plan, status", replacement: "columns name, email, team, plan, status\n        filter status", want: "filter intent"},
+		{name: "sort", old: "columns name, email, team, plan, status", replacement: "columns name, email, team, plan, status\n        sort name asc", want: "sort intent"},
+		{name: "paginate", old: "columns name, email, team, plan, status", replacement: "columns name, email, team, plan, status\n        paginate 20", want: "paginate intent"},
 		{name: "action", old: "actions view, edit", replacement: "actions view, edit, delete", want: "does not realize action delete"},
 		{name: "unique", old: "email Email required", replacement: "email Email required unique", want: "does not realize unique constraint on User.email"},
 		{name: "related entity unique", old: "name String required label", replacement: "name String required unique label", want: "does not realize unique constraint on Team.name"},
@@ -231,7 +219,7 @@ func TestBuildSpecRejectsDroppedIntent(t *testing.T) {
 		{name: "create view", old: "page UserDetail", replacement: `page UserCreate {
     allow admin
     form User {
-        fields name, email, team
+        fields name, email, team, plan
         submit create
     }
 }
@@ -254,7 +242,7 @@ page Users`, want: "does not realize list view"},
 			if len(result.Diagnostics) != 0 {
 				t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 			}
-			_, err := BuildSpec(result.IR, testProfile())
+			_, err := BuildSpec(result.Intent, testProfile())
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("unsupported intent error = %v, want %q", err, test.want)
 			}
@@ -263,15 +251,7 @@ page Users`, want: "does not realize list view"},
 }
 
 func TestBuildSpecLowersUnionVariants(t *testing.T) {
-	source := readExperimentSource(t)
-	source = strings.Replace(source, "type Email = String", "type Email = String\ntype Plan = Free | Pro | Enterprise", 1)
-	source = strings.Replace(source, "team  Team", "team  Team\n    plan  Plan required", 1)
-	editPage := strings.Index(source, "page UserEdit")
-	if editPage < 0 {
-		t.Fatal("UserEdit page not found")
-	}
-	source = source[:editPage] + strings.Replace(source[editPage:], "fields name, email, team", "fields name, email, team, plan", 1)
-	spec := buildUsersSpec(t, source)
+	spec := buildUsersSpec(t, readExperimentSource(t))
 	if !reflect.DeepEqual(spec.Fields["plan"].Variants, []string{"Free", "Pro", "Enterprise"}) {
 		t.Fatalf("plan variants = %#v", spec.Fields["plan"].Variants)
 	}
@@ -287,15 +267,15 @@ func TestBuildSpecRejectsUnknownInteractionState(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	for pageIndex := range result.IR.Pages {
-		for viewIndex := range result.IR.Pages[pageIndex].Views {
-			view := &result.IR.Pages[pageIndex].Views[viewIndex]
+	for pageIndex := range result.Intent.Pages {
+		for viewIndex := range result.Intent.Pages[pageIndex].Views {
+			view := &result.Intent.Pages[pageIndex].Views[viewIndex]
 			if view.Kind == "list" {
 				view.InteractionStates = append(view.InteractionStates, "stale")
 			}
 		}
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "does not realize interaction state stale") {
 		t.Fatalf("unknown interaction state error = %v", err)
 	}
@@ -308,15 +288,15 @@ func TestBuildSpecRequiresEmptyListInteractionState(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	for pageIndex := range result.IR.Pages {
-		for viewIndex := range result.IR.Pages[pageIndex].Views {
-			view := &result.IR.Pages[pageIndex].Views[viewIndex]
+	for pageIndex := range result.Intent.Pages {
+		for viewIndex := range result.Intent.Pages[pageIndex].Views {
+			view := &result.Intent.Pages[pageIndex].Views[viewIndex]
 			if view.Kind == "list" {
-				view.InteractionStates = []string{"loading", "ready", "failure"}
+				view.InteractionStates = []string{"failure"}
 			}
 		}
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "requires empty interaction state") {
 		t.Fatalf("missing empty state error = %v", err)
 	}
@@ -336,7 +316,7 @@ page UserDetail`, 1)
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "duplicate list views") {
 		t.Fatalf("duplicate view error = %v", err)
 	}
@@ -348,7 +328,7 @@ func TestBuildSpecRequiresExplicitEntityLabel(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "declare a label field") {
 		t.Fatalf("missing label error = %v", err)
 	}
@@ -361,17 +341,17 @@ func TestBuildSpecRequiresLabelFieldToBeRequired(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	for entityIndex := range result.IR.Entities {
-		if result.IR.Entities[entityIndex].Name != "User" {
+	for entityIndex := range result.Intent.Entities {
+		if result.Intent.Entities[entityIndex].Name != "User" {
 			continue
 		}
-		for fieldIndex := range result.IR.Entities[entityIndex].Fields {
-			if result.IR.Entities[entityIndex].Fields[fieldIndex].Name == "name" {
-				result.IR.Entities[entityIndex].Fields[fieldIndex].Required = false
+		for fieldIndex := range result.Intent.Entities[entityIndex].Fields {
+			if result.Intent.Entities[entityIndex].Fields[fieldIndex].Name == "name" {
+				result.Intent.Entities[entityIndex].Fields[fieldIndex].Required = false
 			}
 		}
 	}
-	_, err := BuildSpec(result.IR, testProfile())
+	_, err := BuildSpec(result.Intent, testProfile())
 	if err == nil || !strings.Contains(err.Error(), "label field name to be required") {
 		t.Fatalf("optional label error = %v", err)
 	}
@@ -392,14 +372,14 @@ func buildUsersSpec(t *testing.T, source string) AdminSpec {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics: %v", result.Diagnostics)
 	}
-	spec, err := BuildSpec(result.IR, testProfile())
+	spec, err := BuildSpec(result.Intent, testProfile())
 	if err != nil {
 		t.Fatal(err)
 	}
 	return spec
 }
 
-func actionNames(actions []compiler.IRActionRef) []string {
+func actionNames(actions []ActionSpec) []string {
 	names := make([]string, len(actions))
 	for index, action := range actions {
 		names[index] = action.Name
@@ -419,7 +399,7 @@ func assertAdminAccess(t *testing.T, access compiler.IRAccess) {
 	}
 }
 
-func findEditSubmit(t *testing.T, ir *compiler.SemanticIR) *compiler.IRSubmitIntent {
+func findEditSubmit(t *testing.T, ir *compiler.ResolvedIntent) *compiler.IRSubmitIntent {
 	t.Helper()
 	for pageIndex := range ir.Pages {
 		for viewIndex := range ir.Pages[pageIndex].Views {
@@ -433,7 +413,7 @@ func findEditSubmit(t *testing.T, ir *compiler.SemanticIR) *compiler.IRSubmitInt
 	return nil
 }
 
-func findViewAction(t *testing.T, ir *compiler.SemanticIR, viewKind, actionName string) *compiler.IRActionRef {
+func findViewAction(t *testing.T, ir *compiler.ResolvedIntent, viewKind, actionName string) *compiler.IRActionRef {
 	t.Helper()
 	for pageIndex := range ir.Pages {
 		for viewIndex := range ir.Pages[pageIndex].Views {
@@ -462,7 +442,7 @@ func testProfile() Profile {
 func readArtifact(t *testing.T, directory string) map[string][]byte {
 	t.Helper()
 	result := map[string][]byte{}
-	for _, name := range []string{"go.mod", "main.go", "main_test.go", markerName} {
+	for _, name := range generatedArtifactFiles() {
 		content, err := os.ReadFile(filepath.Join(directory, name))
 		if err != nil {
 			t.Fatal(err)
@@ -470,4 +450,11 @@ func readArtifact(t *testing.T, directory string) map[string][]byte {
 		result[name] = content
 	}
 	return result
+}
+
+func generatedArtifactFiles() []string {
+	return []string{
+		"go.mod", "main.go", "main_test.go", "conformance.json",
+		"conformance_runner_test.go", "conformance_adapter_test.go", markerName,
+	}
 }

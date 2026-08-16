@@ -39,7 +39,7 @@ errorなしで通ることを確認した。表現できたのは次である。
 | 承認・却下・出荷の許可された遷移 | `action Order.approve: Submitted -> Approved confirm allow admin` |
 | 誰が承認できるか | `role admin`、`allow admin, staff` |
 | 一覧・詳細・作成・編集・削除と検索・絞り込み・ソート・ページング | `page`、`list`、`detail`、`form` |
-| 承認後の遷移と二重実行防止 | `SubmitIntent`と`IRActionRef`へ決定的に解決される |
+| 承認後の遷移と二重実行防止 | Resolved Intentのsubmit intentとaction referenceへ決定的に解決される |
 
 つまりv0は、この領域の**構造とlifecycleと認可**をすでに表現できる。足りないのは値の導出、
 不変条件、状態遷移以外の事前条件、そして外部への効果である。
@@ -158,7 +158,7 @@ help: the first declaration is at examples/orders.forma:5
 - file/directory引数は1つの集合へunionし、directory構造からapplicationやmodule境界を推測しない。
 - 1 repositoryに複数applicationを置いてよいが、それぞれ別のcompile operationとして指定する。
 - `forma check`はsource引数を必須とし、引数なしの暗黙current-directory探索を行わない。
-- 将来のproject/profile manifestは、1 buildが対象にするsource集合を明示する。
+- Generation Requestを作るcallerは、対象にするsource集合を明示する。
 
 したがって`forma check examples/`の失敗は、独立applicationを意図的に1 unitへ渡した結果である。
 両exampleを個別にcheckする現在のREADMEの用法がcanonicalであり、directory layoutの変更は不要である。
@@ -172,14 +172,13 @@ help: the first declaration is at examples/orders.forma:5
 emission identity = f(occurrence instance, occurrence declaration id, effect declaration id, binding site id)
 ```
 
-後半3つはSemantic IRから決定的に導出できる。最初の1つはruntimeが持つ値であり、conformanceでは
-fixtureが与える。ここでtargetのUUID generatorやDB sequenceに依存させてはならない。§14.5の
-二profile比較で、同じconformance contractをSPA profileとserver-rendered profileの両方へ適用する
-とき、emission identityの決まり方がprofileごとに違うと「同じ論理emissionが1回」という判定自体が
-比較できなくなるためである。
+後半3つはResolved Intentから決定的に導出できる。最初の1つはruntimeが持つ値である。ここでrepositoryの
+UUID generatorやDB sequenceに意味を依存させてはならない。実装方式を変えると「同じ論理emissionが1回」
+という判定まで変わるためである。
 
-conformanceは**配信ではなくemission logに対して**アサートする。adapterの責務は同じemission
-identityを二度処理しないことだけであり、外部サービスの配信回数はFormaのcontractにしない。
+Acceptance Factsは**配信ではなくemission log上の事実**を要求する。coding agentはtarget repositoryの
+testで同じemission identityを二度処理しないことを検査する。外部serviceの実配送回数はFormaの
+application contractにしない。
 
 ## 式レイヤはeffectより先に必要になる
 
@@ -205,8 +204,8 @@ statement languageへ退行させないために、次を明示する必要が�
 4. invariantはpost-stateで、atomic boundaryのcommit前に検査する。
 5. 1回のaction実行 = 1つのatomic boundary。複数entityを含む。
 
-3はschedule triggerのconformance検証に必要な仮想時計と同じ要件であり、境界contract側へ
-まとめて置ける。
+3はschedule triggerのtestに必要な仮想時計と同じ要件である。Acceptance Factsはclockの意味を示し、
+具体的なclock injectionはcoding agentがrepositoryに合わせて実装する。
 
 ## 未決定事項
 
@@ -219,11 +218,11 @@ statement languageへ退行させないために、次を明示する必要が�
 - derived valueをentity fieldとして宣言するか、`list`の`columns`側で表すか。
 - snapshot fieldを`default`の拡張とするか、runtime由来fieldの一般構文とするか。
 - inverse relationを宣言するか、片側から導出するか。
-- schedule triggerの仮想時計をconformance schemaのどこへ置くか。
+- schedule triggerのclock semanticsをAcceptance Factsへどう表すか。
 
 ## 決定前に書く比較例
 
-注文承認だけで`effect` / `on`のgrammarを固定しない。少なくとも次を同じ候補syntaxとIRで記述する。
+注文承認だけで`effect` / `on`のgrammarを固定しない。少なくとも次を同じ候補syntaxとResolved Intentで記述する。
 
 1. 注文承認 — `OrderApproved` → 承認通知（effect）＋ 監査記録（changes）＋ 在庫引当（複数entity changes）。
 2. 会員登録 — `UserRegistered` → `VerificationEmail`。[identity probe](public-membership-proposal.md)と接続する。
@@ -233,11 +232,11 @@ statement languageへ退行させないために、次を明示する必要が�
 
 各例で次を確認する。
 
-- target profileを知らなくても、発生条件と発生してはいけない条件を説明できるか。
+- target repositoryを知らなくても、発生条件と発生してはいけない条件を説明できるか。
 - 同じeffectを複数のoccurrenceから発生させたとき、bindingが重複せずに書けるか。
-- emission identityがSemantic IRから決定的に導出できるか。
+- emission identityがResolved Intentから決定的に導出できるか。
 - `changes`に制御構文を導入せずに書けるか。
-- implementation profileを交換しても同じconformanceを適用できるか。
+- coding agentがframework固有lowering ruleなしに、異なるrepository contextへ実装できるか。
 
 3と5は、「effectはすべて状態遷移に紐づければよい」という誤った一般化を防ぐために必ず含める。
 

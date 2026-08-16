@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestUsersExampleGoldenIR(t *testing.T) {
+func TestUsersExampleGoldenIntent(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -19,12 +19,12 @@ func TestUsersExampleGoldenIR(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	actual, err := MarshalIR(result.IR)
+	actual, err := MarshalIntent(result.Intent)
 	if err != nil {
 		t.Fatal(err)
 	}
 	actual = append(actual, '\n')
-	goldenPath := filepath.Join("testdata", "users.ir.json")
+	goldenPath := filepath.Join("testdata", "users.intent.json")
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
 		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
 			t.Fatal(err)
@@ -38,7 +38,7 @@ func TestUsersExampleGoldenIR(t *testing.T) {
 		t.Fatalf("read golden file: %v (run with UPDATE_GOLDEN=1)", err)
 	}
 	if !bytes.Equal(actual, expected) {
-		t.Fatalf("semantic IR differs from %s\nactual:\n%s", goldenPath, actual)
+		t.Fatalf("resolved intent differs from %s\nactual:\n%s", goldenPath, actual)
 	}
 
 	actualSourceMap, err := MarshalSourceMap(result.SourceMap)
@@ -58,6 +58,30 @@ func TestUsersExampleGoldenIR(t *testing.T) {
 	}
 	if !bytes.Equal(actualSourceMap, expectedSourceMap) {
 		t.Fatalf("source map differs from %s\nactual:\n%s", sourceMapGoldenPath, actualSourceMap)
+	}
+}
+
+func TestResolvedIntentExcludesProfileMechanisms(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := Compile([]SourceFile{NewSourceFile("examples/users.forma", string(content))})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	encoded, err := MarshalIntent(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{
+		`"relationChoices"`, `"tieBreak"`, `"preventDuplicateDispatch"`,
+		`"failureFeedback"`, `"recheckAccess"`, `"loading"`, `"ready"`, `"pending"`,
+	} {
+		if bytes.Contains(encoded, []byte(forbidden)) {
+			t.Errorf("Resolved Intent contains profile mechanism %s", forbidden)
+		}
 	}
 }
 
@@ -222,10 +246,10 @@ func TestStateInitialValueIsIndependentOfPresentationOrder(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	if result.IR == nil || len(result.IR.Entities) != 1 || result.IR.Entities[0].State == nil {
-		t.Fatal("expected one entity with state in Semantic IR")
+	if result.Intent == nil || len(result.Intent.Entities) != 1 || result.Intent.Entities[0].State == nil {
+		t.Fatal("expected one entity with state in Resolved Intent")
 	}
-	if got := result.IR.Entities[0].State.Initial; got != "Active" {
+	if got := result.Intent.Entities[0].State.Initial; got != "Active" {
 		t.Fatalf("initial state = %q, want Active", got)
 	}
 }
@@ -243,11 +267,11 @@ entity StockItem {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	if len(result.IR.Entities) != 1 || len(result.IR.Entities[0].Invariants) != 1 {
-		t.Fatalf("expected one resolved invariant: %#v", result.IR.Entities)
+	if len(result.Intent.Entities) != 1 || len(result.Intent.Entities[0].Invariants) != 1 {
+		t.Fatalf("expected one resolved invariant: %#v", result.Intent.Entities)
 	}
 
-	invariant := result.IR.Entities[0].Invariants[0]
+	invariant := result.Intent.Entities[0].Invariants[0]
 	wantInvariantID := invariantID("StockItem", "stockAvailable")
 	if invariant.ID != wantInvariantID || invariant.Name != "stockAvailable" {
 		t.Fatalf("unexpected invariant identity: %#v", invariant)
@@ -290,13 +314,13 @@ entity StockItem {
 		}
 	}
 
-	ids := semanticIDs(result.IR)
+	ids := semanticIDs(result.Intent)
 	if len(ids) != len(result.SourceMap.Entries) {
-		t.Fatalf("IR has %d semantic nodes but Source Map has %d entries", len(ids), len(result.SourceMap.Entries))
+		t.Fatalf("Resolved Intent has %d semantic nodes but Source Map has %d entries", len(ids), len(result.SourceMap.Entries))
 	}
 	for _, id := range ids {
 		if _, exists := entries[id]; !exists {
-			t.Errorf("Semantic IR identity %q is missing from Source Map", id)
+			t.Errorf("Resolved Intent identity %q is missing from Source Map", id)
 		}
 	}
 }
@@ -478,8 +502,8 @@ func TestInvariantSupportsBuiltInOrderedScalarTypes(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("ordered built-in scalar types should be valid:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	if len(result.IR.Entities) != 1 || len(result.IR.Entities[0].Invariants) != 4 {
-		t.Fatalf("expected four resolved invariants: %#v", result.IR.Entities)
+	if len(result.Intent.Entities) != 1 || len(result.Intent.Entities[0].Invariants) != 4 {
+		t.Fatalf("expected four resolved invariants: %#v", result.Intent.Entities)
 	}
 }
 
@@ -495,10 +519,10 @@ entity RuleSet {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("contextual field names should remain valid:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	if len(result.IR.Entities) != 2 {
-		t.Fatalf("expected two entities: %#v", result.IR.Entities)
+	if len(result.Intent.Entities) != 2 {
+		t.Fatalf("expected two entities: %#v", result.Intent.Entities)
 	}
-	for _, entity := range result.IR.Entities {
+	for _, entity := range result.Intent.Entities {
 		if len(entity.Fields) != 1 || entity.Fields[0].Name != "invariant" {
 			t.Fatalf("field named invariant was not preserved: %#v", entity)
 		}
@@ -530,10 +554,10 @@ entity StockItem {
 	if len(first.Diagnostics) != 0 || len(second.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %s %s", diagnosticMessages(first.Diagnostics), diagnosticMessages(second.Diagnostics))
 	}
-	firstJSON, _ := MarshalIR(first.IR)
-	secondJSON, _ := MarshalIR(second.IR)
+	firstJSON, _ := MarshalIntent(first.Intent)
+	secondJSON, _ := MarshalIntent(second.Intent)
 	if !bytes.Equal(firstJSON, secondJSON) {
-		t.Fatalf("invariant declaration order changed IR\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
+		t.Fatalf("invariant declaration order changed Resolved Intent\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
 	}
 }
 
@@ -567,10 +591,10 @@ func TestSourceOrderDoesNotChangeIR(t *testing.T) {
 	if len(forward.Diagnostics) != 0 || len(reverse.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %s %s", diagnosticMessages(forward.Diagnostics), diagnosticMessages(reverse.Diagnostics))
 	}
-	forwardJSON, _ := MarshalIR(forward.IR)
-	reverseJSON, _ := MarshalIR(reverse.IR)
+	forwardJSON, _ := MarshalIntent(forward.Intent)
+	reverseJSON, _ := MarshalIntent(reverse.Intent)
 	if !bytes.Equal(forwardJSON, reverseJSON) {
-		t.Fatalf("source argument order changed IR\nforward:\n%s\nreverse:\n%s", forwardJSON, reverseJSON)
+		t.Fatalf("source argument order changed Resolved Intent\nforward:\n%s\nreverse:\n%s", forwardJSON, reverseJSON)
 	}
 }
 
@@ -588,10 +612,10 @@ func TestSourcePathsAndBlankLinesDoNotChangeSemanticIdentity(t *testing.T) {
 	if len(first.Diagnostics) != 0 || len(second.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %s %s", diagnosticMessages(first.Diagnostics), diagnosticMessages(second.Diagnostics))
 	}
-	firstJSON, _ := MarshalIR(first.IR)
-	secondJSON, _ := MarshalIR(second.IR)
+	firstJSON, _ := MarshalIntent(first.Intent)
+	secondJSON, _ := MarshalIntent(second.Intent)
 	if !bytes.Equal(firstJSON, secondJSON) {
-		t.Fatalf("file moves or blank lines changed Semantic IR\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
+		t.Fatalf("file moves or blank lines changed Resolved Intent\nfirst:\n%s\nsecond:\n%s", firstJSON, secondJSON)
 	}
 	if first.SourceMap.Entries[0].Span == second.SourceMap.Entries[0].Span {
 		t.Fatal("source positions should remain separate from stable semantic identity")
@@ -658,7 +682,7 @@ page UserCreate {
 				t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 			}
 			var submit *IRSubmitIntent
-			for _, page := range result.IR.Pages {
+			for _, page := range result.Intent.Pages {
 				for _, view := range page.Views {
 					if view.Kind == "form" {
 						submit = view.Submit
@@ -670,9 +694,6 @@ page UserCreate {
 			}
 			if submit.Action != "create" || submit.Success.Kind != test.wantKind || submit.Success.Page != test.wantPage || submit.Success.FallbackPage != test.wantFallback {
 				t.Fatalf("unexpected SubmitIntent: %#v", submit)
-			}
-			if !submit.PreventDuplicateDispatch || !submit.FailureFeedback || !submit.Success.RecheckAccess {
-				t.Fatalf("SubmitIntent omits required runtime semantics: %#v", submit)
 			}
 		})
 	}
@@ -698,7 +719,7 @@ page UserDetail(user User) {
 		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 	}
 	var access IRAccess
-	for _, page := range result.IR.Pages {
+	for _, page := range result.Intent.Pages {
 		for _, view := range page.Views {
 			if view.Submit != nil {
 				access = view.Submit.Access
@@ -763,18 +784,18 @@ func TestSourceMapCoversEveryIRNode(t *testing.T) {
 	for _, entry := range result.SourceMap.Entries {
 		mapped[entry.NodeID] = true
 	}
-	ids := semanticIDs(result.IR)
+	ids := semanticIDs(result.Intent)
 	if len(ids) != len(mapped) {
-		t.Fatalf("IR has %d semantic nodes but Source Map has %d entries", len(ids), len(mapped))
+		t.Fatalf("Resolved Intent has %d semantic nodes but Source Map has %d entries", len(ids), len(mapped))
 	}
 	seen := map[SemanticID]bool{}
 	for _, id := range ids {
 		if seen[id] {
-			t.Fatalf("duplicate Semantic IR identity %q", id)
+			t.Fatalf("duplicate Resolved Intent identity %q", id)
 		}
 		seen[id] = true
 		if !mapped[id] {
-			t.Errorf("Semantic IR identity %q is missing from Source Map", id)
+			t.Errorf("Resolved Intent identity %q is missing from Source Map", id)
 		}
 	}
 }
@@ -822,7 +843,7 @@ func diagnosticMessages(diagnostics []Diagnostic) string {
 	return strings.Join(messages, "\n")
 }
 
-func semanticIDs(ir *SemanticIR) []SemanticID {
+func semanticIDs(ir *ResolvedIntent) []SemanticID {
 	var ids []SemanticID
 	for _, role := range ir.Roles {
 		ids = append(ids, role.ID)
@@ -864,9 +885,6 @@ func semanticIDs(ir *SemanticIR) []SemanticID {
 			}
 			for _, action := range view.Actions {
 				ids = append(ids, action.ID, action.Access.ID)
-			}
-			for _, relation := range view.Relations {
-				ids = append(ids, relation.ID)
 			}
 			if view.Submit != nil {
 				ids = append(ids, view.Submit.ID, view.Submit.Success.ID, view.Submit.Access.ID)

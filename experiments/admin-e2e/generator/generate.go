@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/horizon67/forma/experiments/conformance"
 	"github.com/horizon67/forma/internal/compiler"
 )
 
@@ -22,6 +23,9 @@ var runtimeTemplate string
 
 //go:embed runtime_test.go.tmpl
 var runtimeTestTemplate string
+
+//go:embed conformance_adapter_test.go.tmpl
+var conformanceAdapterTestTemplate string
 
 type Options struct {
 	SourcePath   string
@@ -59,24 +63,56 @@ type AdminSpec struct {
 }
 
 type FieldSpec struct {
-	Name           string   `json:"name"`
-	Label          string   `json:"label"`
-	Type           string   `json:"type"`
-	InputType      string   `json:"inputType"`
-	Variants       []string `json:"variants,omitempty"`
-	Required       bool     `json:"required"`
-	State          bool     `json:"state,omitempty"`
-	RelationEntity string   `json:"relationEntity,omitempty"`
+	ID             compiler.SemanticID `json:"id"`
+	Name           string              `json:"name"`
+	Label          string              `json:"label"`
+	Type           string              `json:"type"`
+	InputType      string              `json:"inputType"`
+	Variants       []string            `json:"variants,omitempty"`
+	Required       bool                `json:"required"`
+	State          bool                `json:"state,omitempty"`
+	RelationEntity string              `json:"relationEntity,omitempty"`
 }
 
 type PresentationSpec struct {
-	PageID            compiler.SemanticID      `json:"pageId"`
-	PageName          string                   `json:"pageName"`
-	Fields            []string                 `json:"fields"`
-	Allows            []string                 `json:"allows"`
-	Actions           []compiler.IRActionRef   `json:"actions,omitempty"`
-	Submit            *compiler.IRSubmitIntent `json:"submit,omitempty"`
-	InteractionStates []string                 `json:"interactionStates"`
+	PageID            compiler.SemanticID `json:"pageId"`
+	ViewID            compiler.SemanticID `json:"viewId"`
+	PageName          string              `json:"pageName"`
+	Fields            []string            `json:"fields"`
+	Allows            []string            `json:"allows"`
+	Actions           []ActionSpec        `json:"actions,omitempty"`
+	Submit            *SubmitSpec         `json:"submit,omitempty"`
+	InteractionStates []string            `json:"interactionStates"`
+}
+
+// ActionSpec and SubmitSpec keep the frozen profile's interaction mechanisms
+// local to the prototype instead of publishing them as application intent.
+type ActionSpec struct {
+	ID                       compiler.SemanticID `json:"id"`
+	Name                     string              `json:"name"`
+	Kind                     string              `json:"kind"`
+	TargetPage               string              `json:"targetPage,omitempty"`
+	SuccessPage              string              `json:"successPage,omitempty"`
+	Access                   compiler.IRAccess   `json:"access"`
+	PreventDuplicateDispatch bool                `json:"preventDuplicateDispatch"`
+	FailureFeedback          bool                `json:"failureFeedback"`
+}
+
+type SubmitSpec struct {
+	ID                       compiler.SemanticID `json:"id"`
+	Action                   string              `json:"action"`
+	Success                  NavigationSpec      `json:"success"`
+	Access                   compiler.IRAccess   `json:"access"`
+	PreventDuplicateDispatch bool                `json:"preventDuplicateDispatch"`
+	FailureFeedback          bool                `json:"failureFeedback"`
+}
+
+type NavigationSpec struct {
+	ID            compiler.SemanticID `json:"id"`
+	Kind          string              `json:"kind"`
+	Page          string              `json:"page,omitempty"`
+	FallbackPage  string              `json:"fallbackPage,omitempty"`
+	RecheckAccess bool                `json:"recheckAccess"`
 }
 
 type viewContext struct {
@@ -92,6 +128,7 @@ type marker struct {
 type templateData struct {
 	SpecLiteral     string
 	FixturesLiteral string
+	Contract        []byte
 }
 
 func Generate(options Options) error {
@@ -114,7 +151,15 @@ func Generate(options Options) error {
 		}
 		return fmt.Errorf("compile Forma source:\n%s", strings.Join(messages, "\n"))
 	}
-	spec, err := BuildSpec(result.IR, profile)
+	contract, err := conformance.Build(result.Intent)
+	if err != nil {
+		return fmt.Errorf("build conformance contract: %w", err)
+	}
+	contractJSON, err := conformance.Marshal(contract)
+	if err != nil {
+		return fmt.Errorf("marshal conformance contract: %w", err)
+	}
+	spec, err := BuildSpec(result.Intent, profile)
 	if err != nil {
 		return err
 	}
@@ -131,10 +176,11 @@ func Generate(options Options) error {
 	}
 	return writeArtifact(options.OutputPath, options.Force, profile.ID, templateData{
 		SpecLiteral: strconv.Quote(string(specJSON)), FixturesLiteral: strconv.Quote(string(fixtures)),
+		Contract: contractJSON,
 	})
 }
 
-func BuildSpec(ir *compiler.SemanticIR, profile Profile) (AdminSpec, error) {
+func BuildSpec(ir *compiler.ResolvedIntent, profile Profile) (AdminSpec, error) {
 	if err := validateProfile(profile); err != nil {
 		return AdminSpec{}, err
 	}
@@ -233,7 +279,7 @@ func BuildSpec(ir *compiler.SemanticIR, profile Profile) (AdminSpec, error) {
 	relatedLabels := map[string]string{}
 	for _, field := range entity.Fields {
 		item := FieldSpec{
-			Name: field.Name, Label: humanize(field.Name), Type: field.Type,
+			ID: field.ID, Name: field.Name, Label: humanize(field.Name), Type: field.Type,
 			InputType: inputTypeFor(types, field.Type), Variants: variantsFor(types, field.Type),
 			Required: field.Required,
 		}
@@ -246,7 +292,7 @@ func BuildSpec(ir *compiler.SemanticIR, profile Profile) (AdminSpec, error) {
 	}
 	if entity.State != nil {
 		fields[entity.State.Name] = FieldSpec{
-			Name: entity.State.Name, Label: humanize(entity.State.Name), Type: entity.State.Name,
+			ID: entity.State.ID, Name: entity.State.Name, Label: humanize(entity.State.Name), Type: entity.State.Name,
 			InputType: "text", Variants: append([]string(nil), entity.State.Values...),
 			Required: true, State: true,
 		}
@@ -346,6 +392,23 @@ func writeArtifact(output string, force bool, profileID string, data templateDat
 	if err := os.WriteFile(filepath.Join(temp, "main_test.go"), formattedTest, 0o644); err != nil {
 		return fmt.Errorf("render runtime test: %w", err)
 	}
+	formattedRunner, err := format.Source([]byte(conformance.RunnerTemplate))
+	if err != nil {
+		return fmt.Errorf("format conformance runner: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(temp, "conformance_runner_test.go"), formattedRunner, 0o644); err != nil {
+		return fmt.Errorf("render conformance runner: %w", err)
+	}
+	formattedAdapter, err := format.Source([]byte(conformanceAdapterTestTemplate))
+	if err != nil {
+		return fmt.Errorf("format conformance adapter: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(temp, "conformance_adapter_test.go"), formattedAdapter, 0o644); err != nil {
+		return fmt.Errorf("render conformance adapter: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(temp, "conformance.json"), data.Contract, 0o644); err != nil {
+		return fmt.Errorf("write conformance contract: %w", err)
+	}
 	markerJSON, _ := json.MarshalIndent(marker{Schema: "forma/generated-artifact/v0", Profile: profileID}, "", "  ")
 	markerJSON = append(markerJSON, '\n')
 	if err := os.WriteFile(filepath.Join(temp, markerName), markerJSON, 0o644); err != nil {
@@ -404,27 +467,30 @@ func lowerPresentation(context viewContext, kind, profileID string) (Presentatio
 			return PresentationSpec{}, fmt.Errorf("profile %s requires edit submit intent on %s", profileID, view.ID)
 		}
 	}
-	actions := make([]compiler.IRActionRef, 0, len(view.Actions))
+	actions := make([]ActionSpec, 0, len(view.Actions))
 	for _, action := range view.Actions {
 		if !supportedActions[action.Name] {
 			return PresentationSpec{}, fmt.Errorf("profile %s does not realize action %s on %s", profileID, action.Name, view.ID)
 		}
-		actions = append(actions, cloneActionRef(action))
+		actions = append(actions, lowerActionSpec(action))
 	}
-	supportedStates := map[string]bool{}
+	supportedIntentStates := map[string]bool{}
+	profileStates := []string{}
 	switch kind {
 	case "list", "detail":
-		for _, state := range []string{"loading", "ready", "empty", "failure"} {
-			supportedStates[state] = true
+		for _, state := range []string{"empty", "failure"} {
+			supportedIntentStates[state] = true
 		}
+		profileStates = []string{"loading", "ready", "empty", "failure"}
 	case "edit":
-		for _, state := range []string{"ready", "invalid", "pending", "failure"} {
-			supportedStates[state] = true
+		for _, state := range []string{"invalid", "failure"} {
+			supportedIntentStates[state] = true
 		}
+		profileStates = []string{"ready", "invalid", "pending", "failure"}
 	}
 	hasEmpty := false
 	for _, state := range view.InteractionStates {
-		if !supportedStates[state] {
+		if !supportedIntentStates[state] {
 			return PresentationSpec{}, fmt.Errorf("profile %s does not realize interaction state %s on %s", profileID, state, view.ID)
 		}
 		if state == "empty" {
@@ -435,31 +501,41 @@ func lowerPresentation(context viewContext, kind, profileID string) (Presentatio
 		return PresentationSpec{}, fmt.Errorf("profile %s requires empty interaction state on %s", profileID, view.ID)
 	}
 	return PresentationSpec{
-		PageID: context.page.ID, PageName: context.page.Name, Fields: append([]string(nil), view.Fields...),
+		PageID: context.page.ID, ViewID: view.ID, PageName: context.page.Name, Fields: append([]string(nil), view.Fields...),
 		Allows: append([]string(nil), context.page.Allows...), Actions: actions,
-		Submit:            cloneSubmitIntent(view.Submit),
-		InteractionStates: append([]string(nil), view.InteractionStates...),
+		Submit:            lowerSubmitSpec(view.Submit),
+		InteractionStates: profileStates,
 	}, nil
 }
 
-func cloneActionRef(action compiler.IRActionRef) compiler.IRActionRef {
-	action.Access.AllOf = append([]compiler.IRAccessRequirement(nil), action.Access.AllOf...)
-	for index := range action.Access.AllOf {
-		action.Access.AllOf[index].AnyOf = append([]string(nil), action.Access.AllOf[index].AnyOf...)
+func lowerActionSpec(action compiler.IRActionRef) ActionSpec {
+	return ActionSpec{
+		ID: action.ID, Name: action.Name, Kind: action.Kind,
+		TargetPage: action.TargetPage, SuccessPage: action.SuccessPage,
+		Access: cloneAccess(action.Access), PreventDuplicateDispatch: true, FailureFeedback: true,
 	}
-	return action
 }
 
-func cloneSubmitIntent(intent *compiler.IRSubmitIntent) *compiler.IRSubmitIntent {
+func lowerSubmitSpec(intent *compiler.IRSubmitIntent) *SubmitSpec {
 	if intent == nil {
 		return nil
 	}
-	copy := *intent
-	copy.Access.AllOf = append([]compiler.IRAccessRequirement(nil), intent.Access.AllOf...)
-	for index := range copy.Access.AllOf {
-		copy.Access.AllOf[index].AnyOf = append([]string(nil), intent.Access.AllOf[index].AnyOf...)
+	return &SubmitSpec{
+		ID: intent.ID, Action: intent.Action, Access: cloneAccess(intent.Access),
+		Success: NavigationSpec{
+			ID: intent.Success.ID, Kind: intent.Success.Kind, Page: intent.Success.Page,
+			FallbackPage: intent.Success.FallbackPage, RecheckAccess: true,
+		},
+		PreventDuplicateDispatch: true, FailureFeedback: true,
 	}
-	return &copy
+}
+
+func cloneAccess(access compiler.IRAccess) compiler.IRAccess {
+	access.AllOf = append([]compiler.IRAccessRequirement(nil), access.AllOf...)
+	for index := range access.AllOf {
+		access.AllOf[index].AnyOf = append([]string(nil), access.AllOf[index].AnyOf...)
+	}
+	return access
 }
 
 func validateNavigationContract(profileID string, list, detail, edit PresentationSpec) error {
@@ -500,7 +576,7 @@ func validateNavigationContract(profileID string, list, detail, edit Presentatio
 	return nil
 }
 
-func indexTypes(ir *compiler.SemanticIR) map[string]compiler.IRType {
+func indexTypes(ir *compiler.ResolvedIntent) map[string]compiler.IRType {
 	types := make(map[string]compiler.IRType, len(ir.Types))
 	for _, item := range ir.Types {
 		types[item.Name] = item
@@ -571,7 +647,7 @@ func variantsFor(types map[string]compiler.IRType, typeName string) []string {
 	return nil
 }
 
-func rejectUnsupportedFieldConstraints(ir *compiler.SemanticIR, types map[string]compiler.IRType, profileID string) error {
+func rejectUnsupportedFieldConstraints(ir *compiler.ResolvedIntent, types map[string]compiler.IRType, profileID string) error {
 	for _, entity := range ir.Entities {
 		for _, field := range entity.Fields {
 			if field.Collection {

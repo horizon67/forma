@@ -7,7 +7,7 @@ Status: exploratory proposal — not valid v0 syntax and not a language decision
 ユーザー管理を表し、認証方式、credential、verification、sessionは扱わない。
 
 規範仕様は[`v0-primitives.md`](v0-primitives.md)である。ここに示す`identity`、`register`、`verify`、
-`login`などは現在のParserでは受理されず、primitive、modifier、IR nodeのいずれにするかも未決定である。
+`login`などは現在のParserでは受理されず、primitive、modifier、Resolved Intent nodeのいずれにするかも未決定である。
 
 ## 対象とするflow
 
@@ -53,7 +53,7 @@ page SignUp {
 ```
 
 このsourceはpassword、verification、loginを宣言していないため、完全な会員登録applicationとは
-みなさない。profileが未宣言の認証flowを推測で追加してはならない。
+みなさない。coding agentが未宣言の認証flowを推測で追加してはならない。
 
 ## 責務の分離
 
@@ -76,7 +76,7 @@ page SignUp {
 - `self`またはownership authorization
 - credentialとverificationに必要なuser-visible constraint
 
-### Identity implementation — Architecture/Profile
+### Identity implementation — Coding agent / Repository
 
 - credentialを保護して保存する具体方式
 - verification token/codeのformatとstorage
@@ -86,7 +86,8 @@ page SignUp {
 - target固有のroute、controller、database schema
 
 implementation detailをFormaへ書かない一方、「verificationが必須」「Activeでなければloginできない」
-などのobservable semanticsをprofileへ隠してはならない。profileは宣言済みのIdentity Intentを実装する。
+などのobservable semanticsをrepository実装へ隠してはならない。coding agentは宣言済みのIdentity
+Intentを、repositoryのarchitectureへ合わせて実装する。
 
 ## passwordをentity fieldにしない
 
@@ -104,10 +105,10 @@ entity User {
 credentialには少なくとも次の性質が必要になる。
 
 - list/detail/search/filter/labelへ指定できない
-- Semantic IRやdiagnosticへsecret valueを保持・表示しない
+- Resolved Intentやdiagnosticへsecret valueを保持・表示しない
 - form inputとして受け取ってもentity fieldへ代入しない
-- target profileが安全なcredential storage capabilityを提供しなければcompile error
-- password requirementは宣言・検査可能だが、保護方式はprofileが所有する
+- target repositoryで安全なcredential storageを実装できなければagentがblockerとして報告する
+- password requirementは宣言・検査可能だが、保護方式はcoding agentとrepositoryが所有する
 
 ## 専用identity modelのsyntax sketch
 
@@ -163,7 +164,7 @@ register
   validate name and email
   validate credential policy
   create User with status Pending
-  store credential through the identity profile
+  store credential through the repository's secure identity implementation
   issue email verification
 
 verify
@@ -178,9 +179,9 @@ login
   grant member authorization context
 ```
 
-## 必要になりそうなSemantic IR
+## 必要になりそうなResolved Intent
 
-名称は未決定だが、target generatorへ未解決sourceを渡さないため、次のようなtarget-neutral intentが
+名称は未決定だが、coding agentへ未解決sourceを渡さないため、次のようなtarget-neutral intentが
 必要になる。
 
 - `IdentityIntent`
@@ -203,7 +204,7 @@ login
 - `AuthenticationViewIntent`
   - register、verify、login、logoutなどのsurface operation
 
-Conformance Contractには正常系だけでなく、duplicate email、invalid credential input、expired/invalid
+Acceptance Factsには正常系だけでなく、duplicate email、invalid credential input、expired/invalid
 verification、reused verification、inactive membership、unauthenticated access、他人のresourceへのaccess
 などの否定caseが必要になる。正確なcase setはidentity semanticsと合わせて決定する。
 
@@ -212,7 +213,7 @@ verification、reused verification、inactive membership、unauthenticated acces
 ### A. 専用`identity` semanticを追加する
 
 identityに固有のsecret、verification、principal、sessionを閉じたmodelとして扱う。application authorが
-任意の認証処理を組み立てる必要がなく、profile capabilityとconformance obligationを標準化しやすい。
+任意の認証処理を組み立てる必要がなく、Resolved IntentとAcceptance Factsを標準化しやすい。
 現時点の第一候補である。
 
 ### B. 汎用action inputとeffect modelで表す
@@ -221,9 +222,9 @@ register、mail、token、loginをgeneral action、input、effectの組合せで
 sessionの安全性をapplicationごとの手続きへ委ね、Formaをgeneral workflow languageへ広げる危険がある。
 identity固有semanticsを一般effectだけへ還元できるかは未証明である。
 
-### C. すべてtarget profileへ任せる
+### C. すべてcoding agentの推測へ任せる
 
-Forma sourceには`User`だけを書き、profileがsignup/loginを追加する。この案はprofileごとにobservableな
+Forma sourceには`User`だけを書き、coding agentがsignup/loginを追加する。この案はagent実行ごとにobservableな
 application behaviorが変わり、Forma sourceがsource of truthでなくなるため採らない。
 
 ## Domain stateとidentity stateを同一視しない
@@ -249,7 +250,7 @@ identity modelがどのstateを所有し、domain transitionとどう接続す�
 - domain roleとidentityから得るroleの対応
 
 `allow member`だけでは、ある会員が別会員のprofileを編集することを防げない。page/action authorizationと
-identity/ownership ruleの合成をSemantic IRとconformanceへ固定する必要がある。
+identity/ownership ruleの合成をResolved IntentとAcceptance Factsへ固定する必要がある。
 
 ## 未決定事項
 
@@ -267,7 +268,7 @@ identity/ownership ruleの合成をSemantic IRとconformanceへ固定する必�
 
 ## 決定前に書く比較例
 
-password signupだけでgrammarを固定しない。少なくとも次を同じ候補syntaxとIRで記述する。
+password signupだけでgrammarを固定しない。少なくとも次を同じ候補syntaxとResolved Intentで記述する。
 
 1. email + password + email verification。
 2. passwordを使わないidentity、またはexternal identity provider。
@@ -276,16 +277,17 @@ password signupだけでgrammarを固定しない。少なくとも次を同じ�
 
 各例で次を確認する。
 
-- target profileを知らなくてもflowと拒否条件を説明できるか。
+- target repositoryを知らなくてもflowと拒否条件を説明できるか。
 - secret valueがentity fieldやdiagnosticへ漏れないか。
 - domain state、verification state、session stateが混同されていないか。
-- implementation profileを交換しても同じconformanceを適用できるか。
+- coding agentがframework固有lowering ruleなしにrepositoryへ実装できるか。
 - 専用identity modelがgeneral workflowへ不必要に拡張していないか。
 
 この比較が終わるまでは、上記syntaxをEBNF、10 primitives、reference compilerへ追加しない。
 
 ## Roadmapへの影響
 
-v0の中心仮説だけを検証する場合、Conformance Adapterがprincipalとroleを注入する現在のscopeで進められる。
-最初のreference artifactを実際に一般利用者が登録・loginできるapplicationにする場合は、identity設計を
-End-to-end v0より前へ移す必要がある。これはreference artifactの目的を決めるときに選択する。
+最初のagent generation experimentでsignup/signin flowを扱うため、identity設計は後回しにできない。
+管理画面flowと並行して最小Identity IntentとAcceptance Factsを決め、Generation Requestへ載せる。
+credential保護やsession方式はForma coreへ実装せず、coding agentがtarget repositoryの標準的で安全な
+仕組みを選ぶ。

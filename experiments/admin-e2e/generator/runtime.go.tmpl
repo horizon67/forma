@@ -39,6 +39,7 @@ type adminSpec struct {
 }
 
 type fieldSpec struct {
+	ID             string `json:"id"`
 	Name           string `json:"name"`
 	Label          string `json:"label"`
 	Type           string `json:"type"`
@@ -51,6 +52,7 @@ type fieldSpec struct {
 
 type presentationSpec struct {
 	PageID            string   `json:"pageId"`
+	ViewID            string   `json:"viewId"`
 	PageName          string   `json:"pageName"`
 	Fields            []string `json:"fields"`
 	Allows            []string `json:"allows"`

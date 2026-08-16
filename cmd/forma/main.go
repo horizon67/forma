@@ -24,7 +24,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
-	if args[0] != "check" {
+	command := args[0]
+	if command != "check" && command != "resolve" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		printUsage(stderr)
 		return 2
@@ -60,8 +61,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 		if count == 1 {
 			label = "error"
 		}
-		fmt.Fprintf(stderr, "\nforma check failed with %d %s\n", count, label)
+		fmt.Fprintf(stderr, "\nforma %s failed with %d %s\n", command, count, label)
 		return 1
+	}
+	if command == "resolve" {
+		content, err := compiler.MarshalIntent(result.Intent)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: marshal Resolved Intent: %v\n", err)
+			return 1
+		}
+		if _, err := stdout.Write(append(content, '\n')); err != nil {
+			fmt.Fprintf(stderr, "forma: write Resolved Intent: %v\n", err)
+			return 1
+		}
+		return 0
 	}
 	label := "files"
 	if len(paths) == 1 {
@@ -122,7 +135,9 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Usage:")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
 	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
+	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
 }

@@ -2,8 +2,8 @@ package compiler
 
 import "sort"
 
-func (c *checker) buildIR() (*SemanticIR, *SourceMap) {
-	ir := &SemanticIR{Version: SemanticIRVersion}
+func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
+	ir := &ResolvedIntent{Version: ResolvedIntentVersion}
 	sourceMap := newSourceMapBuilder()
 	for _, role := range c.program.Roles {
 		if c.roles[role.Name.Text] == role {
@@ -176,7 +176,7 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 	}
 	switch info.View.Kind {
 	case ViewList:
-		view.InteractionStates = []string{"loading", "ready", "empty", "failure"}
+		view.InteractionStates = []string{"empty", "failure"}
 		if mod, ok := mods["columns"]; ok {
 			view.Fields = namesToStrings(mod.Names)
 		}
@@ -185,7 +185,6 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 		}
 		if mod, ok := mods["filter"]; ok {
 			view.Filters = namesToStrings(mod.Names)
-			view.Relations = c.relationChoices(id, info.Entity, mod.Names)
 		}
 		if mod, ok := mods["sort"]; ok && len(mod.Names) > 0 {
 			direction := mod.Direction
@@ -193,7 +192,7 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 				direction = "asc"
 			}
 			sortID := semanticID(string(id), "sort")
-			view.Sort = &IRSort{ID: sortID, Field: mod.Names[0].Text, Direction: direction, TieBreak: "identity"}
+			view.Sort = &IRSort{ID: sortID, Field: mod.Names[0].Text, Direction: direction}
 			sourceMap.add(sortID, "sort", mod.Span)
 		}
 		if mod, ok := mods["paginate"]; ok {
@@ -208,7 +207,7 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 			}
 		}
 	case ViewDetail:
-		view.InteractionStates = []string{"loading", "ready", "empty", "failure"}
+		view.InteractionStates = []string{"empty", "failure"}
 		if mod, ok := mods["fields"]; ok {
 			view.Fields = namesToStrings(mod.Names)
 		}
@@ -221,7 +220,7 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 			}
 		}
 	case ViewForm:
-		view.InteractionStates = []string{"ready", "invalid", "pending", "failure"}
+		view.InteractionStates = []string{"invalid", "failure"}
 		if mod, ok := mods["fields"]; ok {
 			view.Fields = namesToStrings(mod.Names)
 		} else {
@@ -231,7 +230,6 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 				}
 			}
 		}
-		view.Relations = c.relationChoicesFromStrings(id, info.Entity, view.Fields)
 		submit := c.resolveSubmitIntent(info, false)
 		view.Submit = &submit
 		submitSpan := info.View.Span
@@ -242,49 +240,7 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 		sourceMap.add(submit.Success.ID, "navigation", submitSpan)
 		sourceMap.add(submit.Access.ID, "access", submitSpan)
 	}
-	for _, relation := range view.Relations {
-		sourceMap.add(relation.ID, "relation-choice", c.fieldSpan(info.Entity, relation.Field))
-	}
 	return view
-}
-
-func (c *checker) relationChoices(parentID SemanticID, entity *EntityDecl, names []Name) []IRChoice {
-	values := make([]string, 0, len(names))
-	for _, name := range names {
-		values = append(values, name.Text)
-	}
-	return c.relationChoicesFromStrings(parentID, entity, values)
-}
-
-func (c *checker) relationChoicesFromStrings(parentID SemanticID, entity *EntityDecl, names []string) []IRChoice {
-	var choices []IRChoice
-	seen := map[string]bool{}
-	for _, name := range names {
-		if seen[name] {
-			continue
-		}
-		seen[name] = true
-		for _, field := range entity.Fields {
-			if field.Name.Text != name {
-				continue
-			}
-			resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
-			if resolved.Kind == "entity" {
-				id := semanticID(string(parentID), "relation-choice", name)
-				choices = append(choices, IRChoice{ID: id, Field: name, Entity: resolved.Name, Label: c.entityLabels[resolved.Name]})
-			}
-		}
-	}
-	return choices
-}
-
-func (c *checker) fieldSpan(entity *EntityDecl, name string) Span {
-	for _, field := range entity.Fields {
-		if field.Name.Text == name {
-			return field.Name.Span
-		}
-	}
-	return entity.Span
 }
 
 func namesToStrings(names []Name) []string {

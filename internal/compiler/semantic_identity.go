@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-const SourceMapVersion = "forma/source-map/v0.1"
+const SourceMapVersion = "forma/source-map/v0.2"
 
-// SourceMap is emitted separately from SemanticIR because source paths and
+// SourceMap is emitted separately from ResolvedIntent because source paths and
 // positions are not application semantics and must not affect build identity.
 type SourceMap struct {
-	Version   string           `json:"version"`
-	IRVersion string           `json:"irVersion"`
-	Entries   []SourceMapEntry `json:"entries"`
+	Version       string           `json:"version"`
+	IntentVersion string           `json:"intentVersion"`
+	Entries       []SourceMapEntry `json:"entries"`
 }
 
 type SourceMapEntry struct {
@@ -34,7 +34,7 @@ func (b *sourceMapBuilder) add(id SemanticID, kind string, span Span) {
 }
 
 func (b *sourceMapBuilder) build() *SourceMap {
-	result := &SourceMap{Version: SourceMapVersion, IRVersion: SemanticIRVersion}
+	result := &SourceMap{Version: SourceMapVersion, IntentVersion: ResolvedIntentVersion}
 	for _, entry := range b.entries {
 		result.Entries = append(result.Entries, entry)
 	}

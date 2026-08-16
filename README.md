@@ -4,12 +4,11 @@
 
 **A language for describing applications themselves at a high level.**
 
-Forma is an experimental programming language for describing software in terms
-of application concepts—entities, states, relationships, actions, pages, lists,
-and forms—rather than framework-specific mechanics.
+Forma replaces the natural-language prompt given to a coding agent with a
+typed, checkable, and reviewable language.
 
-> Forma source expresses what an application is. The compiler determines its
-> meaning, and a target generator turns that meaning into an implementation.
+> Humans decide application intent in Forma. The compiler resolves that intent,
+> and an AI coding agent implements it in an ordinary software repository.
 
 ```forma
 type Email = String matches /.+@.+/
@@ -24,6 +23,8 @@ entity User {
 action User.activate: Confirmed -> Active
 
 page Users {
+    allow admin
+
     list User {
         columns name, email, status
         search name, email
@@ -35,14 +36,44 @@ page Users {
 }
 ```
 
-`list User` means “present a collection of users.” It does not mean an HTML
-table, a React component, or a database query. A target profile chooses an
-appropriate implementation while preserving the declared application semantics.
+`list User` means “present a collection of users.” It does not prescribe an
+HTML table, a React component, an endpoint, or a query builder. A coding agent
+inspects the target repository and chooses an implementation that preserves the
+resolved intent.
+
+## The core execution model
+
+AI generation is not an optional backend for Forma. It is the central
+end-to-end execution model.
+
+```text
+Forma source
+  → parse / check / resolve
+  → Resolved Intent + Acceptance Facts
+  → Generation Request
+  → AI coding agent + target repository
+  → ordinary application code
+  → build / test
+  → feedback to the agent
+```
+
+The deterministic Forma front end stops at meaning. It does not lower that
+meaning into framework files. The coding agent receives a machine-readable
+request and works in the actual repository, using its existing architecture,
+libraries, conventions, and tests.
+
+This boundary is the project’s defining distinction:
+
+> A conventional DSL builds a code generator. Forma builds stronger input for
+> the AI that writes the code.
+
+See [Agent Generation Model](docs/agent-generation.md) for the responsibility
+boundary and the planned request/feedback loop.
 
 ## What Forma describes
 
-One compilation unit represents one Forma application. In v0, that application
-is described with the following elements.
+One compilation unit represents one application namespace. The current v0
+design contains these application concepts.
 
 ```text
 Application
@@ -63,14 +94,12 @@ Application
     └── Role
 ```
 
-A relation is represented as an entity-typed field rather than as a separate
-primitive. An action currently represents an allowed entity state transition.
-The [Forma v0 specification](docs/v0-primitives.md) defines the precise syntax
-and semantics.
+A relation is an entity-typed field rather than a separate primitive. An action
+currently represents an allowed entity state transition. The
+[Forma v0 specification](docs/v0-primitives.md) defines the precise syntax and
+semantics.
 
-### Elements under design
-
-Additional, unimplemented elements are being tested against concrete examples.
+Additional concepts remain under design:
 
 ```text
 Under design
@@ -79,206 +108,30 @@ Under design
 │   ├── Invariant
 │   └── Precondition
 ├── Changes
-│   └── Atomic postconditions
 ├── Occurrence
 ├── Effect
 └── Identity
 ```
 
-Expression is explored in the
-[minimal expression layer proposal](docs/expression-proposal.md). Changes,
-Occurrence, and Effect are explored in the
-[order approval and inventory probe](docs/order-approval-proposal.md). Identity
-is explored in the
-[public membership and identity proposal](docs/public-membership-proposal.md).
-Their names and syntax are not yet part of the language specification.
+They are explored in the
+[minimal expression proposal](docs/expression-proposal.md),
+[order approval and inventory probe](docs/order-approval-proposal.md), and
+[public membership proposal](docs/public-membership-proposal.md).
 
 ## Why Forma?
 
-Application source code contains two different kinds of information:
-
-1. decisions specific to the application;
-2. implementation mechanics required by frameworks and runtimes.
-
-Forma aims to maximize the density of the first and minimize the amount of the
-second.
-
-In the example above, the developer decided which entity to present, which
-fields are visible and searchable, how results can be filtered, and the logical
-page size. Request encoding, data fetching, loading and failure states, query
-construction, widgets, cache updates, and routing are implementation mechanics.
-
-A conventional implementation may require coordinating all of these concerns
-across a frontend, backend, database, API contract, and tests. Forma treats them
-as consequences of one application-level declaration.
-
-## Why Forma now?
-
-AI-assisted development has changed the relationship between people and source
-code. Developers write fewer implementation lines by hand, and reading every
-line of a large generated codebase is no longer realistic. Yet applications are
-still split across frontend, backend, database, schema, and test languages, while
-their specification is scattered among design documents, implementation code,
-API specs, issues, and prompts.
-
-Spec-Driven Development (SDD) is a useful attempt to reduce that fragmentation.
-A prose specification, however, must still be reread,
-interpreted, checked against the implementation, and kept synchronized after
-every change. When machines perform most implementation work, asking humans to
-operate both long specifications and generated code is tedious and prone to
-drift.
-
-Forma's hypothesis is that the missing layer is not a more detailed document,
-but a higher-level language: readable as a blueprint and parseable, checkable,
-and executable as a program. Humans maintain concise, semantically dense Forma
-source. The compiler fixes its meaning, target generators—including AI—produce
-implementations, and conformance checks the result.
-
-```text
-Humans read and review       Forma source
-Machines generate and own   target code
-Compiler + conformance      keep their meanings aligned
-```
-
-Forma is neither a store for natural-language prompts nor a one-shot scaffolder
-driven by a design document. It aims to consolidate the blueprint,
-implementation intent, and checkable specification that are currently scattered
-across a project into one executable application language.
-
-## Philosophy
-
-### Code should look like the model
-
-Application code should resemble the concepts developers actually reason about.
-A user has states. An order has a lifecycle. A page contains a searchable list.
-An action changes the system. These concepts should be directly expressible.
-
-### Raise the level of abstraction
-
-Existing languages abstract away machine instructions, memory addresses, and
-CPU registers. Forma attempts to move one level higher by making larger
-application semantics part of the language.
-
-### Complexity belongs below the abstraction
-
-Forma does not assume that software is simple. It moves repeated implementation
-complexity behind language-level concepts so compilers and runtimes can handle
-it consistently.
-
-### Prefer semantics over syntax sugar
-
-Forma is not intended to be shorter syntax for Ruby, Go, or TypeScript.
-Constructs such as `entity`, `state`, `action`, `list`, and `page` carry semantic
-meaning understood by the compiler.
-
-### One source, multiple targets
-
-Forma source is not coupled to a particular framework. The same application
-model should be lowerable through different target profiles while preserving
-the same observable behavior.
-
-### Forma is the source humans read
-
-Generated React, Ruby, Go, or other target code is not source that humans keep
-editing. Forma source must therefore be the application's only source of truth:
-diffable, reviewable, searchable, and durable in version control. Diagrams are
-derived views generated from Forma, not a second UML input that can drift.
-
-A requirement that Forma cannot express must not be patched into generated
-code. A profile that cannot implement declared intent produces a compile error;
-requirements absent from the language are explicitly outside v0's scope. Any
-future escape hatch must remain visible and versioned as a profile or
-source-level extension.
-
-### Readable accurately and over time
-
-Forma source prioritizes accurate understanding of application meaning over
-brevity or prose-like syntax. Without knowing the target framework, a reader
-should be able to explain what exists, who can see and change it, which
-constraints and state transitions apply, and what a change will affect.
-
-Forma omits implementation mechanics, not semantically important facts. The
-same concept uses the same form; implicit defaults and reference resolution
-follow closed, deterministic rules that the compiler can expand and explain.
-See [Forma Language Design Principles](docs/language-design-principles.md) for
-the detailed review criteria.
-
-### Fix meaning, not implementation shape
-
-Syntax, name resolution, types, permissions, transitions, navigation, and
-conformance expectations are deterministic. Component boundaries, file layout,
-and framework APIs need not be byte-identical. An AI target generator may vary
-the implementation only while preserving resolved Semantic IR and passing the
-same conformance contract.
-
-## One declaration, many consequences
-
-Consider a state transition:
-
-```forma
-action User.activate: Confirmed -> Active
-```
-
-This is not shorthand for one `if` statement. It declares the application rule:
-
-> A user can become active only from the confirmed state.
-
-From that rule, a target may produce an authoritative backend guard, frontend
-action availability, an API contract, state refresh behavior, tests for valid
-and invalid transitions, and documentation. One Forma declaration can affect
-many generated artifacts because it represents meaning, not a code template.
-
-## Architecture
-
-Forma is designed around a target-neutral semantic intermediate representation
-and a conformance contract derived from it, not direct source-to-source
-rewriting.
-
-```text
-Natural language (optional)
-          │
-          ▼ optional AI
-     Forma source
-          │
-          ▼ deterministic front end
-Lexer / Parser / AST / Checker
-          │
-          ▼
-Semantic IR + Conformance Contract
-          │
-          ▼ target profile + generator (AI allowed)
-Generated Application
-          │
-          ▼ build + deterministic conformance
-   Accepted Artifact
-```
-
-The compiler resolves types, relationships, state transitions, permissions,
-actions, and navigation before a target profile selects concrete components,
-transport, persistence, and runtime behavior.
-
-The deterministic boundary runs from Forma source through the Semantic IR and
-conformance contract:
-
-```text
-Forma source + front-end version -> Semantic IR + Conformance Contract
-```
-
-A target generator may use AI, and generated code may differ between runs. That
-code is a disposable artifact rather than human-edited source. Its correctness
-is determined by a successful build and a deterministic conformance contract,
-not by byte-for-byte identity.
-
-## Forma and AI
-
-AI-assisted development showed that developers often describe application
-changes at a much higher level than existing programming languages allow:
+AI coding agents already accept high-level requests such as:
 
 > Add a paginated user list with search by name and email.
 
-Today, a coding agent may expand that instruction into many pieces of
-framework-specific code. Forma explores whether the same high-level instruction
-can become durable, reviewable, and mechanically checkable source code:
+Natural-language prompts are convenient but weak as durable application source.
+Names are unresolved, types are implicit, omissions are hard to distinguish
+from decisions, and later prompts can reinterpret earlier ones. Prose
+specifications have the same synchronization problem: people must continuously
+reread them and compare them with the implementation.
+
+Forma turns that request into source that can be parsed, checked, diffed, and
+reviewed:
 
 ```forma
 page Users {
@@ -289,71 +142,143 @@ page Users {
 }
 ```
 
-AI may translate natural language into Forma, help author target profiles, or
-generate target artifacts from Semantic IR. Forma's syntax, semantics,
-validation, Semantic IR, and conformance contract remain deterministic and do
-not depend on model judgment.
+The compiler catches misspelled fields, incompatible types, invalid state
+transitions, unresolved actions, and inconsistent permissions before a coding
+agent changes the repository. It then emits the application meaning with all
+references and deterministic defaults resolved.
 
-An AI target generator receives resolved Semantic IR, a versioned target
-profile, and an output contract—not unchecked Forma source. Generated output is
-accepted only after it builds and passes conformance; failures are returned as
-diagnostics for another generation attempt.
+## Resolved Intent
+
+The compiler’s main output is **Resolved Intent**, not a lowering-oriented
+intermediate representation. It is a target-neutral, machine-readable account
+of what the coding agent must implement.
+
+It contains resolved entities, fields, constraints, states, actions,
+permissions, pages, capabilities, navigation, and stable semantic identities.
+It does not contain React components, HTTP verbs, SQL, directories, package
+names, framework APIs, loading widgets, relation pickers, submission tokens, or
+other implementation mechanisms.
+
+Source Maps connect every resolved node back to Forma source so compiler and
+repository failures can be explained in terms a human can review.
+
+## Acceptance Facts
+
+Forma also derives structured, target-neutral facts that should be true after
+implementation. The following is their human-readable rendering:
+
+```text
+- User.activate succeeds only from Confirmed
+- admin can view the Users page
+- Users searches name and email
+- Users has a logical page size of 20
+- an invalid transition is rejected without changing state
+```
+
+The coding agent translates these facts into the target repository’s normal
+unit, integration, request, or browser tests. Forma does not maintain a
+framework adapter or prescribe HTTP status codes and DOM selectors.
+
+Each fact has a stable ID. Repository-specific tests reference the IDs they
+cover, and a successful generation run requires the requested and covered fact
+ID sets to match and every covered fact to pass.
+
+The expected meaning remains deterministic; only the repository-specific way of
+implementing and testing it belongs to the agent.
+
+## Forma and the target repository
+
+The target repository is normal application source, not a disposable artifact.
+The coding agent may add to an existing system, preserve hand-written code,
+follow established architecture, and apply incremental changes. Humans may
+continue to work in the repository.
+
+Forma owns the application intent it expresses. The repository owns the
+implementation. A semantic change made only in target code can drift from
+Forma, so that change should be reflected in Forma source before the next agent
+request. Forma does not attempt to make generated files byte-identical.
+
+Concrete implementation decisions belong to the agent and repository:
+
+- components and user-interface structure;
+- routes, APIs, and transport;
+- database schema, persistence, and migrations;
+- framework and library usage;
+- file layout and naming conventions;
+- target-specific tests;
+- incremental integration with existing code.
+
+## Design principles
+
+- Express application intent directly, not through framework vocabulary.
+- Keep one canonical form for one application concept.
+- Omit implementation mechanics, never semantically important facts.
+- Resolve defaults and references deterministically and make them explainable.
+- Make dependencies and change impact traceable through semantic identities.
+- Let the coding agent choose implementation shape from repository context.
+- Use build and test feedback to repair implementation, not to redefine intent.
+
+The detailed review criteria are in
+[Forma Language Design Principles](docs/language-design-principles.md).
 
 ## Goals
 
-- Express application decisions with high semantic density.
+- Replace fragile coding prompts with typed, durable application intent.
 - Make domain rules and user-visible capabilities explicit and checkable.
-- Generate consistent behavior across frontend, backend, persistence, and tests.
-- Keep Forma source independent of target frameworks.
-- Make semantics and acceptance decisions reproducible without an LLM.
-- Treat target code as a generated artifact that never needs manual editing.
+- Produce stable Resolved Intent and machine-readable Generation Requests.
+- Let coding agents implement Forma in new or existing repositories.
+- Feed build and test failures back into an iterative repair loop.
+- Apply Forma changes incrementally without owning framework-specific generators.
 
 ## Non-goals
 
 Forma is not intended to:
 
-- replace every low-level or systems programming language;
-- expose every capability of every target framework;
-- use natural language as executable syntax;
-- delegate parsing, semantic resolution, or the conformance oracle to an LLM;
-- manually edit generated target code and create a second source of truth;
-- become a collection of framework-specific shortcuts.
+- generate each framework through a built-in deterministic lowerer;
+- maintain target-profile capability matrices or framework adapter suites;
+- standardize routes, SQL, components, directories, or test frameworks;
+- require byte-identical application-code regeneration;
+- use natural language as unchecked executable syntax;
+- delegate parsing, name resolution, type checking, or Forma semantics to an LLM;
+- replace every low-level or systems programming language.
 
 ## Status
 
 Forma is in an early design phase. There is no compiler release yet. The
-unreleased Go front end partially implements the design draft v0.4 surface
-syntax, together with the lexer, parser, syntax AST, name resolution, type
-checking, semantic validation, diagnostics, `forma/v0.4` core Semantic IR, and Source Maps.
-It also implements an exploratory, non-v0 slice for named invariants that
-compares two required fields on `self` with `<=` and emits resolved expression IR.
+unreleased Go front end partially implements the design draft v0.4 grammar,
+parser, name resolution, type checking, semantic validation, stable identities,
+Resolved Intent, and Source Maps. It also contains an exploratory non-v0
+self-only invariant slice.
 
-This does not mean the entire normative draft is implemented. The conformance
-contract, target-profile capability check, and artifact
-generation and verification protocols remain future work. The normative
-document is design draft v0.4; the reference implementation covers only part
-of it.
+The Go admin generator and target-neutral conformance adapter under
+`experiments/` are now **frozen meaning-discovery prototypes**. They helped
+identify information missing from the front end, but they are not the planned
+Forma generation architecture. No second framework generator or shared runtime
+adapter will be built as the next step.
 
 - [Forma v0 specification](docs/v0-primitives.md)
+- [Agent generation model](docs/agent-generation.md)
 - [Development roadmap](docs/roadmap.md)
+- [Language design principles](docs/language-design-principles.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
-- [Architecture Manifest proposal (exploratory)](docs/architecture-manifest.md)
-- [Public membership and identity proposal (exploratory)](docs/public-membership-proposal.md)
-- [Order approval, inventory, and effect proposal (exploratory)](docs/order-approval-proposal.md)
-- [Minimal expression layer proposal (exploratory)](docs/expression-proposal.md)
+- [Minimal expression proposal](docs/expression-proposal.md)
+- [Frozen admin generation prototype](experiments/admin-e2e/README.md)
+- [Frozen conformance prototype](experiments/conformance/README.md)
 
 Run the checker from source with Go 1.24 or newer:
 
 ```bash
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
+go run ./cmd/forma resolve examples/users.forma
 go test ./...
 ```
 
 The files and directories passed to one `forma check` invocation form one
-compilation unit and one application namespace. Directory structure does not
-create implicit application boundaries. The two examples in this repository
-are independent applications, so check them separately as shown above.
+compilation unit. The two examples are independent applications and should be
+checked separately.
 
-`forma build`, `forma conformance`, and `forma run` remain future work.
+`forma resolve` now emits canonical Resolved Intent JSON. The next tooling
+milestones are the Generation Request and agent feedback loop. Framework-specific
+`forma build --profile` is no longer on the core roadmap.

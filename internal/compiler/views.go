@@ -280,7 +280,7 @@ func (c *checker) checkUniqueNames(names []Name, context string) {
 
 func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref IRActionRef) {
 	id := semanticID(string(viewSemanticID(info)), "action", name.Text)
-	ref = IRActionRef{ID: id, Name: name.Text, PreventDuplicateDispatch: true, FailureFeedback: true}
+	ref = IRActionRef{ID: id, Name: name.Text}
 	var domainAction *ActionDecl
 	defer func() {
 		ref.Access = c.actionRefAccess(id, info, ref, domainAction)
@@ -344,10 +344,7 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref 
 func (c *checker) resolveSubmitIntent(info *viewInfo, report bool) IRSubmitIntent {
 	viewID := viewSemanticID(info)
 	id := semanticID(string(viewID), "submit")
-	success := IRNavigationIntent{
-		ID:            semanticID(string(id), "success"),
-		RecheckAccess: true,
-	}
+	success := IRNavigationIntent{ID: semanticID(string(id), "success")}
 
 	details := c.details[info.Entity.Name.Text]
 	switch {
@@ -371,12 +368,10 @@ func (c *checker) resolveSubmitIntent(info *viewInfo, report bool) IRSubmitInten
 	}
 
 	return IRSubmitIntent{
-		ID:                       id,
-		Action:                   info.Mode,
-		Success:                  success,
-		Access:                   c.composeAccess(semanticID(string(id), "access"), pageNames, nil),
-		PreventDuplicateDispatch: true,
-		FailureFeedback:          true,
+		ID:      id,
+		Action:  info.Mode,
+		Success: success,
+		Access:  c.composeAccess(semanticID(string(id), "access"), pageNames, nil),
 	}
 }
 

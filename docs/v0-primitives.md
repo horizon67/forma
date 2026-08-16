@@ -1,32 +1,31 @@
 # Forma v0 — プリミティブと言語仕様
 
-Status: design draft 0.4 (reference implementation: partial; core Semantic IR: `forma/v0.4`)
+Status: design draft 0.4 (reference implementation: partial; Resolved Intent schema under revision)
 
 > Forma is a high-level application programming language for expressing what
 > software should be, not how it should be implemented.
 
 ```text
-自然言語
-  ↓ AI（任意の翻訳器）
 Forma source
   ↓ Lexer → Parser → AST → Semantic Checker
-Semantic IR + Conformance Contract
-  ↓ target profile + generator（AI可）
-Generated Artifact
-  ↓ build + deterministic conformance
-Accepted Artifact
+Resolved Intent + Acceptance Facts
+  ↓ Generation Request
+AI coding agent + target repository
+  ↓ repository-native implementation
+Application code
+  ↓ build / test
+Feedback → coding agent
 ```
 
-AIは自然言語からFormaへの翻訳、target profileの作成、Semantic IRからtarget artifactへの生成に
-利用できる。ただし、Forma sourceのparse、意味解決、Semantic IR、conformance contract、合否判定に
-LLMの判断を用いてはならない。同じForma sourceとfront-end versionからは、byte-identicalな
-Semantic IRとconformance contractを得なければならない。生成artifact自体は実行ごとに異なって
-よいが、同じ観測可能な意味を持ち、同じconformance contractを通過しなければならない。
+AI coding agentはFormaのend-to-end実装モデルに必須である。ただし、Forma sourceのparse、名前解決、
+型検査、静的semantics、Resolved Intentの意味をLLMの判断へ委ねない。同じForma sourceとfront-end
+versionからはbyte-identicalなResolved Intentを得る。Acceptance Factsの期待する意味もfront-endが
+決めるが、それをrepository固有のtestへ変換するのはcoding agentである。
 
-生成されたtarget codeは人間が編集するsourceではなく、破棄・再生成可能なartifactとする。
-target固有の恒久的な判断はversioned target profileに置き、生成物へ手修正してはならない。
-人間がreviewし保守するアプリケーションsourceはFormaだけである。diagramはFormaから生成する
-viewであって、別のsource of truthにはしない。
+target codeは破棄専用artifactではなく、通常のapplication repositoryである。coding agentは既存code、
+architecture、library、testを読み、incrementalに変更する。Forma sourceはapplication intentの
+source of truthであり、repository codeは実装のsource of truthである。同じ意味を両方で独立に定義せず、
+意味を変える場合はForma sourceへ反映する。
 
 本書をForma v0の規範仕様とする。
 
@@ -38,9 +37,9 @@ Formaは、AI時代には人間がtarget codeの大部分を書かず、すべ�
 なく実行可能な高水準言語にすることがFormaの中心的な選択である。
 
 Forma v0が検証するのは、アプリケーションの「何が存在し、誰が、何を見て、どう変えられるか」
-を短く記述し、実装詳細を含まないSemantic IRと、実装の合否を判定できるconformance contractへ
-決定的に変換できるか、という一点である。target generatorの実装や生成コードが異なっても、
-同じcontractによって観測可能な意味を検証できることを含む。
+を短く記述し、実装詳細を含まないResolved IntentとAcceptance Factsへ決定的に変換し、それを
+coding agentが通常のrepositoryへ実装できるか、という一点である。固定lowererを持たず、agentが
+repository contextから実装方法を選び、既存のbuild/test loopで修正できることを含む。
 
 最初の対象は、次を備えたデータ管理アプリケーションとする。
 
@@ -48,11 +47,11 @@ Forma v0が検証するのは、アプリケーションの「何が存在し、
 - 検索・絞り込み・ソート・ページング
 - 状態遷移と、状態に応じたactionの表示・拒否
 - roleによるpageとactionの認可
-- loading、empty、pending、validation error、failureの各状態
+- empty、validation error、failureを利用者が識別できるfeedback
 
 `list User`はHTML tableやReact componentを意味しない。「Userの集合を利用者に提示する」
 という意図である。Webではtable、mobileではlistとinfinite scrollなど、具体的な実現方法は
-target profileが決める。
+coding agentがtarget repositoryのcontextから決める。
 
 ### 1.1 人間可読性の設計contract
 
@@ -68,7 +67,7 @@ transport、database schemaを知らなくても、sourceから次を説明で�
 
 短さや自然言語らしさだけを理由にsyntaxを追加しない。同じconceptには一つのcanonical formを与え、
 実装詳細は省略してもapplication semanticsを決める事実は隠さない。defaultや参照解決による暗黙性は、
-閉じた決定的規則から導出し、Semantic IRへ記録し、人間向けに展開できる場合だけ認める。宣言間の依存と
+閉じた決定的規則から導出し、Resolved Intentへ記録し、人間向けに展開できる場合だけ認める。宣言間の依存と
 diagnosticはSource MapによってForma declarationへ追跡可能にする。
 
 詳細なproposal checklistと完全例の監査結果は
@@ -77,7 +76,7 @@ diagnosticはSource MapによってForma declarationへ追跡可能にする。
 
 ## 2. プリミティブの選別基準
 
-プリミティブは、target-neutralなSemantic IRに独立した意味ノードを導入し、他の構文の
+プリミティブは、target-neutralなResolved Intentに独立した意味ノードを導入し、他の構文の
 パラメータだけでは表現できない概念とする。
 
 修飾子は、既存のプリミティブを限定または調整するだけで、単独のidentityやlifecycleを
@@ -99,7 +98,7 @@ diagnosticはSource MapによってForma declarationへ追跡可能にする。
 
 1回のfront-end compile operationへ明示的に渡されたForma source fileの集合を、1つの
 **compilation unit**とする。1 compilation unitは1つのapplication namespaceを持ち、すべての
-top-level declaration、参照解決、重複検査、Semantic IR、Source Map、Conformance Contractは
+top-level declaration、参照解決、重複検査、Resolved Intent、Source Map、Acceptance Factsは
 その集合全体に対して生成する。
 
 source pathとdirectory階層はnamespaceやapplication境界を作らない。複数fileまたはdirectoryを
@@ -114,8 +113,8 @@ compile operationとして明示する。したがって独立した`examples/us
 通常の重複宣言としてerrorになる。
 
 `forma check`は1個以上のfileまたはdirectory引数を必須とし、引数なしでcurrent directoryを暗黙に
-探索しない。将来のproject/profile manifestは1つのbuildについてこのsource集合を明示する責務を持つが、
-manifestの所在やdirectory layoutによってlanguage semanticsを変えてはならない。
+探索しない。Generation Requestを作るcallerは対象source集合を明示する責務を持つが、repositoryの
+directory layoutによってlanguage semanticsを変えてはならない。
 
 ## 3. プリミティブ10個
 
@@ -155,7 +154,7 @@ entity User {
 ```
 
 entity型のfieldはto-one関連、`[Entity]`はto-many関連を意味する。foreign key、join table、
-埋め込みなどの永続化方式はtarget profileが決める。
+埋め込みなどの永続化方式はcoding agentがtarget repositoryのcontextから決める。
 
 entity型のfieldを人間に提示するときは、参照先entityの`label` fieldを使う。上の例では
 `User.team`を表示する値は`Team.name`である。`label`はHTML labelやfield captionではなく、
@@ -212,8 +211,9 @@ page UserDetail(user User) {
 }
 ```
 
-pageは0個または1個のentity parameterを取る。routeはpage名、parameter、target profileから
-決定的に導出する。route文字列はv0ソースに書かない。
+pageは0個または1個のentity parameterを取る。page間のnavigation destinationはResolved Intentへ
+解決するが、URLやroute shapeはcoding agentとtarget repositoryが所有する。route文字列はv0 sourceに
+書かない。
 
 #### 7. `list`
 
@@ -278,8 +278,8 @@ page Users {
 ```
 
 `role`と`allow`からpage guardとaction guardを生成する。ただし、roleは認証方式を定義しない。
-OAuth、password、session、token、login/logout UIなどはtarget profileまたはv1以降のidentity設計が
-担当する。
+OAuth、password、session、token、login/logout UIなどのapplication intentはv1以降のidentity設計、
+具体的な実装はcoding agentとtarget repositoryが担当する。
 
 ## 4. 組み込み型
 
@@ -321,8 +321,8 @@ presentation orderとして保持するが、大小比較やbusiness priorityを
 含まれるrecordだけを返す。tokenization、stemming、locale依存collation、fuzzy searchはv0に含めない。
 
 `matches /.../`はNFC正規化済みの値に対し、RE2-compatibleな正規表現のsearch semanticsを使う。
-文字列全体を検査する場合はauthorが`^`と`$`を明記する。profileは同じdialectを実装し、host
-language固有のregexへ意味を変えてはならない。
+文字列全体を検査する場合はauthorが`^`と`$`を明記する。coding agentは同じdialectの意味を実装し、
+host language固有のregexへ黙って意味を変えてはならない。
 
 ## 5. 修飾子の閉じたセット
 
@@ -348,7 +348,7 @@ v0で使用できる修飾子は次のものだけである。
 
 named scalarが別のnamed scalarをbaseにする場合、baseのconstraintをtransitiveに継承する。
 derived typeの`matches`は継承したpatternとのAND、`min`は全lower boundの最大値、`max`は全upper
-boundの最小値として合成する。合成結果が充足不能ならcompile errorとする。Semantic IRには宣言ごとの
+boundの最小値として合成する。合成結果が充足不能ならcompile errorとする。Resolved Intentには宣言ごとの
 差分ではなく、targetが再解決を必要としないeffective constraintを記録する。
 
 ### 5.2 field修飾子
@@ -366,8 +366,8 @@ relation fieldが`columns`、`filter`、`detail fields`、`form fields`のいず
 relationの表示は参照先の`label`値を使う。relationを`filter`で使う場合は参照先identityによる
 exact filterとlabelによる選択肢を提供する。relationを`form`で使う場合は、現在のpage/actionの
 認可contextで選択可能な参照先entityへ到達できるrelation pickerを提供する。dropdown、検索型
-picker、lazy queryなどの実現方法はprofileが決めるが、選択肢の意味は
-`identity + label value`であり、別のfieldを推測してはならない。この能力はSemantic IRに
+picker、lazy queryなどの実現方法はcoding agentが決めるが、選択肢の意味は
+`identity + label value`であり、別のfieldを推測してはならない。この能力はResolved Intentに
 `RelationChoiceIntent`として明示する。
 
 to-many relationを`columns`または`detail fields`へ明示した場合は、各要素を
@@ -383,12 +383,12 @@ v0の`literal`には`Date`と`DateTime`の表記がない。そのため、こ�
 
 ### 5.3 action修飾子
 
-- `confirm`: dispatch前に肯定的な確認を要求する。具体的な文言とUIはtarget profileが提供する。
+- `confirm`: dispatch前に肯定的な確認を要求する。具体的な文言とUIはcoding agentがrepositoryに合わせる。
 - `allow roles`: 記載roleのいずれかを要求する。
 - `goto Page`: 成功後にpageへ遷移する。
 
-`delete`は`confirm`を明記できない標準actionだが、常にtarget profileの標準確認を要求する。
-破壊的操作を無確認で生成してはならない。
+`delete`は`confirm`を明記できない標準actionだが、常に確認を要求する。coding agentはtarget repositoryに
+適したUIでこれを実装し、破壊的操作を無確認にしてはならない。
 
 ### 5.4 page修飾子
 
@@ -406,14 +406,15 @@ v0の`literal`には`Date`と`DateTime`の表記がない。そのため、こ�
 
 `paginate`はoffset、cursor、infinite scrollを指定しない。観測可能な契約は、安定した順序、
 一巡中に重複しないこと、残りの結果へ到達できること、の3点である。指定sortが一意でない場合、
-targetは暗黙のentity identityをtie-breakerとして追加する。
+coding agentはrepositoryに適したstable tie-breakを選ぶ。具体的なtie-break keyはForma semanticsではない。
 
 `sort`には、組み込みscalarまたはそれを基底とするnamed scalar fieldだけを指定できる。
 relation、collection、union、stateはv0ではsortできない。比較はStringがNFC正規化後のUnicode
 scalar valueによるcase-sensitive辞書順、Int/Decimalが数値順、Boolが`false < true`、
 Date/DateTimeが時系列順とする。
 
-各list修飾子は1回まで。targetが意図を実現できない場合はcompile errorとし、黙って無視しない。
+各list修飾子は1回まで。coding agentが特定repositoryで意図を実現できない場合は、黙って無視せず
+Generation Feedbackでblockerとして返す。
 
 ### 5.6 detailとform修飾子
 
@@ -429,14 +430,14 @@ actionを通す。
 
 ### 5.7 `columns`と`detail fields`を省略した場合
 
-省略をprofileの推測にしないため、次のprojectionへ決定的に展開する。
+省略をcoding agentの推測にしないため、次のprojectionへ決定的に展開する。
 
 - `list`の`columns`省略: collection以外のfieldをsource orderで並べ、最後にstateを置く。
 - `detail`の`fields`省略: collection以外のfieldをsource orderで並べ、最後にstateを置く。
 - to-many relationは、データ量を暗黙に展開しないため、どちらも明示した場合だけ提示する。
 
-暗黙に選ばれたto-one relationにも通常の`label`検査を適用する。展開後のprojectionをSemantic IRへ
-記録し、target generatorに省略の再解釈をさせない。展開結果が空になるlist/detailは、人間に
+暗黙に選ばれたto-one relationにも通常の`label`検査を適用する。展開後のprojectionをResolved Intentへ
+記録し、coding agentに省略の再解釈をさせない。展開結果が空になるlist/detailは、人間に
 提示できる値がないためcompile errorとする。
 
 ## 6. actionの宣言・参照・解決
@@ -482,15 +483,16 @@ domain actionは`goto`があればそのpageへ遷移し、なければ現在の
 再評価する。parameterを持つ遷移先には、作成・編集・遷移後のcontext entityを渡す。
 
 「呼び出し元list」はaction dispatch時のnavigation contextとして保持する。以上の規則は
-Semantic IRに解決済みdestinationとして記録し、target profileが別の遷移を選んではならない。
+Resolved Intentに解決済みdestinationとして記録し、coding agentが別の遷移を選んではならない。
 ここでdestinationは固定page名だけでなく、`caller-list`または`same-context`という閉じたruntime
 policyを取り得る。各form viewのIRにはmodeだけでなく、`submit create/edit`、成功destination、
-duplicate dispatch防止、failure feedbackを持つ`SubmitIntent`を必ず含める。
+合成済みaccessを持つ`SubmitIntent`を必ず含める。
 
-`SubmitIntent`は少なくとも、standard action名、成功navigation、合成済みaccess、pending中の
-duplicate dispatch防止、failure feedbackを保持する。成功navigationは固定`page`、
+`SubmitIntent`は少なくとも、standard action名、成功navigation、合成済みaccessを保持する。
+成功navigationは固定`page`、
 `caller-list`、`same-context`の閉じた3種類とし、`caller-list`にはdirect navigation時の
-`same-context` fallback pageを記録する。遷移時にはdestination pageのaccessを再検査する。
+`same-context` fallback pageを記録する。認可再検査、validation failure、1回の論理操作が複数mutationを
+発生させないことは、実現機構をSubmitIntentへ埋め込まず、対象nodeを参照するAcceptance Factsにする。
 
 accessは単一role listへ平坦化せず、source page、action、destination pageそれぞれの`allow`を
 `allOf`で合成し、各`allow`内のrole listを`anyOf`として保持する。例えば
@@ -508,25 +510,26 @@ actionを提示するには、現在pageの`allow`、domain action自身の`allo
 
 ## 7. 実行時に必須の意味
 
-簡潔なFormaソースから省略されても、次は全targetに必須である。
+簡潔なForma sourceから省略されても、次はすべての実装に必須である。
 
-- list/detailのloading、empty、failure状態
-- formの初期値、client feedback、authoritative validation error、pending状態
-- actionのpending中のduplicate dispatch防止、成功後の表示整合、failure feedback
+- list/detailでemptyとfailureを利用者が区別できること
+- formの初期値、authoritative validation error、入力保持、failure feedback
+- 1回の論理mutationが重複dispatchによって複数回適用されないこと
+- action成功後に表示内容と保存済み状態が整合すること
 - state preconditionとrole ruleのserver-side相当境界での再検査
 - field constraintとunique constraintのauthoritativeな検証
 - query traversalの安定性
 
-これらのinteraction stateは特定widgetの表示を要求するものではなく、利用者から観測できるruntime
-conditionである。たとえばserver-rendered targetはplatformのnavigation中状態で`loading`を満たして
-よいが、処理中を`ready`や`empty`として誤表示してはならない。conformance adapterは各target固有の
-表現を、共通のconditionへ対応付けて観測する。
+これらは利用者またはdomainから観測できる性質であり、loading widget、disabled button、submission token、
+HTTP statusなど特定の対策を要求しない。
 
-具体的なcomponent、HTTP、cache invalidation、再取得、transaction、database constraint、test
-frameworkはtarget profileが選ぶ。これらをForma sourceやSemantic IRのUI/transport固有ノードに
-漏らしてはならない。
+Forma front-endは静的なapplication構造をResolved Intentへ、実行後に観測すべき保証をAcceptance Factsへ
+保持する。coding agentはtarget
+repositoryのtest frameworkを使い、必要な正常系と否定系testへ変換する。具体的なcomponent、HTTP、
+cache invalidation、再取得、transaction、database constraint、test frameworkはagentとrepositoryが
+所有し、Forma sourceやResolved IntentのUI/transport固有nodeに漏らさない。
 
-## 8. target profile、Semantic IR、conformance
+## 8. Resolved Intent、Generation Request、agent loop
 
 ### 8.1 deterministic front-end
 
@@ -539,9 +542,9 @@ Token stream
   ↓ Parser
 Syntax AST
   ↓ Semantic Checker
-Semantic IR
-  ↓ Conformance Builder
-Conformance Contract
+Resolved Intent
+  ↓ Acceptance Builder
+Acceptance Facts
 ```
 
 Parserまたは同等の決定的な構文解析は、textual languageであるFormaに必須である。独立したLexerは
@@ -555,34 +558,32 @@ tokenizeするために使用する。ASTはsource syntaxとsource spanを保持
 front-endの規範的な出力は次のように決まる。
 
 ```text
-Forma source + front-end version -> Semantic IR + Conformance Contract
+Forma source + front-end version -> Resolved Intent + Acceptance Facts + Source Map
 ```
 
-target profileは、component、route形状、transport、persistence、pagination方式、concurrency、
-cache更新、authentication integration、test frameworkを所有する。AI generatorを利用するprofileは、
-model設定、prompt template、利用可能なtool、出力schemaもversion管理する。これらは実装方針であり、
-Semantic IRの意味を変更してはならない。
+Resolved Intentはcompiler内部のcode lowering planではない。coding agentが実装すべきapplication intentを、
+未解決参照やtarget固有推測なしに読めるmachine-readableな出力である。
 
-コンパイラは最初にsourceをtarget-neutralなSemantic IRへ正規化する。たとえばlistは最低でも
+コンパイラは最初にsourceをtarget-neutralなResolved Intentへ正規化する。たとえばlistは最低でも
 次を保持する。
 
 ```text
 CollectionIntent(entity: User)
   projection: [name, email, team, status]
-  relations: [team -> RelationPresentation(Team.name)]
   search: [name, email]
   filters: [status, team]
-  ordering: [name ascending, identity stable-tiebreaker]
+  ordering: [name ascending]
   window: 20
   actions: [create, view, edit, delete, transition(User.suspend)]
   access: anyOf(admin)
 ```
 
-Semantic IRは、解決済みsymbol、型、constraint、認可、状態precondition、必須のinteraction stateを
+Resolved Intentは、解決済みsymbol、型、constraint、認可、状態precondition、観測可能なpresentation
+stateを
 保持する。各semantic nodeには安定したidentityを与え、compilerはそのidentityからsource spanへの
 Source Mapを別に出力する。pathやlineの変更をsemantic changeとして扱わないため、Source Mapは
-Semantic IRの意味的等価性やbuild keyには含めない。React component、Rails controller、HTTP verb、
-SQLなどはSemantic IRに保持しない。
+Resolved Intentの意味的等価性には含めない。React component、Rails controller、HTTP verb、SQL、
+directory、package名などはResolved Intentに保持しない。
 
 semantic identityはsource path、line、column、declarationのglobalなsource orderを含まないcanonical
 pathとする。named declarationは次の形を取る。
@@ -598,53 +599,56 @@ page/UserDetail
 ```
 
 page内のviewは`page/{Page}/view/{kind}/{Entity}`、formはmodeも含む
-`page/{Page}/view/form/{create|edit}/{Entity}`とする。view内の解決済みaction参照、relation choice、
-sort、SubmitIntent、navigation、accessなどの匿名nodeは、親identityへkindと局所名を追加する。
+`page/{Page}/view/form/{create|edit}/{Entity}`とする。view内の解決済みaction参照、sort、SubmitIntent、
+navigation、accessなどの匿名nodeは、親identityへkindと局所名を追加する。
 同じpage内に同一identityとなるviewを複数宣言することはできない。declarationまたはviewの意味的な
 主語をrenameすればidentityは変わるが、file移動、空行、comment、source positionだけの変更では
-identityは変わらない。top-level IR collectionはidentity順へcanonicalizeする。field順、state value順、
+identityは変わらない。top-level Resolved Intent collectionはidentity順へcanonicalizeする。field順、state value順、
 view内の明示的なprojection/action順のようにpresentation semanticsを持つ順序は保持する。
 
-Source Mapのformat versionは`forma/source-map/v0.1`とし、対象IR versionと、semantic nodeごとの
-`nodeId`、`kind`、half-open source spanを保持する。generator/build/runtime diagnosticは`nodeId`で
-Forma declarationを参照し、表示時にSource Mapを使って現在のfileと位置へ戻す。
+Source Mapは対象Resolved Intent versionと、semantic nodeごとの`nodeId`、`kind`、half-open source
+spanを保持する。coding agentのbuild/test feedbackは可能な限り`nodeId`でForma declarationを参照し、
+表示時にSource Mapを使って現在のfileと位置へ戻す。
 
-conformance contractはSemantic IRから決定的に導出する。最低でも、正常系と次の否定的な性質を
-target-neutralなcaseとして保持する。
+Acceptance FactsはResolved Intentから決定的に導出する。最低でも、正常系と次の否定的な性質を
+target-neutralな事実として保持する。
 
 - field constraintとunique constraintの受理・拒否
 - state transitionのsource preconditionと遷移後state
 - page/actionのrole認可と権限拒否
-- relation choiceのentityとlabel
+- relation fieldの参照entityと人間向けlabel
 - search、filter、stable sort、page boundary
 - 標準actionの成功後navigation
-- loading、empty、invalid、pending、failureを含む必須interaction state
+- empty、invalid、failureの観測可能なfeedback
+- authoritativeな認可再検査と、1回の論理mutationが複数回適用されないこと
 
-conformance contractは言語仕様を置き換えるものではなく、生成artifactを検査するための決定的な
-projectionである。contractに未収録の振る舞いをgeneratorが自由に決めてよいことにはならず、
-規範的な意味は本書とSemantic IRに残る。
+Acceptance Factsは言語仕様を置き換えるものではなく、agentがtarget固有testを作るためのprojectionで
+ある。期待する意味をagentへ発明させない一方、HTTP status、DOM selector、test frameworkなどの
+観測方法は標準化しない。各factはtarget非依存なkind、subjectのSemanticID、input、expected、根拠nodeと、
+それらから決定的に導出したstable fact IDを持つ。上記の箇条書きは人間向け表示であり、正式な交換形式を
+散文にはしない。
 
-profileは、version管理された決定的なadapter/harnessによってcontractをtargetへ適用する。AIにtestの
-期待値や合否を決めさせてはならない。生成artifactはbuildに成功し、contractを全て通過した場合だけ
-採用する。
+### 8.3 Generation Request
 
-生成コストと不要な差分を抑えるため、実装は次の入力からbuild keyを作り、成功済みartifactを
-content-addressed cacheで再利用してよい。IRだけでなくprofileやgenerator設定の変更もkeyへ含める。
+Resolved Intent、Acceptance Facts、Source Map、requested changeをmachine-readableなGeneration Requestへ
+まとめ、AI coding agentへtarget repositoryとともに渡す。repositoryの内容をrequestへ複製しない。
+agentはworkspaceから既存architecture、library、file layout、build/test commandを読み取る。
 
-```text
-build key = hash(Semantic IR, Conformance Contract,
-                 target profile version, generator configuration)
-```
+model、prompt template、tool listはagent executionの設定であり、Forma language semanticsへ含めない。
+Forma coreはframework別profile manifest、capability matrix、共通runtime adapterを持たない。
 
-cacheは最適化であり、正しさの根拠ではない。cache missで再生成したartifactも同じconformance
-contractを通過しなければならない。
+### 8.4 feedback loop
 
-### 8.3 profile compatibility
+agentはrepositoryを編集し、既存のbuild、test、lintを実行する。failureはstage、command、diagnostic、
+関連intent nodeを持つstructured feedbackとして返す。各repository固有testは対応するfact IDを参照し、
+feedbackはfact ID、test reference、resultを持つcoverageを返す。`succeeded`の前に、requestとcoverageの
+fact ID集合が完全一致し、すべてpassedであることをorchestration layerが機械的に検査する。
+agentはfailureを解消するために実装を変更してよいが、
+Forma constraintやAcceptance Factを黙って弱めてはならない。
 
-`forma check`はtarget-neutralなsyntaxとsemanticsだけを検査する。特定profileがintentを実装できるかは、
-`forma build --profile P`がgeneration前に検査する。profileは対応するIR versionとcapabilityを機械可読に
-宣言し、未対応のsemantic nodeまたはcapabilityがあれば、AI generatorを呼ぶ前にsource-addressedな
-compile errorとする。profile非対応をgeneratorの推測やconformance failureまで遅延させない。
+特定repositoryで実装できない場合、それは`forma check`のprofile compatibility errorではない。
+repository上の制約と失敗したcommandを人間へ返し、repository変更、architecture constraint変更、Forma
+source変更のどれが必要か判断できるようにする。
 
 ## 9. v0で意図的に扱わないもの
 
@@ -662,7 +666,6 @@ compile errorとする。profile非対応をgeneratorの推測やconformance fai
 - inverse relationとcascade rule
 - 既存deploymentのschema/data migrationとzero-downtime evolution
 - deployment、secret管理、monitoringなどのoperations
-- 生成target codeへ手書き機能を混在させるcustomization
 
 重要でないからではなく、identity、effect、infrastructure、queryという次の設計軸を必要とし、
 v0の仮説検証範囲を広げるためである。
@@ -678,24 +681,25 @@ v0の仮説検証範囲を広げるためである。
 7. domain actionはtop levelで一度だけ宣言し、view側は参照だけを行う。
 8. formは大文字のentityならcreate、小文字のbindingならeditに解決する。
 9. roleは認可だけを表し、認証方式を暗黙に発明しない。
-10. routeは自動導出し、明示route構文をv0に入れない。
+10. page間のnavigation destinationは解決するが、route shapeはcoding agentとrepositoryが所有する。
+    明示route構文をv0に入れない。
 11. 改行をseparatorとし、semicolonは持たない。
 12. modifiersは§5の閉じた集合とする。
 13. 人間に提示するrelation先entityは、String基底の`label` fieldを明示する。
 14. keywordはcontextualとし、globalな予約語表を持たない。
-15. 標準actionの成功後遷移は§6.1の規則で決定し、profileの裁量にしない。
-16. 決定的なcompile境界はSemantic IRとconformance contractまでとする。
-17. target generatorはAIを利用できるが、生成artifactは決定的なconformanceで検証する。
-18. 生成されたtarget codeは編集対象のsourceではなく、破棄・再生成可能なartifactとする。
+15. 標準actionの成功後遷移は§6.1の規則で決定し、coding agentの裁量にしない。
+16. 決定的なcompile境界はResolved Intent、Acceptance Facts、Source Mapまでとする。
+17. AI coding agentをend-to-end実装の必須主体とし、Forma coreはframework別lowererを持たない。
+18. target codeは通常のrepository sourceとして人間とagentがincrementalに保守できる。
 19. reference front-endはLexer、Parser、syntax AST、Semantic Checkerを明示的に分離する。
-20. `columns`と`detail fields`の省略は§5.7のprojectionへ展開し、profileに推測させない。
-21. value equality、`search`、regex semanticsは§4.1に固定し、profile固有のcollationへ委ねない。
-22. `forma check`はtarget-neutralとし、profile compatibilityは`forma build`でgeneration前に検査する。
+20. `columns`と`detail fields`の省略は§5.7のprojectionへ展開し、coding agentに推測させない。
+21. value equality、`search`、regex semanticsは§4.1に固定し、repository固有のcollationへ黙って委ねない。
+22. `forma check`はtarget-neutralとし、repository固有の実装不能はagent feedbackとして扱う。
 23. diagramはFormaから生成するviewとし、別のsource of truthにしない。
-24. named scalarのconstraintはtransitiveに合成し、Semantic IRへeffective constraintを記録する。
-25. form submissionと成功後navigationは`SubmitIntent`へ解決し、generatorに再導出させない。
+24. named scalarのconstraintはtransitiveに合成し、Resolved Intentへeffective constraintを記録する。
+25. form submissionと成功後navigationは`SubmitIntent`へ解決し、coding agentに再導出させない。
 26. 可読性は言語設計要件とし、短さよりintentの直接性、canonical form、説明可能な暗黙性を優先する。
-27. semantic identityはcanonical pathから導出し、Source MapをIRと分離する。同じpage内で同一identityに
+27. semantic identityはcanonical pathから導出し、Source MapをResolved Intentと分離する。同じpage内で同一identityに
     なるviewはcompile errorとする。
 28. 1回のcompile operationへ明示的に渡したsource集合を1 compilation unit、1 application namespaceと
     する。pathやdirectoryから暗黙のapplication/module境界を導出しない。
@@ -710,7 +714,7 @@ v0の仮説検証範囲を広げるためである。
 | `createdAt Date readonly`の値を誰が作るか未定 | runtime由来fieldをv0から外し、完全例のsortを`name`へ変更。entity identityだけは暗黙 |
 | action引数が未決なのにEBNFでは許可される | domain actionのparameterをv0 EBNFから削除 |
 | 「完全例」にcreate/deleteの到達経路がない | create formを追加し、list/detailから標準actionを参照 |
-| roleからlogin/logoutまで導出できるように読める | roleは認可だけと明記し、認証integrationはprofileの責務に分離 |
+| roleからlogin/logoutまで導出できるように読める | roleは認可だけと明記し、認証intentはv1以降、具体実装はcoding agentの責務に分離 |
 | relationの人間向け表現とpicker queryが未定義 | `label` fieldと`RelationChoiceIntent`を追加 |
 | 標準actionの成功後遷移が未定義 | create/edit/deleteの遷移規則を§6.1に固定 |
 | keywordの予約方式と標準action名衝突が未定義 | keywordをcontextualとし、domain actionと標準actionの同名宣言をerrorにする |
@@ -845,7 +849,8 @@ type namespaceで予約され、同名の`type`を再宣言できない。
 diagnosticはfile、source span、stable code、説明、可能なら修正案を含む。compilerはdomain field、
 遷移、role、破壊的actionを推測で追加してはならない。
 
-target profileの非対応は`forma check`ではなく§8.3のprofile compatibility checkで検出する。
+repository固有のarchitectureやlibraryとの適合性は`forma check`の対象ではない。coding agentが実装時に
+repositoryを調べ、build/test failureと関連intent nodeをfeedbackとして返す。
 
 ## 13. 完全例
 
@@ -867,39 +872,38 @@ modifierだけでユーザー管理を記述する。
 
 ## 14. v0の完了条件
 
-### 14.1 target実装前に固定する境界contract
+### 14.1 coding agentへ渡す前に固定する境界
 
-language semanticsはtarget実装へ進める状態にあるが、`forma build`と`forma conformance`を実装する前に
-次の機械可読contractを固定する必要がある。これらはv1へ送らず、v0のblockerとして扱う。
+language semanticsをcoding agentへ渡すには、次のmachine-readableな境界が必要である。
 
-| contract | 固定する内容 | 現在の状態 |
+| boundary | 固定する内容 | 現在の状態 |
 | --- | --- | --- |
-| target profile manifest | profile ID/version、対応IR version、capability、generator/toolchain設定 | 未決定 |
-| artifact protocol | generatorの許可されたwrite範囲、file manifest、dependency lock、build entrypoint、失敗形式 | 未決定 |
-| conformance schema | fixture、operation、期待値、否定case、interaction stateの表現 | 未決定 |
-| profile conformance adapter | data reset、role principal注入、operation実行、UI/runtime観測の共通interface | 未決定 |
-| semantic identity / Source Map | IR nodeの安定identityとsource spanへの対応 | `forma/v0.4` IRと`forma/source-map/v0.1`としてreference front-endに実装済み |
+| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.4`として部分実装 |
+| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.2`として実装済み |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | schema要件を定義。kindごとの詳細は未実装 |
+| Generation Request | intent、facts、source map、requested change | 未決定 |
+| Generation Feedback | stage、command、diagnostic、関連intent node、fact coverage、status | schema要件を定義。未実装 |
 
-model providerや具体的なframeworkはprofileの選択であり、言語全体のblockerではない。上記contractが
-固定されるまでは、特定provider向けのpromptやreference applicationを規範interfaceとして
-先行実装しない。
+framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の
+schemaへ固定しない。model provider、prompt template、tool listもagent execution設定であり、language
+versionのblockerではない。
 
 ### 14.2 現行reference front-endとの差分
 
 現在のGo front-endはdesign draft v0.4のsurface syntaxを部分実装し、Lexer、Parser、syntax AST、
-主要な静的検査、`forma/v0.4` core Semantic IR、golden IR、Source Mapまで実装済みである。ただしdesign draft
+主要な静的検査、core Resolved Intent、golden output、Source Mapまで実装済みである。ただしdesign draft
 v0.4に対して、少なくとも次は未実装である。
 
 reference front-endはこの規範v0に加え、[Minimal Expression Layer Proposal](expression-proposal.md)を
 検証するexperimental syntaxとして、selfのrequired field同士を`<=`で比較する名前付きInvariantも受理する。
-これはv0の10 primitives、EBNF、完了条件へは含めず、式評価器とConformance oracleもまだ未実装である。
+これはv0の10 primitives、EBNF、完了条件へは含めない。
 
-- §5.7の省略projectionを展開したlist/detail IR
+- §5.7の省略projectionを展開したlist/detail intent
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
 - v0で閉じたstring/regex escape setの厳密な検査
-- conformance contract、profile manifest/capability check、artifact protocol
+- Acceptance Facts、Generation Request、Generation Feedback
 
-したがってv0.4のgolden IRとSource Mapは現在の実装回帰には使えるが、v0.4 Semantic IR schemaの
+したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.4 Resolved Intent schemaの
 完成形ではない。
 
 ### 14.3 Language/front-end v0
@@ -907,26 +911,24 @@ reference front-endはこの規範v0に加え、[Minimal Expression Layer Propos
 次をすべて満たしたとき、Forma language/front-end v0を完了とする。
 
 1. 本書のEBNFをparseし、§12の検査を行う`forma check`がある。
-2. 完全例をtarget-neutralなSemantic IR、Source Map、conformance contractへ正規化できる。
-3. 同じsourceとfront-end versionからbyte-identicalなSemantic IRとconformance contractを生成できる。
-4. parse、意味解決、IR、conformance contract、test oracleがAIまたはnetwork推論に依存しない。
+2. 完全例をtarget-neutralなResolved Intent、Source Map、Acceptance Factsへ正規化できる。
+3. 同じsourceとfront-end versionからbyte-identicalなResolved Intentを生成できる。
+4. parse、意味解決、Resolved Intent、Acceptance Factsの期待する意味がAIまたはnetwork推論に依存しない。
 5. default、projection、action解決、navigationなどsourceから導出した意味を、人間向けに展開して
    対応するsource declarationとともに確認できる。
 
 ### 14.4 End-to-end v0
 
-§14.1のcontractを固定し、language/front-end v0に加えて次を満たしたとき、Forma end-to-end v0を
+§14.1の境界を固定し、language/front-end v0に加えて次を満たしたとき、Forma end-to-end v0を
 完了とする。
 
-1. 一つのreference profileが完全例から、list/detail/create/edit/delete、query能力、状態遷移、
-   relation picker、成功後navigation、認可、必須interaction stateを持つ実行可能なapplicationを
-   生成する。generatorはAIを利用してよい。
-2. 正常系、不正遷移、権限拒否、validation failure、relation label/selection、成功後navigation、
-   stable paginationを、Semantic IRから決定的に導出したconformance contractで検証する。
-3. conformanceの期待値と合否判定がAIまたはnetwork推論に依存しない。
-4. target codeを手編集せず、同じsource of truthから破棄・再生成できる。
+1. coding agentがGeneration Requestとtarget repositoryを受け取り、実行可能なapplicationを実装する。
+2. agentがAcceptance Factsをrepository固有のtestへ変換し、正常系と否定系を検査する。
+3. build/test failureをstructured feedbackとして受け取り、少なくとも一度のrepair loopを完了する。
+4. Forma sourceの変更をResolved Intent差分として既存repositoryへincrementalに適用する。
+5. Forma coreへframework別lowerer、profile capability matrix、runtime adapterを追加しない。
 
-reference web profileなら、概ね次のcapabilityを生成する。ただしHTTP shape自体は規範ではない。
+最初のweb applicationでは、概ね次のcapabilityをagent generationで確認する。HTTP shape自体は規範ではない。
 
 ```text
 list users
@@ -943,12 +945,17 @@ enforce field, state, and role constraints
 
 ### 14.5 Formaの中心仮説の検証
 
-同じSemantic IRを二つの意味の異なるtarget profileへ生成し、同じtarget-neutral conformance suiteを
-通過したとき、「実装方法ではなくapplication intentを記述する」という中心仮説が検証されたと
-みなす。生成コードの類似性ではなく、観測可能な意味の同等性を評価する。最初から一つのprofileに
-最適化しないよう、たとえばSPAとserver-rendered applicationのように実装モデルが離れた二つを選ぶ。
-一つのreference profileでend-to-end v0を実装できても、この二profile比較を通るまでは中心仮説を
-検証済みとはみなさない。
+中心仮説は、Formaがcoding agentのpromptより強い入力として機能することで検証する。少なくとも次を
+満たさなければならない。
+
+- agentがFormaにないapplication requirementを推測せず実装できる。
+- framework固有lowering ruleをForma coreへ追加せず、repository contextに合うcodeを作れる。
+- 人間が散文promptではなくForma diffとResolved Intent差分から変更をreviewできる。
+- Acceptance Factsから作ったtarget固有testと既存build/testが成功する。
+- 次のForma変更をfull regenerationではなくincrementalに適用できる。
+
+異なるframeworkへの適用は有用な追加probeだが、二つのprofile generatorをForma自身が作ることを
+中心仮説の完了条件にはしない。
 
 ## 15. v0以降へ残す問い
 
@@ -956,21 +963,20 @@ enforce field, state, and role constraints
 - runtime由来fieldをどのeffect modelで表すか
 - join、aggregate、derived listをどう表すか
 - domain actionの引数とformをどう統合するか
-- 明示routeが本当に必要か
 - [表側の会員登録とidentity](public-membership-proposal.md)をどのsemantic modelで表し、identity providerと
   login/logoutのどこまでを言語へ入れるか
 - notification、background job、fileを共通effectとして扱えるか
-- page/view identityを使ったversioned profile extensionを、安全なescape hatchとして設けるか
+- repository固有constraintをForma semanticsへ混ぜず、Generation Requestへどう添付するか
 - derived value、`invariant`、action preconditionを式で表し、statementを持たない境界を保てるか
   （[Minimal Expression Layer Proposal](expression-proposal.md)）
-- 表示文言と設計意図を`title`やdoc commentとしてsourceとSemantic IRに載せるか
+- 表示文言と設計意図を`title`やdoc commentとしてsourceとResolved Intentに載せるか
 - 複数entityをまたぐ副作用を、手続き型へ退行せずどのeffect modelで表すか
 - 状態を変えないactionを宣言できるようにするか。現在は§12の遷移検査が拒否する
 - observable domain occurrenceをactionから導出するか、明示するか
   （[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)）
 - `forma diagram`でstate machineやentity graphを生成し、図をsource of truthにせず利用できるか
-- Ruby/RailsやAWSなどの人間によるarchitecture選定を、application semanticsから分離した
-  [Architecture Manifest](architecture-manifest.md)としてどう表すか
+- coding agentが[repositoryとarchitecture context](architecture-manifest.md)をどこまで自動で読み取り、
+  どこから明示的なuser constraintを必要とするか
 
 v1の式レイヤはまだ決定事項ではない。まず注文・明細・在庫のような実例を`examples/`へ書き、
 導出値、invariant、state以外のaction preconditionだけで何が表現でき、どこからeffectが必要に

@@ -1,198 +1,87 @@
-# Architecture Manifest Proposal
+# Repository and Architecture Context
 
-Status: exploratory proposal — not a language decision and not part of the v0 grammar
+Status: superseded exploration — not part of the Forma grammar or core roadmap
 
-この文書は、Ruby/Rails、AWS、database、libraryなど、人間が当面選定する実装architectureを
-Forma projectでどう扱うかという一案を記録する。規範仕様は
-[`v0-primitives.md`](v0-primitives.md)であり、ここに示すfile名、TOML schema、profile分割、keywordは
-未決定である。
+この文書は以前、Application Profile、Deployment Profile、capability matrix、`forma.lock`を持つ
+Architecture Manifestを提案していた。その設計は、Forma自身がframework別generatorを所有する前提へ
+寄りすぎるため撤回する。
 
-## 問題
+現在の実行モデルは[`agent-generation.md`](agent-generation.md)に定める。
 
-Forma sourceはapplicationの意味をtarget-neutralに記述する。一方、実際にapplicationを生成・運用する
-には、当面は人間が次のような判断を行う必要がある。
+```text
+Resolved Intent + Acceptance Facts
+  → AI coding agent + existing repository
+  → repository-native implementation
+```
 
-- runtimeとframework: Ruby、Railsなど
-- databaseとpersistence adapter
-- cloud providerとcompute、database、object storage
-- authorization、job、observabilityなどを実装するlibrary
-- version policy、region、deployment topology
+## Architectureを誰が決めるか
 
-これらを`.forma`へ直接書くと、application semanticsが特定のframeworkやcloudへ結び付く。反対に、
-generatorの内部へ隠すと、projectの恒久的なarchitecture判断を人間がreviewできない。この間を埋める
-versioned inputとして、Architecture Manifestを検討する。
+coding agentは、まず対象repositoryを調べる。
+
+- 使用中のruntimeとframework
+- databaseとmigration方式
+- component、route、API、persistenceの既存pattern
+- test、lint、build command
+- dependencyとversion policy
+- deploymentやsecurityに関するrepository policy
+
+既存repositoryがないgreenfieldの場合は、user instructionと明示的な制約をもとにagentが候補を提示し、
+人間が承認する。選択結果をForma compilerのprofile registryへ登録する必要はない。
 
 ## source of truthの分担
 
-複数の真実を同じ対象について重複させるのではなく、異なる判断を異なるartifactが所有する。
+| source | 所有する判断 |
+| --- | --- |
+| `*.forma` | entity、state、action、permission、pageなどのapplication intent |
+| repository code/config | framework、route、database、library、deploymentなどの実装 |
+| repository policyまたはuser instruction | 実装上守る制約、禁止事項、品質条件 |
+| Resolved Intent / Acceptance Facts | agentへ渡す解決済み要求と検査すべき意味 |
 
-| artifact | 所有する判断 | 編集者 |
-| --- | --- | --- |
-| `*.forma` | entity、state、action、permission、pageなどのapplication intent | 人間 |
-| `forma.arch.toml`（仮） | runtime、framework、provider、adapterなどのarchitecture policy | 人間。当面はAIの提案を承認してもよい |
-| `forma.lock`（仮） | 解決済みprofile、generator、direct dependency version、digest | resolverが生成し、人間がreviewする |
-| generated artifact | target code、infrastructure definition、target固有lockfile | generator。人間は手編集しない |
+同じ判断を二重に宣言しない。たとえばpermissionはFormaが所有し、repositoryはその実装だけを持つ。
+一方、Rails、PostgreSQL、AWSの選択はapplication semanticsではないため、`.forma`へ入れない。
 
-Architecture Manifestはapplication semanticsの第二の定義ではない。`.forma`が「何を実現するか」を、
-Manifestが「どの実装方針で実現するか」を所有する。
+## 明示的なarchitecture constraints
 
-## profileの分割案
-
-一つの巨大なtarget profileへすべてを入れず、少なくとも次を分ける案を検討する。
-
-### Application Profile
-
-Semantic IRを特定のruntimeとframeworkへloweringする。component、transport、persistence adapter、
-runtime behavior、target側test harnessなどを所有する。
-
-### Deployment Profile
-
-生成されたapplication artifactを特定のproviderへ配置する。compute、managed database、network、
-object storageなどを所有する。secretの値そのものは所有しない。
-
-### Architecture Manifest
-
-projectが使用するApplication ProfileとDeployment Profileを選択し、両者のcapabilityをbindする。
-RailsをAWS以外へ配置でき、AWS上でRails以外も動かせるよう、両profileを独立して組み合わせられる形を
-目指す。ただし、無制限なprofile compositionはhidden behaviorを増やすため、compatibilityは生成前に
-機械的に検査する。
+greenfieldや大きなarchitecture変更では、agentへ次のような制約を渡すことがある。
 
 ```text
-Forma source
-    ↓ deterministic front-end
-Semantic IR + Conformance Contract
-    │
-    ├─ Application Profile: Ruby + Rails
-    └─ Deployment Profile: AWS
-              ↓
-Generated Application + Infrastructure
-              ↓ build + conformance
-Accepted Artifact
+- use the repository's existing Ruby on Rails application
+- keep PostgreSQL and the current migration tool
+- do not introduce a second authorization library
+- deploy only through the existing CI workflow
 ```
 
-## Manifestの概念例
+これらは自然言語でもrepository policy fileでもよい。Forma languageの意味としてparse・type-checkする
+対象ではない。将来、同じconstraintが多くのprojectで繰り返され、machine-readableである必要が実例から
+確認できた場合だけ、Generation Requestの補助schemaとして検討する。
 
-次は議論用のTOML sketchであり、schemaの決定ではない。product名やservice名をForma grammarの
-keywordにせず、versioned profile/capability identifierとして扱うことを想定している。
+## dependency
 
-```toml
-schema = "forma/architecture/v0"
+Formaはlibrary packageとsemantic capabilityのregistryを持たない。agentはrepositoryの既存dependencyを
+優先し、新規dependencyが必要なら通常のcode reviewで理由を示す。lockfileは対象ecosystemの標準toolが
+所有する。
 
-[application]
-profile = "ruby-rails"
-runtime = "ruby"
-framework = "rails"
-database = "postgresql"
+## feedback
 
-[deployment]
-profile = "aws"
-region = "ap-northeast-1"
-compute = "ecs"
-database = "rds"
-object_storage = "s3"
+選んだarchitectureでForma intentを実装できなかった場合、compilerがprofile incompatibilityを返すのでは
+なく、agentが次を報告する。
 
-[[adapters]]
-capability = "persistence"
-implementation = "active-record"
+- 実装できなかったintent node
+- repository上の制約または衝突
+- 失敗したbuild/test commandとdiagnostic
+- repository変更、constraint変更、Forma source変更のどれが必要か
 
-[[adapters]]
-capability = "authorization"
-implementation = "pundit"
-```
-
-## libraryをpackage名だけで指定しない
-
-次のようなflat package listだけでは、dependencyが何のために存在し、どのForma semanticsを実装するかを
-読めない。
-
-```toml
-packages = ["pundit", "aws-sdk-s3"]
-```
-
-可能な限り、direct dependencyをcapabilityとimplementationの対応として宣言する。
-
-```toml
-[[adapters]]
-capability = "authorization"
-implementation = "pundit"
-
-[[adapters]]
-capability = "object-storage"
-implementation = "aws-sdk-s3"
-```
-
-libraryはFormaに存在しないapplication behaviorを暗黙に追加してはならない。たとえばauthorization
-ruleは`.forma`の`allow`が所有し、PunditはRails上でそれを実装するadapterにすぎない。observableな
-semanticsを追加するlibraryが必要なら、単なるpackageではなくcompiler-visibleなcapabilityまたは
-versioned extensionとして設計する。
-
-人間が指定するのはdirect dependencyとversion policyまでとし、transitive dependency、正確なversion、
-digestは`forma.lock`または生成targetのlockfileへ解決する案が考えられる。
-
-## 人間選定から自動選定への移行
-
-別々の仕組みを作るのではなく、同じarchitecture axisをどこまで固定するかで段階を表現する。
-
-1. **Pinned**: 人間がRuby、Rails、AWS、serviceまで指定する。
-2. **Constrained**: managed infrastructure、relational database、Japan regionなどのrequirementだけを指定する。
-3. **Automatic**: requirementとprofile capabilityからgeneratorが候補を選び、人間の承認後にlockする。
-
-将来は次のような要求だけを人間が保守する可能性がある。
-
-```toml
-[requirements]
-region = "japan"
-managed = true
-relational_database = true
-```
-
-AIがarchitectureを選定する場合も、modelの一時的な回答をそのままbuild入力にはしない。選定結果を
-機械可読なplanとして提示し、人間またはpolicyが承認した結果をversioned lockへ固定する。Forma sourceと
-conformance contractは選定方法に依存しない。
-
-## build keyとの関係
-
-Architecture Manifest、解決済みprofile、generator設定、lockは生成結果へ影響するため、artifactの
-build keyへ含める必要がある。
-
-```text
-build key = hash(Semantic IR, Conformance Contract,
-                 Architecture Manifest, resolved profiles,
-                 generator configuration, architecture lock)
-```
-
-architectureを変更してもapplication semanticsが同じなら、同じconformance contractを通過しなければ
-ならない。profileが実装できないcapabilityはAI generatorを呼ぶ前にcompatibility errorとする。
-
-## 未決定事項
-
-- ManifestをTOMLにするか、Forma lexer/parserを共有する別grammarにするか。
-- Application ProfileとDeployment Profileの責務境界。
-- databaseのように両profileへまたがるcapabilityのbinding方法。
-- profile、capability、adapter identifierのregistryとversioning。
-- direct dependencyのversion constraintと`forma.lock`のschema。
-- staging、productionなどenvironment差分の表現。
-- availability、latency、cost、data residencyなどnon-functional requirementの置き場所。
-- secretの参照方法。secret valueをsourceやlockへ保存しない仕組み。
-- AIによるarchitecture proposalの承認、更新、rollback protocol。
-- infrastructure conformanceをapplication conformanceと同じcontractへ含めるか、別contractにするか。
+この情報から人間が判断する。agentが未宣言のapplication behaviorを追加したり、Forma constraintを
+黙って弱めたりしてはならない。
 
 ## 検証方法
 
-schemaを決める前に、少なくとも次の二例を最後まで記述して比較する。
+新しいmanifest schemaを設計する前に、次を実測する。
 
-1. 同じForma applicationをRuby/Rails + AWSへ生成する明示的なPinned構成。
-2. 同じForma applicationを異なるframework/providerへ生成する構成、またはrequirementだけを指定する
-   Constrained構成。
+1. architectureが存在するrepositoryへGeneration Requestを渡す。
+2. agentが追加のprofile metadataなしで既存patternを再利用できるか確認する。
+3. greenfield repositoryでは、最小限のuser constraintから実装planを提案できるか確認する。
+4. Forma変更をincrementalに適用しても、手書きcodeとrepository policyを保てるか確認する。
 
-比較では、次を確認する。
-
-- `.forma`を変更せずarchitectureだけを交換できるか。
-- direct libraryの目的をManifestから説明できるか。
-- profile incompatibilityをgeneration前に検出できるか。
-- lockから同じarchitecture inputsを再現できるか。
-- architectureを交換しても同じconformance contractを適用できるか。
-- Manifestが巨大なvendor-specific DSLへ成長していないか。
-
-この検証を行うまでは、`forma.arch.toml`、profile分割、Pinned/Constrained/Automaticという名称を
-言語またはcompilerの決定事項にしない。
+このprobeで不足が確認されるまでは、`forma.arch.toml`、Application Profile、Deployment Profile、
+capability registry、architecture build keyを復活させない。

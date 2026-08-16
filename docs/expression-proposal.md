@@ -7,8 +7,8 @@ Status: exploratory proposal — first self-only `<=` compiler slice implemented
 
 規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書はまだlanguage decisionではなく、v0の
 10 primitivesも変更しない。reference compilerは検証用の最初の縦切りとして、名前付きInvariant、
-selfのfield参照、`<=`、名前解決・型検査、Resolved Expression IR、Source Mapまでを実装している。
-numeric literal、他のoperator、式評価器、`=`によるDerived Value、`require`は未実装である。
+selfのfield参照、`<=`、名前解決・型検査、Resolved Expression tree、Source Mapまでを実装している。
+numeric literal、他のoperator、`=`によるDerived Value、`require`は未実装である。
 
 本書は[`order-approval-proposal.md`](order-approval-proposal.md)で実測した不足を受けている。Expressionを
 先に一般化するのではなく、注文・在庫で必要になった具体例から、EffectやChangesより前に共有すべき
@@ -29,18 +29,15 @@ Forma compilerはfieldのtypo、型の不一致、依存するdeclaration、期�
 ```text
 Forma source
   ↓ Go front-end: parse、名前解決、型検査
-Resolved Expression IR
-  ├─ reference evaluator: fixtureに対する期待値を決定
-  └─ AI generator: targetに適した実装を選択
-       ↓
-     Generated Artifact
-       ↓ deterministic conformance: evaluatorの期待値と照合
-     Accepted Artifact
+Resolved Intent内のExpression
+  ↓ Generation Request + Acceptance Facts
+AI coding agent + target repository
+  ↓ targetに適した実装とtest
+build / test feedback
 ```
 
-Go front-endは「何を意味するか」を確定し、AI generatorは「どう実装するか」を決める。reference
-toolchainはfront-endに加えて、Resolved Expression IRを実行する決定的な式評価器を持つ。式評価器は
-target artifactを実装するものではなく、Conformanceのoracleを生成する。
+Go front-endは「何を意味するか」を確定し、AI coding agentはtarget repositoryで「どう実装し、どう
+検査するか」を決める。Forma coreはframework別evaluator adapterやtest harnessを持たない。
 
 ## 実例から必要になった式
 
@@ -103,7 +100,7 @@ invariantを安定して区別できないためである。
 entity/StockItem/invariant/stockAvailable
 ```
 
-この名前はcompiler diagnostic、Source Map、Conformance Contractの参照に使う。利用者向けのerror copyを
+この名前はcompiler diagnostic、Source Map、Acceptance Factsの参照に使う。利用者向けのerror copyを
 この名前から自動生成するかは、本proposalでは決めない。
 
 InvariantはBool expressionを持ち、createまたはmutationのpost-stateに対して、authoritativeなatomic
@@ -140,7 +137,7 @@ entity StockItem {
 }
 ```
 
-entity-bound expression内のunqualified nameは、そのentityのfieldまたはstateへ解決する。Semantic IRでは
+entity-bound expression内のunqualified nameは、そのentityのfieldまたはstateへ解決する。Resolved Intentでは
 暗黙性を残さず、`self` bindingへ解決する。
 
 ```text
@@ -160,7 +157,7 @@ customer.email
 ```
 
 ただし中間relationは`required`でなければならない。例えば`product Product`がoptionalなら、
-`product.price`はcompile errorとする。値が存在しない場合の意味をgeneratorへ推測させないためである。
+`product.price`はcompile errorとする。値が存在しない場合の意味をcoding agentへ推測させないためである。
 
 ```forma
 product Product required
@@ -251,17 +248,17 @@ segments:
 result type: Decimal
 ```
 
-次はAI generatorを呼ぶ前にcompile errorとする。
+次はGeneration Requestをcoding agentへ渡す前にcompile errorとする。
 
 - 存在しないfield
 - scalar値に対する`.` traversal
 - to-many relationをscalar pathとしてtraverseすること
 - optional relationを暗黙にtraverseすること
-- relation traversalの途中または結果がprofile固有値であること
+- relation traversalの途中または結果がrepository固有値であること
 
 ## 型規則
 
-すべてのExpression IR nodeは、解決済みresult typeを持つ。
+すべてのExpression tree nodeは、解決済みresult typeを持つ。
 
 | 構文 | operand | result |
 | --- | --- | --- |
@@ -347,7 +344,7 @@ optionalを必要とする実例が出た時点で、target非依存なabsence s
 意味を同時に決める必要がある。
 
 最小scalar expressionへ一般function callやlambdaを持ち込まないため、collectionは別段階に分ける。
-Semantic IRとして次が本当に共通になるかを比較例で確認してからsurface syntaxを決める。
+Resolved Intentとして次が本当に共通になるかを比較例で確認してからsurface syntaxを決める。
 
 ```text
 Count(collection)
@@ -357,26 +354,26 @@ All(collection, predicate)
 ```
 
 したがって最初の縦切りで表現できるのはself fieldだけを使う`reserved <= onHand`である。
-`quantity * product.price`、`lines.count > 0`、`Order.total`はまだ表現できない。この不足をgeneratorに
+`quantity * product.price`、`lines.count > 0`、`Order.total`はまだ表現できない。この不足をcoding agentに
 推測させない。
 
 ## Expressionの利用場所ごとの評価context
 
-同じExpression IRを使っても、評価時点は利用場所ごとに異なる。
+同じExpression treeを使っても、評価時点は利用場所ごとに異なる。
 
 | 利用場所 | binding | 評価時点 | 必須result type | false/failureの意味 |
 | --- | --- | --- | --- | --- |
 | Invariant | entity `self`。最初はlocal field/stateのみ | commit前のpost-state | `Bool` | atomic operationを拒否 |
-| Derived Value | entity `self` | 値の観測時 | 宣言field type | 値を生成できないartifactは不適合 |
+| Derived Value | entity `self` | 値の観測時 | 宣言field type | 値を生成できない実装は不適合 |
 | Action Precondition | action targetと将来のinput | mutation前のpre-state | `Bool` | actionを提示せず、authoritative境界でも拒否 |
 | Effect Binding | occurrence snapshot | emission作成時 | effect parameter type | bindingできないoccurrenceを成功扱いしない |
 | Occurrence Predicate | pre/post snapshot | occurrence判定時 | `Bool` | predicateの成立変化規則に従う |
 
 本proposalで固定候補にするのはInvariantのcontextだけである。残りはExpressionの利用者側proposalで決める。
 
-## Semantic IR sketch
+## Resolved Intent sketch
 
-名称は候補だが、target generatorへunresolved sourceを渡さないため、概ね次のnodeが必要になる。
+名称は候補だが、coding agentへunresolved sourceを渡さないため、概ね次のnodeが必要になる。
 
 ```text
 InvariantIntent
@@ -419,10 +416,10 @@ a and b and c
   c:          .../expression/right
 ```
 
-## Conformanceへの要求
+## Acceptance Factsへの要求
 
-AIに式の期待値を決めさせない。reference toolchainは、front-endのparse・名前解決・型検査とは別に、
-同じResolved Expression IRを決定的に実行する式評価器を持たなければならない。
+AIに式の意味や期待結果を発明させない。front-endは解決済みpredicateと、成立・不成立時に必要な
+application behaviorをAcceptance Factsへ保持する。
 
 ```text
 onHand = 10, reserved = 8
@@ -432,13 +429,13 @@ onHand = 10, reserved = 12
   → predicate false、保存拒否
 ```
 
-任意expressionに対するfixtureの自動合成は別問題である。本proposalは、少なくともfixtureを与えたときの
-oracleがAIやtarget implementationに依存せず、同じ式評価結果を得ることを要求する。negative fixtureを
-どこまでcompilerが自動生成するかはConformance Schemaで決める。
+任意expressionに対するfixtureの自動合成は別問題である。coding agentはtarget repositoryのdata modelと
+test frameworkに合わせ、上記の正常系・否定系をtestへ変換する。Forma coreが全target共通のfixture
+evaluatorやruntime adapterを保有することは要求しない。
 
 InvariantはUIだけで検査してはならない。authoritativeなmutation境界で、concurrent operationを含めて
 post-stateがInvariantを満たす必要がある。database constraint、transaction、server validationのどれを
-使うかはprofileが決める。
+使うかはcoding agentがrepository contextから決める。
 
 ## 必須diagnostic
 
@@ -494,7 +491,8 @@ boolean `and`を実装した後は、helpをcanonical candidateの
 invariant "reserved must not exceed onHand"
 ```
 
-AIは理解できるが、compilerが名前解決、型検査、dependency追跡、決定的なoracle生成を行えないため採らない。
+AIは理解できるが、compilerが名前解決、型検査、dependency追跡、Resolved IntentとAcceptance Factsへの
+変換を行えないため採らない。
 
 ### target言語を埋め込む
 
@@ -554,14 +552,15 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 ## 推奨する実装順序
 
 1. `invariant name: expression`のentity memberとstable identity。**実装済み**。
-2. field参照と`<=`の最小parser・型検査・IR。**実装済み**。numeric literalは未実装。
-3. self-only Invariant向けのdeterministic evaluatorとConformance oracleを追加する。
-4. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
-5. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
-6. 同じExpression IRをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
-7. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
-8. relationを読むInvariantのdependency/revalidation contractを設計する。
-9. collection、Action Precondition、Effect Binding、Occurrence Predicateをそれぞれの実例で拡張する。
+2. field参照と`<=`の最小parser・型検査・Resolved Intent出力。**実装済み**。numeric literalは未実装。
+3. self-only Invariantから正常系・否定系のAcceptance Factsを出力する。
+4. Generation Requestをcoding agentへ渡し、repository固有testと保存境界の実装を確認する。
+5. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
+6. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
+7. 同じExpression treeをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
+8. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
+9. relationを読むInvariantのdependency/revalidation contractを設計する。
+10. collection、Action Precondition、Effect Binding、Occurrence Predicateをそれぞれの実例で拡張する。
 
 最初のacceptance caseは次である。
 
@@ -577,10 +576,10 @@ entity StockItem {
 - `forma check`が成功する。
 - Invariantのfield参照が`StockItem`自身へ限定され、relation traversalは拒否される。
 - typoと型不一致をGo front-endが拒否する。
-- byte-identicalなResolved Expression IRとSource Mapを生成する。
-- AI generatorを使わず、fixtureに対するpredicateの期待値を決定できる。
-- target artifactがinvalid post-stateをauthoritativeな境界で拒否することをconformanceで検査できる。
+- byte-identicalなResolved Expressionを含むResolved IntentとSource Mapを生成する。
+- 正常post-stateの受理とinvalid post-stateの拒否をAcceptance Factsとして出力する。
+- coding agentがtarget repositoryのauthoritativeな境界とtestへ実装し、build/testを通す。
 
-現在は最初の4項目までをreference compilerとtestで確認済みである。式評価器とConformanceが必要な最後の
-2項目は未実装である。これらが成立するまでは、general function、collection、Effect syntaxをcompilerへ
-追加しない。
+現在は最初の4項目までをreference compilerとtestで確認済みである。Acceptance Factsとcoding agentへの
+Generation Requestは未実装である。これらが成立するまでは、general function、collection、Effect syntaxを
+compilerへ追加しない。
