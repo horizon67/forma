@@ -1,6 +1,6 @@
 # Forma
 
-[English](README.md) | **日本語**
+[en](README.md) / **ja**
 
 **アプリケーションそのものを高水準に記述する言語。**
 
@@ -37,6 +37,56 @@ page Users {
 `list User`は「ユーザーの集合を提示する」という意味です。HTMLのtable、React component、
 database queryを指定するものではありません。target profileが、宣言されたアプリケーションの
 意味を保ちながら、platformに適した実装を選択します。
+
+## Formaが記述するアプリケーション
+
+1つのcompilation unitが、1つのForma applicationを表します。現行v0では、そのapplicationを
+次の構成要素で記述します。
+
+```text
+Application
+├── Data
+│   ├── Type
+│   ├── Entity
+│   ├── Field
+│   └── Relation
+├── Behavior
+│   ├── State
+│   └── Action
+├── Presentation
+│   ├── Page
+│   ├── List
+│   ├── Detail
+│   └── Form
+└── Authorization
+    └── Role
+```
+
+Relationは独立したprimitiveではなく、entity型のFieldとして表します。Actionは現在、entityの
+許可された状態遷移を表します。正確なsyntaxとsemanticsは
+[Forma v0仕様](docs/v0-primitives.md)に定めています。
+
+### 設計中の構成要素
+
+実例から必要性を検証している、未実装の構成要素もあります。
+
+```text
+Under design
+├── Expression
+│   ├── Derived value
+│   ├── Invariant
+│   └── Precondition
+├── Changes
+│   └── Atomic postconditions
+├── Occurrence
+├── Effect
+└── Identity
+```
+
+Expression、Changes、Occurrence、Effectは
+[注文承認・在庫のprobe](docs/order-approval-proposal.md)、Identityは
+[表側の会員登録・identity案](docs/public-membership-proposal.md)で検討しています。これらの名称や
+syntaxは、まだ言語仕様として確定していません。
 
 ## なぜFormaなのか
 

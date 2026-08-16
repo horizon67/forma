@@ -1,6 +1,6 @@
 # Forma
 
-**English** | [日本語](README.ja.md)
+**en** / [ja](README.ja.md)
 
 **A language for describing applications themselves at a high level.**
 
@@ -38,6 +38,58 @@ page Users {
 `list User` means “present a collection of users.” It does not mean an HTML
 table, a React component, or a database query. A target profile chooses an
 appropriate implementation while preserving the declared application semantics.
+
+## What Forma describes
+
+One compilation unit represents one Forma application. In v0, that application
+is described with the following elements.
+
+```text
+Application
+├── Data
+│   ├── Type
+│   ├── Entity
+│   ├── Field
+│   └── Relation
+├── Behavior
+│   ├── State
+│   └── Action
+├── Presentation
+│   ├── Page
+│   ├── List
+│   ├── Detail
+│   └── Form
+└── Authorization
+    └── Role
+```
+
+A relation is represented as an entity-typed field rather than as a separate
+primitive. An action currently represents an allowed entity state transition.
+The [Forma v0 specification](docs/v0-primitives.md) defines the precise syntax
+and semantics.
+
+### Elements under design
+
+Additional, unimplemented elements are being tested against concrete examples.
+
+```text
+Under design
+├── Expression
+│   ├── Derived value
+│   ├── Invariant
+│   └── Precondition
+├── Changes
+│   └── Atomic postconditions
+├── Occurrence
+├── Effect
+└── Identity
+```
+
+Expression, Changes, Occurrence, and Effect are explored in the
+[order approval and inventory probe](docs/order-approval-proposal.md). Identity
+is explored in the
+[public membership and identity proposal](docs/public-membership-proposal.md).
+Their names and syntax are not yet part of the language specification.
 
 ## Why Forma?
 
