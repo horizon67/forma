@@ -276,7 +276,8 @@ checked separately.
 `forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
 Generation Request, and `forma verify` validates agent feedback against the
 immutable request. The next milestone is an incremental change to an existing
-target repository and an automated repair loop.
+target repository with a minimal Implementation Policy Manifest. A signup/signin
+Identity probe and the automated repair loop follow it.
 
 ## Design documents
 

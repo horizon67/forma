@@ -2,137 +2,254 @@
 
 Status: living roadmap — non-normative
 
-Formaの中心仮説は、coding agentへ渡す自然言語promptを、型付き・検査可能・review可能な言語へ
-置き換えられることである。Forma自身がframework別code generatorになることではない。
+## 1. 中心仮説と責任境界
+
+Formaの中心仮説は、coding agentへ渡す自然言語promptを、型付き・検査可能・review可能なapplication
+specificationへ置き換えられることである。Forma自身がframework別code generatorになることではない。
 
 ```text
 Forma source
-  → parse / check / resolve
+  → Go front-end: format / parse / resolve / type check / semantic check
   → Resolved Intent + Acceptance Facts
   → Generation Request
-  → AI coding agent + repository
+  → AI coding agent + target repository
   → ordinary application code
   → build / test feedback
 ```
 
-言語のsyntaxとsemanticsは[`v0-primitives.md`](v0-primitives.md)、agentとの境界は
-[`agent-generation.md`](agent-generation.md)に記録する。
+Forma sourceは**何を作るか**を決める。Implementation Policy Manifestは**何を使って作るか**を決める。
+target repositoryは既存code、dependency、architecture、build/test commandという**現在の状態**を与える。
+coding agentはこの3つを統合してrepository-nativeな実装を作る。
 
-## 現在地
+言語のsyntaxとsemanticsは[`v0-primitives.md`](v0-primitives.md)、agentとの責任境界は
+[`agent-generation.md`](agent-generation.md)、実装技術policyの案は
+[`implementation-policy-manifest-proposal.md`](implementation-policy-manifest-proposal.md)に記録する。
 
-| 領域 | 状態 | 現在の内容 |
+## 2. 現在地
+
+| 領域 | 状態 | 根拠と残る課題 |
 | --- | --- | --- |
-| 言語思想 | 方針修正済み | AI coding agentを必須の実行主体とし、Formaはpromptより強い入力を作る |
-| v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義 |
-| reference front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Map、admin-flow Acceptance Facts |
-| CLI | 最小実装 | `forma check`、`forma resolve`、`forma request`、coverageを検査する`forma verify` |
-| Generation Request | 最小slice | `v0alpha1` full request、stable fact ID、immutable requestに対するcoverage集合照合。incremental changeは未実装 |
-| agent execution | 初回実測済み | standalone Go repositoryへ管理画面flowを実装し43/43 factsを確認。自動repair loopは未実装 |
-| incremental update | 未実装 | intent差分を既存repositoryへ適用する実験が必要 |
-| Go admin/conformance | 凍結prototype | 意味抽出のprobeとして保存。正式generator/profile architectureにはしない |
+| 言語思想 | 方針確定 | AI coding agentを必須の実装主体とし、Formaはpromptより強い入力を作る |
+| v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義。未実装項目が残る |
+| Go front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Mapを実装 |
+| Acceptance Facts | admin slice実装 | list/detail/editの正常系・拒否系をstable ID付きで導出 |
+| Generation Request | 初回生成を実装 | `v0alpha1` full requestとimmutable requestに対するcoverage照合を実装 |
+| 初回agent E2E | 実測済み | standalone Go repositoryへ管理画面を実装し43/43 factsを確認 |
+| incremental update | **次に検証** | 既存repositoryへintent差分を適用した実測がない |
+| Implementation Policy Manifest | proposal | 最小schemaとverify規則をincremental probeで検証する |
+| public Identity | proposal | signup/signin、current principal、ownershipをまだagent E2Eで検証していない |
+| automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
+| Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
+| 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
-## 1. Forma sourceをparse・checkできる
+管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
+
+> Formaは、AIに渡す前処理として本当に機能するか。
+
+次の焦点は、同じtarget repositoryを壊さずに変更できるかである。ここが通れば、Formaは一度きりの詳しい
+promptではなく、applicationを継続的に保守するsourceとして一段強い根拠を持つ。
+
+## 3. 優先順位
+
+現在の実施順序を次のように固定する。
+
+| 優先度 | Milestone | 検証する仮説 |
+| --- | --- | --- |
+| **P0 / Now** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
+| **P1** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
+| **P2** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
+| **P3** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
+| **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
+
+この順序は、実装が簡単なものではなく、**中心仮説を強く否定し得る実験**を先に置く。各Milestoneを
+始める前にschemaを完成させず、最小のvertical sliceを実測してから一般化する。
+
+front-endの未実装項目はすべてを先に埋めない。次のprobeを正しく表現・検査するために必要なものから
+実装する。
+
+## Milestone 1 — Front-end foundations（継続）
 
 ### 目的
 
-coding agentへ渡す前に、application intentの構文・参照・型・静的semanticsを確定する。
+coding agentへ渡す前に、application intentの構文・参照・型・静的semanticsを決定的に確定する。
 
-### 実装する
+### 実装済みの核
 
-- design draftとParser、AST、Checkerのsurface syntaxを一致させる
-- `forma fmt`でcanonicalなsource layoutを作る
-- inherited constraintを合成する
-- defaultと`required readonly` producerを検査する
-- 省略projection、action参照、navigationを一意に解決する
-- string/regex escape setを仕様どおり検査する
-- diagnosticをstable code、source span、修正案付きで返す
-- `forma explain`で暗黙に解決した意味を人間向けに表示する
+- `forma check`のLexer、Parser、AST、Checker
+- stable diagnostic codeとsource span
+- stable semantic identityとSource Map
+- `forma resolve`によるcanonical Resolved Intent JSON
+- admin-flow Acceptance Facts
+- `forma request`と`forma verify`の最小slice
+
+### probeに応じて実装する残項目
+
+- `forma fmt`によるcanonical source layout
+- inherited constraintの合成
+- defaultと`required readonly` producerの検査
+- 省略projection、action参照、navigationの完全な解決
+- string/regex escape setの仕様どおりの検査
+- `forma explain`による暗黙の意味の人間向け表示
+- Resolved Intent、Source Map、Acceptance Factsのversioningと互換性方針
 
 ### Exit criteria
 
 - 完全例を`forma check`できる
 - typo、型不一致、不正遷移、permission不整合をagent実行前に拒否できる
-- sourceの意味がmodelやnetwork inferenceに依存しない
-- 新しい構文を可読性、semantic necessity、target neutralityで評価できる
-
-## 2. Resolved Intentを安定して出力できる
-
-### 目的
-
-Forma sourceの省略と参照を解消し、coding agentが再解釈しなくてよいmachine-readableなapplication
-intentを作る。
-
-### 実装する
-
-- [x] 公開概念を`Semantic IR`から`Resolved Intent`へ変更する
-- [x] `forma resolve`でcanonical JSONを出力する
-- entity、field、constraint、state、action、permission、page capability、navigationを保持する
-- semantic nodeへsource位置に依存しないstable identityを与える
-- Source Mapを別出力にして、nodeを現在のForma sourceへ戻せるようにする
-- sourceの省略から導出したprojection、access、Submit Intentを説明可能にする
-- Resolved Intentのversioningと互換性方針を定める
-- [x] list/detail/editの正常系・拒否系Acceptance Factsをstable ID付きで出力する
-
-### Exit criteria
-
 - 同じsourceとfront-end versionからbyte-identicalなResolved Intentを得る
-- file移動やcomment変更でapplication intentが変化しない
 - すべてのresolved nodeをsource declarationへ追跡できる
-- framework、route、SQL、component、directoryの語彙を含まない
+- sourceの意味がmodelやnetwork inferenceに依存しない
+- framework、route、SQL、component、directoryの語彙をResolved Intentへ含めない
 
 決定性を要求するのはここまでの意味解決であり、target application codeのbyte identityではない。
 
-## 3. Resolved Intentをcoding agentへ渡して一つのapplicationを実装できる
+## Milestone 2 — Initial agent generation（admin slice実測済み）
 
 ### 目的
 
-固定lowererを作らず、coding agentが実際のrepository contextを読んでForma intentを実装できるか検証する。
+固定lowererを作らず、coding agentがrepository contextを読んでForma intentを実装できるか検証する。
 
-### Generation Request
+### 完了した実験
 
-最小requestは次を含む。
+1. [x] repository規約を持つstandalone Go repositoryを用意した。
+2. [x] 管理側のUser list/detail/edit flowをFormaで記述した。
+3. [x] Resolved Intent、Source Map、Acceptance Factsを含むGeneration Requestを出力した。
+4. [x] coding agentが通常のGo application codeとrepository固有testを実装した。
+5. [x] 43/43 Acceptance Factsと既存build/testの成功を確認した。
+6. [x] framework、route、HTTP、HTML、storageなどの実装判断をrequestへ持ち込まずに実装できた。
+7. [x] fact coverageの集合照合と、distinct test数・最大facts/testの集中度を検査した。
 
-- Resolved Intent
-- target-neutralなAcceptance Facts
-- Source Map
-- 初回生成か変更適用かを表すrequested change
-- userまたはrepositoryが持つarchitecture constraintsへの参照
+詳細は[`../experiments/admin-agent-e2e`](../experiments/admin-agent-e2e/README.md)に記録する。
 
-各Acceptance Factはstable IDを持つ構造化nodeとし、散文promptにはしない。agentが作るtestは対応する
-fact IDを参照し、requestのfact ID集合とtest coverageの集合を機械的に照合する。
+### 得られた根拠と限界
 
-最小のfull requestは`forma request`として実装済みである。
-[`../experiments/admin-agent-e2e`](../experiments/admin-agent-e2e/README.md)のlist/detail/edit flowを
-golden化し、通常のstandalone Go repositoryへの初回agent実装と43 factsのcoverage照合まで完了した。
-incremental requested changeと、独立agentまたは実在repositoryでの再現確認が次の段階である。
-次のincremental experimentでは
-[`implementation-policy-manifest-proposal.md`](implementation-policy-manifest-proposal.md)の最小policyを
-同乗させ、「何を作るか」と「何を使って作るか」を分離したまま検証する。
+- Forma coreへframework別generatorを追加せずapplicationが動いた。
+- Acceptance Factsからtarget固有の正常系・否定系testを作れた。
+- targetのfile構成、route、submission方式などはagentが独立に決めた。
+- 43/43は主要testを直接reviewし、単なるcoverage申告でないことを確認した。
+- controlled experimentは同一workspace内の初回生成であり、incremental updateと独立再現性は未検証である。
 
-repositoryのframework、library、file構成はFormaがprofileとして再定義しない。agentが既存codeとpolicyから
-読み取り、必要な実装を選ぶ。
+このMilestoneを繰り返して二つ目のframework generatorを作ることはしない。
 
-### 最初の実験
+## Milestone 3 — Incremental update + Implementation Policy Manifest（P0 / Now）
 
-1. [x] repository規約を持つ小さなstandalone Go repositoryを用意する。
-2. [x] 管理側のUser list/detail/edit flowを追加する。
-3. [x] Resolved IntentとAcceptance Factsを正本としてagentへ渡す。
-4. [x] repository固有のcodeとtestを作り、既存build/testを通す。
-5. [x] Formaに存在しない実装判断と、意味の不足を分けて記録する。
-6. User signup/signin flowとidentity axisは別probeとして実施する。
+### 目的
+
+target codeを破棄・再生成せず、Forma sourceの変更を既存repositoryへ小さく安全な差分として適用する。
+同時に、「何を作るか」と「何を使って作るか」を分離したままagentへ渡せるか検証する。
+
+### 実験前に固定するbaseline
+
+- 現在の`app.forma`
+- canonical Resolved Intent、Source Map、Generation Request
+- 43 Acceptance Factsと対応する12 distinct target tests
+- 現在のtarget repository commitとpassing build/test
+- target内の手書き・無関係codeとして保持すべきfile
+
+### 最初の変更候補
+
+- `User.nickname` fieldを追加する。
+- nicknameをlist、detail、editへ提示し、search対象へ追加する。
+- listのlogical page sizeを20から10へ変更する。
+
+field追加で**追加node/fact**を、page size変更で**同じsemantic nodeの期待値変更**を同時に観測する。
+最終的な変更内容はexperiment開始時にbaselineとともに固定し、途中で成功しやすい要求へ変えない。
+
+### 最小Implementation Policy Manifest
+
+```yaml
+schema: forma/implementation-policy/v0alpha1
+
+policies:
+  - id: implementation/server-rendering
+    policy: required
+    value: html/template
+
+  - id: implementation/persistence
+    policy: preferred
+    value: database/sql
+
+  - id: implementation/router
+    policy: forbidden
+    value: github.com/gorilla/mux
+```
+
+- `required`はevidence fileの存在とopaque valueの出現を検査する。
+- `preferred`を使わない場合はnon-emptyな逸脱理由を要求する。
+- `forbidden`は定義済みscopeをscanし、hitを無言で無視しない。
+- technology名をForma coreが意味解釈しない。
+- 正規化済みManifestをimmutableなGeneration Requestへ埋め込む。
+
+### 最初のprobeで実装・検証する
+
+- before/after Resolved Intentのsemantic diff
+- requested changeでadded、changed、unchangedを区別する最小model
+- 追加・変更されたAcceptance Factsの集合
+- Manifest parser、normalizer、generic policy coverage validator
+- existing target repositoryを読むagent instruction
+- full regeneration禁止と無関係code保持のreview
+
+最初のprobeへrename、削除、migrationの一般modelまで詰め込まない。追加と変更が成功した後、次の独立した
+probeとして扱う。
+
+### 後続のincremental probe
+
+- fieldのrenameと削除をstable identityで区別する
+- constraint変更と既存data migrationを扱う
+- state value、transition、permissionを変更する
+- pageとactionを追加・削除する
+- removed factに対応するstaleなtarget code/testを検出する
 
 ### Exit criteria
 
-- Forma coreへframework別generatorを追加せずapplicationが動く
-- agentが既存repositoryのarchitectureとconventionを再利用する
-- Acceptance Factsからtarget固有の正常系・否定系testを作れる
-- 実装上の判断と、Formaに不足した意味を区別して報告できる
+- full regenerationなしでintent差分を既存repositoryへ適用できる
+- 無関係な手書きcodeと既存architectureを壊さない
+- 変更と無関係な既存Acceptance Factsが引き続き成功する
+- 追加・変更されたFactsがtarget固有testで覆われ、stale coverageが残らない
+- required、preferred、forbidden policyの各経路を実測する
+- semantic changeとagentのimplementation refactorをreview上で区別できる
+- update後のbuild/testが成功する
 
-## 4. build/test failureをagentへ戻して修正できる
+## Milestone 4 — Public signup/signin + Identity（P1）
 
 ### 目的
 
-一度の生成成功ではなく、失敗を観測して修正するagent loopを完成させる。
+管理画面CRUDでは現れなかったcurrent principal、credential、session、ownershipの意味を、実装方式から
+独立して記述できるか検証する。
+
+### 最初のflow
+
+1. visitorがsignupする。
+2. 登録済みuserがsigninし、signoutできる。
+3. 未認証principalは保護されたpageを閲覧できない。
+4. authenticated userは自分のprofileだけを表示・編集できる。
+5. email変更など再verificationが必要なflowを拒否条件とともに扱う。
+
+### 設計・検証する
+
+- domain entityとcurrent principalの関係
+- signup、signin、signoutのobservable intent
+- ownership predicateとrole permissionの合成
+- credentialを通常のentity fieldやdiagnosticへ漏らさない境界
+- session方式、hash、cookie、identity providerをagent/repositoryへ委ねる境界
+- Identity Intentと正常系・拒否系Acceptance Facts
+
+候補syntaxを先に固定せず、[`public-membership-proposal.md`](public-membership-proposal.md)の比較例を
+Generation Requestへ落とせる最小semantic modelから決める。
+
+### Exit criteria
+
+- target repositoryを知らなくてもflowと拒否条件を説明できる
+- 本人だけの操作をrole定数へ縮退させず検査できる
+- credential valueがResolved Intent、Source Map、diagnosticへ漏れない
+- agentがrepository標準の安全なidentity実装を選べる
+- Identity Factsをtarget固有testへ変換し、正常系と否定系が成功する
+
+## Milestone 5 — Automated repair loop（P2）
+
+### 目的
+
+一度の生成成功ではなく、build/test failureを観測し、Formaの意味を弱めずに実装を修正するloopを完成する。
 
 ```text
 Generation Request
@@ -144,69 +261,92 @@ Generation Request
   → repeat until success or genuine blocker
 ```
 
-### 実装する
+### 実装済みの土台
 
-- [x] stage、status、command、diagnostic、関連intent node、fact coverageを持つ`v0alpha1` feedback型
-- [x] required fact IDとcoverageの完全一致、未知・重複・未参照を拒否するvalidator
-- [x] immutableなrequestとfeedback JSONを検査する`forma verify`
-- compiler errorとrepository build/test failureの分離
-- Source Mapを使ったForma declarationへの関連付け
-- agentが意味を勝手に弱めず、実装を修正するretry policy
-- [x] fact ID、repository固有test reference、resultを持つcoverage report
+- stage、status、command、diagnostic、関連intent node、fact coverageを持つ`v0alpha1` feedback型
+- required fact IDとcoverageの完全一致、未知・重複・未参照を拒否するvalidator
+- immutable requestとfeedback JSONを検査する`forma verify`
+- fact ID、repository固有test reference、resultを持つcoverage report
+
+### 残る実装・実験
+
+- compiler errorとrepository build/test failureの明確な分離
+- Source Mapを使ったForma declarationへのfailure関連付け
+- agentが要求を削除・弱化してtestを通すことを禁止するretry policy
+- failureが実装bugか、Formaのintent gapかを分類するfeedback
+- controlledなfailure → repair → successを少なくとも1回実測する
 
 ### Exit criteria
 
-- buildまたはtest failureから少なくとも一度自動修正して成功できる
-- failureがFormaの不足なら、codeで回避せず人間へintent gapとして返せる
-- 合否を「agentがそう思う」ではなく、repository commandの結果で確認できる
+- buildまたはtest failureから自動修正して成功できる
+- retry中もrequested factsとpolicyが欠落・弱化しない
+- failureがFormaの不足ならcodeで回避せず、人間へintent gapとして返せる
+- 合否をagentの自己申告ではなくrepository commandの結果で確認できる
 
-## 5. Formaの変更から既存applicationをincrementalに更新できる
+## Milestone 6 — Application semanticsを実例から拡張する（P3）
 
 ### 目的
 
-target codeを毎回破棄せず、通常のrepositoryを安全に進化させる。
+CRUDとstate transitionを越えるdomain behaviorを、statement languageやframework vocabularyへ退行せず
+記述する。
 
-### 実験する変更
+### 検討順序
 
-- fieldの追加・rename・constraint変更
-- listのsearch/filter/page size変更
-- state valueとtransitionの追加
-- permission変更
-- pageとactionの追加・削除
+```text
+1. pure Expression
+2. Derived Value / Invariant / Precondition
+3. Changesとatomic post-state
+4. Occurrence model
+5. Effect binding / delivery contract
+```
 
-### 実装する
+Effectを先に設計しない。recipientや発生条件にもExpressionが必要であり、ChangesとEffectの境界には
+atomic post-stateの意味が必要だからである。
 
-- 前回と今回のResolved Intent差分
-- source renameと削除を区別できるidentity/change model
-- repositoryの既存手書きcodeを保つ編集境界
-- migrationやtest更新を含むagent plan
-- staleな実装とAcceptance Fact coverageの検出
+### 現在のprobe
+
+- [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`を最小sliceとして実装
+- [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
+- [`examples/orders.forma`](../examples/orders.forma): v0だけで書ける構造・lifecycle・認可を確認
+
+### 選別基準
+
+- 2つ以上の異なるapplication例で同じsemantic needが現れる
+- 独立したstable identity、評価時点、failure semanticsを持つ
+- 他のprimitiveのmodifierだけでは表せない
+- frameworkやdelivery mechanismから独立してAcceptance Factsを導出できる
+- control flow、statement順序、暗黙の副作用を持ち込まない
 
 ### Exit criteria
 
-- full regenerationなしでintent差分を既存repositoryへ適用できる
-- 無関係な手書きcodeを壊さない
-- semantic changeとagentのimplementation refactorをreview上で区別できる
-- update後のbuild/testが成功し、追加・変更されたAcceptance Factsを覆う
+- order/inventoryと少なくとももう1例で共通axisを確認する
+- actionを実行できる条件とpost-stateをtarget-neutralに表現できる
+- 状態を変えないactionとobservable occurrenceを表現できる
+- effectのemissionとdeliveryを分離し、stable emission identityを導出できる
+- 各追加概念から正常系・拒否系Acceptance Factsを作れる
 
-## v1候補は実例から設計する
+## Milestone 7 — v0 hardening and release（P4）
 
-v1 syntaxを先に増やさず、agent generation experimentで表現できなかったapplication intentから必要な
-semantic axisを抽出する。
+### 目的
 
-現在の候補:
+実験で残った最小言語とfront-end boundaryを、第三者が再現・利用できるreleaseへする。
 
-- expression、invariant、derived value、precondition
-- action argument、changes、atomic postcondition
-- occurrence、effect、notification、schedule、retry
-- public identity、credential、ownership
-- aggregate、join、inverse relation、cascade rule
-- schema/data migration intent
-- i18n copyとdesign intent
+### 実装する
 
-注文・注文明細・在庫probeは[`order-approval-proposal.md`](order-approval-proposal.md)、式レイヤは
-[`expression-proposal.md`](expression-proposal.md)、public identityは
-[`public-membership-proposal.md`](public-membership-proposal.md)で検討している。
+- normative v0とreference front-endの差分を閉じる
+- schema/version compatibilityとmigration policyを固定する
+- `forma fmt`、`forma explain`、diagnostic UXを完成する
+- compilation unitとproject layoutを明文化する
+- installation、editor integration、CI例を用意する
+- examplesとgolden/negative corpusを増やす
+- security、secret handling、untrusted repository実行境界をreviewする
+
+### Exit criteria
+
+- clean environmentからinstallし、examplesをcheck/resolve/request/verifyできる
+- normative specificationと実装の既知の差分がない
+- version不一致やunsupported intentを無言で無視しない
+- 第三者が少なくとも1つのrepositoryでE2Eを再現できる
 
 ## 凍結した方向
 
@@ -226,6 +366,7 @@ code-generator projectへ近づけるかを示す凍結prototypeとして残す�
 
 ## Roadmap全体の原則
 
+- 中心仮説を強く否定し得るend-to-end experimentを、広いschema設計より先に行う。
 - Forma sourceの可読性を生成速度より優先する。
 - AIは実装主体だが、parse、名前解決、型、Forma semanticsは所有しない。
 - Resolved Intentは実装shapeではなくapplication intentを運ぶ。
@@ -233,3 +374,4 @@ code-generator projectへ近づけるかを示す凍結prototypeとして残す�
 - repositoryを通常のsourceとして尊重し、既存codeへincrementalに変更する。
 - build/test failureは実装修正へ使い、intentを暗黙に弱めない。
 - 足りない意味はframework profileではなく、必要ならForma languageへ戻して検討する。
+- 実例が必要性を示すまで、新しいprimitiveやmanifest schemaを固定しない。

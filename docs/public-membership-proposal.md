@@ -287,7 +287,10 @@ password signupだけでgrammarを固定しない。少なくとも次を同じ�
 
 ## Roadmapへの影響
 
-最初のagent generation experimentでsignup/signin flowを扱うため、identity設計は後回しにできない。
-管理画面flowと並行して最小Identity IntentとAcceptance Factsを決め、Generation Requestへ載せる。
-credential保護やsession方式はForma coreへ実装せず、coding agentがtarget repositoryの標準的で安全な
-仕組みを選ぶ。
+管理画面list/detail/editの最初のagent generation experimentはIdentityを含めずに完了した。現在は
+既存repositoryを保持できるかを先に検証するため、incremental updateをP0とする。その直後のP1で本書の
+signup/signin flowを実施し、最小Identity IntentとAcceptance FactsをGeneration Requestへ載せる。
+
+IdentityをExpressionやEffectの一般化より先に置くのは、public applicationを記述できるかという中心的な
+言語境界であり、role定数だけではownershipを表現できないためである。credential保護やsession方式は
+Forma coreへ実装せず、coding agentがtarget repositoryの標準的で安全な仕組みを選ぶ。

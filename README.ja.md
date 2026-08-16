@@ -242,7 +242,8 @@ applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
 `forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。次のmilestoneは、
-既存target repositoryへのincremental changeと自動repair loopです。
+最小Implementation Policy Manifestを伴う既存target repositoryへのincremental changeです。その後、
+signup/signinのIdentity probeと自動repair loopへ進みます。
 
 ## 設計資料
 

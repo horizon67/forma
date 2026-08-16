@@ -933,8 +933,8 @@ reference front-endはこの規範v0に加え、[Minimal Expression Layer Propos
 
 1. coding agentがGeneration Requestとtarget repositoryを受け取り、実行可能なapplicationを実装する。
 2. agentがAcceptance Factsをrepository固有のtestへ変換し、正常系と否定系を検査する。
-3. build/test failureをstructured feedbackとして受け取り、少なくとも一度のrepair loopを完了する。
-4. Forma sourceの変更をResolved Intent差分として既存repositoryへincrementalに適用する。
+3. Forma sourceの変更をResolved Intent差分として既存repositoryへincrementalに適用する。
+4. build/test failureをstructured feedbackとして受け取り、少なくとも一度のrepair loopを完了する。
 5. Forma coreへframework別lowerer、profile capability matrix、runtime adapterを追加しない。
 
 最初のweb applicationでは、概ね次のcapabilityをagent generationで確認する。HTTP shape自体は規範ではない。
