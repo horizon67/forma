@@ -1,6 +1,9 @@
 package compiler
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 func (c *checker) indexViews() {
 	for _, page := range c.program.Pages {
@@ -14,6 +17,7 @@ func (c *checker) indexViews() {
 				c.error(page.Param.Type.Span, "F2003", fmt.Sprintf("unknown page parameter entity `%s`", page.Param.Type.Text), "use an entity type for the page parameter")
 			}
 		}
+		seenViewIDs := map[SemanticID]Span{}
 		for _, view := range page.Views {
 			info := &viewInfo{Page: page, View: view}
 			switch view.Kind {
@@ -56,6 +60,12 @@ func (c *checker) indexViews() {
 				}
 			}
 			c.viewInfo[view] = info
+			id := viewSemanticID(info)
+			if previous, exists := seenViewIDs[id]; exists {
+				c.error(view.Subject.Span, "F2001", fmt.Sprintf("duplicate semantic view `%s`", id), fmt.Sprintf("the first view is at line %d; a page needs one canonical view for each kind, mode, and entity", previous.Start.Line))
+			} else {
+				seenViewIDs[id] = view.Span
+			}
 		}
 	}
 }
@@ -225,6 +235,7 @@ func (c *checker) checkForm(info *viewInfo, mods map[string]ViewModifier) {
 			c.error(mod.Names[0].Span, "F2408", fmt.Sprintf("%s form must submit `%s`, not `%s`", info.Mode, expected, mod.Names[0].Text), fmt.Sprintf("write `submit %s`", expected))
 		}
 	}
+	c.resolveSubmitIntent(info, true)
 }
 
 func (c *checker) checkFormField(field *FieldDecl, at Span) {
@@ -267,8 +278,13 @@ func (c *checker) checkUniqueNames(names []Name, context string) {
 	}
 }
 
-func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) IRActionRef {
-	ref := IRActionRef{Name: name.Text, PreventDuplicateDispatch: true, FailureFeedback: true}
+func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref IRActionRef) {
+	id := semanticID(string(viewSemanticID(info)), "action", name.Text)
+	ref = IRActionRef{ID: id, Name: name.Text, PreventDuplicateDispatch: true, FailureFeedback: true}
+	var domainAction *ActionDecl
+	defer func() {
+		ref.Access = c.actionRefAccess(id, info, ref, domainAction)
+	}()
 	if _, standard := standardActions[name.Text]; standard {
 		ref.Kind = "standard"
 		switch name.Text {
@@ -314,6 +330,7 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) IRAct
 		}
 		return ref
 	}
+	domainAction = action
 	ref.Kind = "transition"
 	ref.SuccessPage = info.Page.Name.Text
 	for _, mod := range action.Mods {
@@ -322,6 +339,89 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) IRAct
 		}
 	}
 	return ref
+}
+
+func (c *checker) resolveSubmitIntent(info *viewInfo, report bool) IRSubmitIntent {
+	viewID := viewSemanticID(info)
+	id := semanticID(string(viewID), "submit")
+	success := IRNavigationIntent{
+		ID:            semanticID(string(id), "success"),
+		RecheckAccess: true,
+	}
+
+	details := c.details[info.Entity.Name.Text]
+	switch {
+	case len(details) == 1:
+		success.Kind = "page"
+		success.Page = details[0].Page.Name.Text
+	case len(details) > 1:
+		name := info.View.Subject
+		c.destinationCountError(name, info.Mode+" success detail", len(details), report)
+	case len(c.lists[info.Entity.Name.Text]) > 0:
+		success.Kind = "caller-list"
+		success.FallbackPage = info.Page.Name.Text
+	default:
+		success.Kind = "same-context"
+		success.Page = info.Page.Name.Text
+	}
+
+	pageNames := []string{info.Page.Name.Text}
+	if success.Kind == "page" && success.Page != "" {
+		pageNames = append(pageNames, success.Page)
+	}
+
+	return IRSubmitIntent{
+		ID:                       id,
+		Action:                   info.Mode,
+		Success:                  success,
+		Access:                   c.composeAccess(semanticID(string(id), "access"), pageNames, nil),
+		PreventDuplicateDispatch: true,
+		FailureFeedback:          true,
+	}
+}
+
+func (c *checker) actionRefAccess(id SemanticID, info *viewInfo, ref IRActionRef, action *ActionDecl) IRAccess {
+	pageNames := []string{info.Page.Name.Text}
+	if ref.TargetPage != "" {
+		pageNames = append(pageNames, ref.TargetPage)
+	} else if ref.SuccessPage != "" {
+		pageNames = append(pageNames, ref.SuccessPage)
+	}
+	return c.composeAccess(semanticID(string(id), "access"), pageNames, action)
+}
+
+func (c *checker) composeAccess(id SemanticID, pageNames []string, action *ActionDecl) IRAccess {
+	access := IRAccess{ID: id, AllOf: []IRAccessRequirement{}}
+	seen := map[SemanticID]bool{}
+	for _, pageName := range pageNames {
+		page := c.pages[pageName]
+		if page == nil || len(page.Allows) == 0 {
+			continue
+		}
+		source := pageID(page.Name.Text)
+		if seen[source] {
+			continue
+		}
+		seen[source] = true
+		access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, AnyOf: namesToStrings(page.Allows)})
+	}
+	if action != nil {
+		var allows []string
+		for _, mod := range action.Mods {
+			if mod.Kind == "allow" {
+				allows = namesToStrings(mod.Names)
+				break
+			}
+		}
+		if len(allows) > 0 {
+			source := actionID(action.Entity.Text, action.Name.Text)
+			if !seen[source] {
+				access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, AnyOf: allows})
+			}
+		}
+	}
+	sort.Slice(access.AllOf, func(i, j int) bool { return access.AllOf[i].Source < access.AllOf[j].Source })
+	return access
 }
 
 func (c *checker) uniqueDestination(name Name, kind string, candidates []*viewInfo, report bool) string {

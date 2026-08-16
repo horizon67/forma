@@ -9,11 +9,13 @@ import (
 type Result struct {
 	Program     *Program
 	IR          *SemanticIR
+	SourceMap   *SourceMap
 	Sources     map[string]SourceFile
 	Diagnostics []Diagnostic
 }
 
-// Compile parses and checks one or more Forma source files as one program.
+// Compile parses and checks the exact source set as one compilation unit and
+// one application namespace. Source paths do not create nested units.
 func Compile(sources []SourceFile) Result {
 	result := Result{Program: &Program{}, Sources: map[string]SourceFile{}}
 	ordered := append([]SourceFile(nil), sources...)
@@ -28,8 +30,9 @@ func Compile(sources []SourceFile) Result {
 	if len(result.Diagnostics) > 0 {
 		return result
 	}
-	ir, diagnostics := check(result.Program)
+	ir, sourceMap, diagnostics := check(result.Program)
 	result.IR = ir
+	result.SourceMap = sourceMap
 	result.Diagnostics = diagnostics
 	return result
 }
@@ -37,6 +40,11 @@ func Compile(sources []SourceFile) Result {
 // MarshalIR returns stable, indented JSON for golden tests and compiler tooling.
 func MarshalIR(ir *SemanticIR) ([]byte, error) {
 	return json.MarshalIndent(ir, "", "  ")
+}
+
+// MarshalSourceMap returns stable, indented JSON for compiler tooling.
+func MarshalSourceMap(sourceMap *SourceMap) ([]byte, error) {
+	return json.MarshalIndent(sourceMap, "", "  ")
 }
 
 func mergeProgram(destination, source *Program) {

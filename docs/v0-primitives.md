@@ -1,6 +1,6 @@
 # Forma v0 — プリミティブと言語仕様
 
-Status: design draft 0.4 (reference implementation: partial; core Semantic IR: `forma/v0.3`)
+Status: design draft 0.4 (reference implementation: partial; core Semantic IR: `forma/v0.4`)
 
 > Forma is a high-level application programming language for expressing what
 > software should be, not how it should be implemented.
@@ -94,6 +94,28 @@ diagnosticはSource MapによってForma declarationへ追跡可能にする。
 | `confirm` | 修飾子 | 一つの`action`の実行条件を追加する |
 | `login` `logout` | v0対象外 | roleは認可を記述するが、認証方式は決めない |
 | `upload` `retry` `cache` | v0対象外 | インフラとeffectの設計を必要とする |
+
+### 2.1 compilation unitとapplication境界
+
+1回のfront-end compile operationへ明示的に渡されたForma source fileの集合を、1つの
+**compilation unit**とする。1 compilation unitは1つのapplication namespaceを持ち、すべての
+top-level declaration、参照解決、重複検査、Semantic IR、Source Map、Conformance Contractは
+その集合全体に対して生成する。
+
+source pathとdirectory階層はnamespaceやapplication境界を作らない。複数fileまたはdirectoryを
+1回の`forma check`へ渡した場合、再帰的に得たすべての`.forma`を1つのcompilation unitへunionする。
+同じdirectoryにあることだけを理由に複数のapplicationへ分割したり、subdirectoryごとに暗黙の
+moduleを作ったりしてはならない。file間の参照に`import`は不要であり、v0はpackage/module構文を
+持たない。
+
+1 repositoryに複数のForma applicationを置いてよい。その場合は、それぞれのsource集合を別の
+compile operationとして明示する。したがって独立した`examples/users.forma`と
+`examples/orders.forma`は個別にはvalidでも、両方を同じoperationへ渡せば、同名の`role admin`などは
+通常の重複宣言としてerrorになる。
+
+`forma check`は1個以上のfileまたはdirectory引数を必須とし、引数なしでcurrent directoryを暗黙に
+探索しない。将来のproject/profile manifestは1つのbuildについてこのsource集合を明示する責務を持つが、
+manifestの所在やdirectory layoutによってlanguage semanticsを変えてはならない。
 
 ## 3. プリミティブ10個
 
@@ -465,6 +487,17 @@ Semantic IRに解決済みdestinationとして記録し、target profileが別�
 policyを取り得る。各form viewのIRにはmodeだけでなく、`submit create/edit`、成功destination、
 duplicate dispatch防止、failure feedbackを持つ`SubmitIntent`を必ず含める。
 
+`SubmitIntent`は少なくとも、standard action名、成功navigation、合成済みaccess、pending中の
+duplicate dispatch防止、failure feedbackを保持する。成功navigationは固定`page`、
+`caller-list`、`same-context`の閉じた3種類とし、`caller-list`にはdirect navigation時の
+`same-context` fallback pageを記録する。遷移時にはdestination pageのaccessを再検査する。
+
+accessは単一role listへ平坦化せず、source page、action、destination pageそれぞれの`allow`を
+`allOf`で合成し、各`allow`内のrole listを`anyOf`として保持する。例えば
+`allow admin, editor`のsource pageから`allow member`のpageへ遷移する場合は、
+`(admin OR editor) AND member`である。固定destinationはcompile時に合成し、`caller-list`の
+destination accessはdispatch時に保持したnavigation contextから再検査する。
+
 ### 6.2 navigationと認可の合成
 
 actionを提示するには、現在pageの`allow`、domain action自身の`allow`、遷移先pageの`allow`を
@@ -550,6 +583,31 @@ Semantic IRは、解決済みsymbol、型、constraint、認可、状態precondi
 Source Mapを別に出力する。pathやlineの変更をsemantic changeとして扱わないため、Source Mapは
 Semantic IRの意味的等価性やbuild keyには含めない。React component、Rails controller、HTTP verb、
 SQLなどはSemantic IRに保持しない。
+
+semantic identityはsource path、line、column、declarationのglobalなsource orderを含まないcanonical
+pathとする。named declarationは次の形を取る。
+
+```text
+role/admin
+type/Email
+entity/User
+entity/User/field/email
+entity/User/state/status
+action/User/activate
+page/UserDetail
+```
+
+page内のviewは`page/{Page}/view/{kind}/{Entity}`、formはmodeも含む
+`page/{Page}/view/form/{create|edit}/{Entity}`とする。view内の解決済みaction参照、relation choice、
+sort、SubmitIntent、navigation、accessなどの匿名nodeは、親identityへkindと局所名を追加する。
+同じpage内に同一identityとなるviewを複数宣言することはできない。declarationまたはviewの意味的な
+主語をrenameすればidentityは変わるが、file移動、空行、comment、source positionだけの変更では
+identityは変わらない。top-level IR collectionはidentity順へcanonicalizeする。field順、state value順、
+view内の明示的なprojection/action順のようにpresentation semanticsを持つ順序は保持する。
+
+Source Mapのformat versionは`forma/source-map/v0.1`とし、対象IR versionと、semantic nodeごとの
+`nodeId`、`kind`、half-open source spanを保持する。generator/build/runtime diagnosticは`nodeId`で
+Forma declarationを参照し、表示時にSource Mapを使って現在のfileと位置へ戻す。
 
 conformance contractはSemantic IRから決定的に導出する。最低でも、正常系と次の否定的な性質を
 target-neutralなcaseとして保持する。
@@ -637,6 +695,10 @@ v0の仮説検証範囲を広げるためである。
 24. named scalarのconstraintはtransitiveに合成し、Semantic IRへeffective constraintを記録する。
 25. form submissionと成功後navigationは`SubmitIntent`へ解決し、generatorに再導出させない。
 26. 可読性は言語設計要件とし、短さよりintentの直接性、canonical form、説明可能な暗黙性を優先する。
+27. semantic identityはcanonical pathから導出し、Source MapをIRと分離する。同じpage内で同一identityに
+    なるviewはcompile errorとする。
+28. 1回のcompile operationへ明示的に渡したsource集合を1 compilation unit、1 application namespaceと
+    する。pathやdirectoryから暗黙のapplication/module境界を導出しない。
 
 ### 10.1 統合レビューで埋めた仕様の穴
 
@@ -816,7 +878,7 @@ language semanticsはtarget実装へ進める状態にあるが、`forma build`�
 | artifact protocol | generatorの許可されたwrite範囲、file manifest、dependency lock、build entrypoint、失敗形式 | 未決定 |
 | conformance schema | fixture、operation、期待値、否定case、interaction stateの表現 | 未決定 |
 | profile conformance adapter | data reset、role principal注入、operation実行、UI/runtime観測の共通interface | 未決定 |
-| semantic identity / Source Map | IR nodeの安定identityとsource spanへの対応、generator diagnosticの返却形式 | 未決定 |
+| semantic identity / Source Map | IR nodeの安定identityとsource spanへの対応 | `forma/v0.4` IRと`forma/source-map/v0.1`としてreference front-endに実装済み |
 
 model providerや具体的なframeworkはprofileの選択であり、言語全体のblockerではない。上記contractが
 固定されるまでは、特定provider向けのpromptやreference applicationを規範interfaceとして
@@ -825,17 +887,16 @@ model providerや具体的なframeworkはprofileの選択であり、言語全�
 ### 14.2 現行reference front-endとの差分
 
 現在のGo front-endはdesign draft v0.4のsurface syntaxを部分実装し、Lexer、Parser、syntax AST、
-主要な静的検査、`forma/v0.3` core Semantic IR、golden IRまで実装済みである。ただしdesign draft
+主要な静的検査、`forma/v0.4` core Semantic IR、golden IR、Source Mapまで実装済みである。ただしdesign draft
 v0.4に対して、少なくとも次は未実装である。
 
 - §5.7の省略projectionを展開したlist/detail IR
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
-- formの`SubmitIntent`と、navigation先pageを含む認可の合成
 - v0で閉じたstring/regex escape setの厳密な検査
-- stable semantic identityとSource Map
 - conformance contract、profile manifest/capability check、artifact protocol
 
-したがってv0.3のgolden IRは現在の実装回帰には使えるが、v0.4 Semantic IR schemaの完成形ではない。
+したがってv0.4のgolden IRとSource Mapは現在の実装回帰には使えるが、v0.4 Semantic IR schemaの
+完成形ではない。
 
 ### 14.3 Language/front-end v0
 
@@ -899,10 +960,14 @@ enforce field, state, and role constraints
 - derived value、`invariant`、action preconditionを式で表し、statementを持たない境界を保てるか
 - 表示文言と設計意図を`title`やdoc commentとしてsourceとSemantic IRに載せるか
 - 複数entityをまたぐ副作用を、手続き型へ退行せずどのeffect modelで表すか
+- 状態を変えないactionを宣言できるようにするか。現在は§12の遷移検査が拒否する
+- observable domain occurrenceをactionから導出するか、明示するか
+  （[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)）
 - `forma diagram`でstate machineやentity graphを生成し、図をsource of truthにせず利用できるか
 - Ruby/RailsやAWSなどの人間によるarchitecture選定を、application semanticsから分離した
   [Architecture Manifest](architecture-manifest.md)としてどう表すか
 
 v1の式レイヤはまだ決定事項ではない。まず注文・明細・在庫のような実例を`examples/`へ書き、
 導出値、invariant、state以外のaction preconditionだけで何が表現でき、どこからeffectが必要に
-なるかを確認してからEBNFを定める。
+なるかを確認してからEBNFを定める。この実例は[`examples/orders.forma`](../examples/orders.forma)と
+[Order Approval, Inventory, and Effect Proposal](order-approval-proposal.md)で着手した。

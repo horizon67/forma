@@ -73,7 +73,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 func collectPaths(arguments []string) ([]string, error) {
 	if len(arguments) == 0 {
-		arguments = []string{"."}
+		return nil, fmt.Errorf("no source files or directories specified")
 	}
 	seen := map[string]bool{}
 	var paths []string
@@ -121,8 +121,8 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "Forma compiler")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Usage:")
-	fmt.Fprintln(writer, "  forma check [file.forma | directory ...]")
+	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
-	fmt.Fprintln(writer, "  check    parse, resolve, and validate a Forma program")
+	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
 }

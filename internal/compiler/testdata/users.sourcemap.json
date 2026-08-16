@@ -1,0 +1,975 @@
+{
+  "version": "forma/source-map/v0.1",
+  "irVersion": "forma/v0.4",
+  "entries": [
+    {
+      "nodeId": "action/User/activate",
+      "kind": "action",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 375,
+          "line": 20,
+          "column": 1
+        },
+        "end": {
+          "offset": 418,
+          "line": 20,
+          "column": 44
+        }
+      }
+    },
+    {
+      "nodeId": "action/User/confirm",
+      "kind": "action",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 329,
+          "line": 19,
+          "column": 1
+        },
+        "end": {
+          "offset": 375,
+          "line": 19,
+          "column": 47
+        }
+      }
+    },
+    {
+      "nodeId": "action/User/reinstate",
+      "kind": "action",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 484,
+          "line": 22,
+          "column": 1
+        },
+        "end": {
+          "offset": 539,
+          "line": 22,
+          "column": 56
+        }
+      }
+    },
+    {
+      "nodeId": "action/User/suspend",
+      "kind": "action",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 418,
+          "line": 21,
+          "column": 1
+        },
+        "end": {
+          "offset": 484,
+          "line": 21,
+          "column": 67
+        }
+      }
+    },
+    {
+      "nodeId": "entity/Team",
+      "kind": "entity",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 116,
+          "line": 7,
+          "column": 1
+        },
+        "end": {
+          "offset": 162,
+          "line": 9,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/Team/field/name",
+      "kind": "field",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 134,
+          "line": 8,
+          "column": 5
+        },
+        "end": {
+          "offset": 161,
+          "line": 8,
+          "column": 32
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User",
+      "kind": "entity",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 164,
+          "line": 11,
+          "column": 1
+        },
+        "end": {
+          "offset": 327,
+          "line": 17,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/email",
+      "kind": "field",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 208,
+          "line": 13,
+          "column": 5
+        },
+        "end": {
+          "offset": 236,
+          "line": 13,
+          "column": 33
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/name",
+      "kind": "field",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 182,
+          "line": 12,
+          "column": 5
+        },
+        "end": {
+          "offset": 204,
+          "line": 12,
+          "column": 27
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/team",
+      "kind": "field",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 240,
+          "line": 14,
+          "column": 5
+        },
+        "end": {
+          "offset": 251,
+          "line": 14,
+          "column": 16
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/team/relation",
+      "kind": "relation",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 246,
+          "line": 14,
+          "column": 11
+        },
+        "end": {
+          "offset": 250,
+          "line": 14,
+          "column": 15
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/state/status",
+      "kind": "state",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 256,
+          "line": 16,
+          "column": 5
+        },
+        "end": {
+          "offset": 326,
+          "line": 16,
+          "column": 75
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate",
+      "kind": "page",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 786,
+          "line": 37,
+          "column": 1
+        },
+        "end": {
+          "offset": 899,
+          "line": 44,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate/view/form/create/User",
+      "kind": "form",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 825,
+          "line": 40,
+          "column": 5
+        },
+        "end": {
+          "offset": 897,
+          "line": 43,
+          "column": 6
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate/view/form/create/User/relation-choice/team",
+      "kind": "relation-choice",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 240,
+          "line": 14,
+          "column": 5
+        },
+        "end": {
+          "offset": 244,
+          "line": 14,
+          "column": 9
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate/view/form/create/User/submit",
+      "kind": "submit",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 878,
+          "line": 42,
+          "column": 9
+        },
+        "end": {
+          "offset": 891,
+          "line": 42,
+          "column": 22
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate/view/form/create/User/submit/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 878,
+          "line": 42,
+          "column": 9
+        },
+        "end": {
+          "offset": 891,
+          "line": 42,
+          "column": 22
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserCreate/view/form/create/User/submit/success",
+      "kind": "navigation",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 878,
+          "line": 42,
+          "column": 9
+        },
+        "end": {
+          "offset": 891,
+          "line": 42,
+          "column": 22
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail",
+      "kind": "page",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 901,
+          "line": 46,
+          "column": 1
+        },
+        "end": {
+          "offset": 1081,
+          "line": 53,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/parameter",
+      "kind": "parameter",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 917,
+          "line": 46,
+          "column": 17
+        },
+        "end": {
+          "offset": 927,
+          "line": 46,
+          "column": 27
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User",
+      "kind": "detail",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 951,
+          "line": 49,
+          "column": 5
+        },
+        "end": {
+          "offset": 1079,
+          "line": 52,
+          "column": 6
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/activate",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1045,
+          "line": 51,
+          "column": 40
+        },
+        "end": {
+          "offset": 1053,
+          "line": 51,
+          "column": 48
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/activate/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1045,
+          "line": 51,
+          "column": 40
+        },
+        "end": {
+          "offset": 1053,
+          "line": 51,
+          "column": 48
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/confirm",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1036,
+          "line": 51,
+          "column": 31
+        },
+        "end": {
+          "offset": 1043,
+          "line": 51,
+          "column": 38
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/confirm/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1036,
+          "line": 51,
+          "column": 31
+        },
+        "end": {
+          "offset": 1043,
+          "line": 51,
+          "column": 38
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/delete",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1028,
+          "line": 51,
+          "column": 23
+        },
+        "end": {
+          "offset": 1034,
+          "line": 51,
+          "column": 29
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/delete/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1028,
+          "line": 51,
+          "column": 23
+        },
+        "end": {
+          "offset": 1034,
+          "line": 51,
+          "column": 29
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/edit",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1022,
+          "line": 51,
+          "column": 17
+        },
+        "end": {
+          "offset": 1026,
+          "line": 51,
+          "column": 21
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/edit/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1022,
+          "line": 51,
+          "column": 17
+        },
+        "end": {
+          "offset": 1026,
+          "line": 51,
+          "column": 21
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/reinstate",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1064,
+          "line": 51,
+          "column": 59
+        },
+        "end": {
+          "offset": 1073,
+          "line": 51,
+          "column": 68
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/reinstate/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1064,
+          "line": 51,
+          "column": 59
+        },
+        "end": {
+          "offset": 1073,
+          "line": 51,
+          "column": 68
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/suspend",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1055,
+          "line": 51,
+          "column": 50
+        },
+        "end": {
+          "offset": 1062,
+          "line": 51,
+          "column": 57
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserDetail/view/detail/User/action/suspend/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1055,
+          "line": 51,
+          "column": 50
+        },
+        "end": {
+          "offset": 1062,
+          "line": 51,
+          "column": 57
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit",
+      "kind": "page",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1083,
+          "line": 55,
+          "column": 1
+        },
+        "end": {
+          "offset": 1203,
+          "line": 62,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/parameter",
+      "kind": "parameter",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1097,
+          "line": 55,
+          "column": 15
+        },
+        "end": {
+          "offset": 1107,
+          "line": 55,
+          "column": 25
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/view/form/edit/User",
+      "kind": "form",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1131,
+          "line": 58,
+          "column": 5
+        },
+        "end": {
+          "offset": 1201,
+          "line": 61,
+          "column": 6
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/view/form/edit/User/relation-choice/team",
+      "kind": "relation-choice",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 240,
+          "line": 14,
+          "column": 5
+        },
+        "end": {
+          "offset": 244,
+          "line": 14,
+          "column": 9
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/view/form/edit/User/submit",
+      "kind": "submit",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1184,
+          "line": 60,
+          "column": 9
+        },
+        "end": {
+          "offset": 1195,
+          "line": 60,
+          "column": 20
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/view/form/edit/User/submit/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1184,
+          "line": 60,
+          "column": 9
+        },
+        "end": {
+          "offset": 1195,
+          "line": 60,
+          "column": 20
+        }
+      }
+    },
+    {
+      "nodeId": "page/UserEdit/view/form/edit/User/submit/success",
+      "kind": "navigation",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 1184,
+          "line": 60,
+          "column": 9
+        },
+        "end": {
+          "offset": 1195,
+          "line": 60,
+          "column": 20
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users",
+      "kind": "page",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 540,
+          "line": 24,
+          "column": 1
+        },
+        "end": {
+          "offset": 784,
+          "line": 35,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User",
+      "kind": "list",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 574,
+          "line": 27,
+          "column": 5
+        },
+        "end": {
+          "offset": 782,
+          "line": 34,
+          "column": 6
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/create",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 741,
+          "line": 33,
+          "column": 17
+        },
+        "end": {
+          "offset": 747,
+          "line": 33,
+          "column": 23
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/create/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 741,
+          "line": 33,
+          "column": 17
+        },
+        "end": {
+          "offset": 747,
+          "line": 33,
+          "column": 23
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/delete",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 761,
+          "line": 33,
+          "column": 37
+        },
+        "end": {
+          "offset": 767,
+          "line": 33,
+          "column": 43
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/delete/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 761,
+          "line": 33,
+          "column": 37
+        },
+        "end": {
+          "offset": 767,
+          "line": 33,
+          "column": 43
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/edit",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 755,
+          "line": 33,
+          "column": 31
+        },
+        "end": {
+          "offset": 759,
+          "line": 33,
+          "column": 35
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/edit/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 755,
+          "line": 33,
+          "column": 31
+        },
+        "end": {
+          "offset": 759,
+          "line": 33,
+          "column": 35
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/suspend",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 769,
+          "line": 33,
+          "column": 45
+        },
+        "end": {
+          "offset": 776,
+          "line": 33,
+          "column": 52
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/suspend/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 769,
+          "line": 33,
+          "column": 45
+        },
+        "end": {
+          "offset": 776,
+          "line": 33,
+          "column": 52
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/view",
+      "kind": "action-reference",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 749,
+          "line": 33,
+          "column": 25
+        },
+        "end": {
+          "offset": 753,
+          "line": 33,
+          "column": 29
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/action/view/access",
+      "kind": "access",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 749,
+          "line": 33,
+          "column": 25
+        },
+        "end": {
+          "offset": 753,
+          "line": 33,
+          "column": 29
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/relation-choice/team",
+      "kind": "relation-choice",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 240,
+          "line": 14,
+          "column": 5
+        },
+        "end": {
+          "offset": 244,
+          "line": 14,
+          "column": 9
+        }
+      }
+    },
+    {
+      "nodeId": "page/Users/view/list/User/sort",
+      "kind": "sort",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 691,
+          "line": 31,
+          "column": 9
+        },
+        "end": {
+          "offset": 700,
+          "line": 31,
+          "column": 18
+        }
+      }
+    },
+    {
+      "nodeId": "role/admin",
+      "kind": "role",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 67,
+          "line": 3,
+          "column": 1
+        },
+        "end": {
+          "offset": 78,
+          "line": 3,
+          "column": 12
+        }
+      }
+    },
+    {
+      "nodeId": "type/Email",
+      "kind": "type",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 79,
+          "line": 5,
+          "column": 1
+        },
+        "end": {
+          "offset": 115,
+          "line": 5,
+          "column": 37
+        }
+      }
+    },
+    {
+      "nodeId": "type/Email/constraint/matches",
+      "kind": "constraint",
+      "span": {
+        "file": "examples/users.forma",
+        "start": {
+          "offset": 99,
+          "line": 5,
+          "column": 21
+        },
+        "end": {
+          "offset": 114,
+          "line": 5,
+          "column": 36
+        }
+      }
+    }
+  ]
+}

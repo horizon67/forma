@@ -8,16 +8,16 @@ import (
 
 // Position is a zero-based byte offset and one-based line/column location.
 type Position struct {
-	Offset int
-	Line   int
-	Column int
+	Offset int `json:"offset"`
+	Line   int `json:"line"`
+	Column int `json:"column"`
 }
 
 // Span identifies a half-open source range.
 type Span struct {
-	File  string
-	Start Position
-	End   Position
+	File  string   `json:"file"`
+	Start Position `json:"start"`
+	End   Position `json:"end"`
 }
 
 func mergeSpan(a, b Span) Span {

@@ -1,15 +1,20 @@
 {
-  "version": "forma/v0.3",
+  "version": "forma/v0.4",
   "roles": [
-    "admin"
+    {
+      "id": "role/admin",
+      "name": "admin"
+    }
   ],
   "types": [
     {
+      "id": "type/Email",
       "name": "Email",
       "kind": "scalar",
       "base": "String",
       "constraints": [
         {
+          "id": "type/Email/constraint/matches",
           "kind": "matches",
           "value": ".+@.+"
         }
@@ -18,9 +23,11 @@
   ],
   "entities": [
     {
+      "id": "entity/Team",
       "name": "Team",
       "fields": [
         {
+          "id": "entity/Team/field/name",
           "name": "name",
           "type": "String",
           "required": true,
@@ -30,29 +37,35 @@
       "label": "name"
     },
     {
+      "id": "entity/User",
       "name": "User",
       "fields": [
         {
+          "id": "entity/User/field/name",
           "name": "name",
           "type": "String",
           "required": true
         },
         {
+          "id": "entity/User/field/email",
           "name": "email",
           "type": "Email",
           "required": true,
           "unique": true
         },
         {
+          "id": "entity/User/field/team",
           "name": "team",
           "type": "Team",
           "relation": {
+            "id": "entity/User/field/team/relation",
             "entity": "Team",
             "label": "name"
           }
         }
       ],
       "state": {
+        "id": "entity/User/state/status",
         "name": "status",
         "initial": "Pending",
         "values": [
@@ -66,14 +79,7 @@
   ],
   "actions": [
     {
-      "entity": "User",
-      "name": "confirm",
-      "sources": [
-        "Pending"
-      ],
-      "destination": "Confirmed"
-    },
-    {
+      "id": "action/User/activate",
       "entity": "User",
       "name": "activate",
       "sources": [
@@ -82,6 +88,28 @@
       "destination": "Active"
     },
     {
+      "id": "action/User/confirm",
+      "entity": "User",
+      "name": "confirm",
+      "sources": [
+        "Pending"
+      ],
+      "destination": "Confirmed"
+    },
+    {
+      "id": "action/User/reinstate",
+      "entity": "User",
+      "name": "reinstate",
+      "sources": [
+        "Suspended"
+      ],
+      "destination": "Active",
+      "allows": [
+        "admin"
+      ]
+    },
+    {
+      "id": "action/User/suspend",
       "entity": "User",
       "name": "suspend",
       "sources": [
@@ -92,27 +120,324 @@
       "allows": [
         "admin"
       ]
-    },
-    {
-      "entity": "User",
-      "name": "reinstate",
-      "sources": [
-        "Suspended"
-      ],
-      "destination": "Active",
-      "allows": [
-        "admin"
-      ]
     }
   ],
   "pages": [
     {
+      "id": "page/UserCreate",
+      "name": "UserCreate",
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "id": "page/UserCreate/view/form/create/User",
+          "kind": "form",
+          "entity": "User",
+          "mode": "create",
+          "fields": [
+            "name",
+            "email",
+            "team"
+          ],
+          "relationChoices": [
+            {
+              "id": "page/UserCreate/view/form/create/User/relation-choice/team",
+              "field": "team",
+              "entity": "Team",
+              "label": "name"
+            }
+          ],
+          "submit": {
+            "id": "page/UserCreate/view/form/create/User/submit",
+            "action": "create",
+            "success": {
+              "id": "page/UserCreate/view/form/create/User/submit/success",
+              "kind": "page",
+              "page": "UserDetail",
+              "recheckAccess": true
+            },
+            "access": {
+              "id": "page/UserCreate/view/form/create/User/submit/access",
+              "allOf": [
+                {
+                  "source": "page/UserCreate",
+                  "anyOf": [
+                    "admin"
+                  ]
+                },
+                {
+                  "source": "page/UserDetail",
+                  "anyOf": [
+                    "admin"
+                  ]
+                }
+              ]
+            },
+            "preventDuplicateDispatch": true,
+            "failureFeedback": true
+          },
+          "interactionStates": [
+            "ready",
+            "invalid",
+            "pending",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/UserDetail",
+      "name": "UserDetail",
+      "param": {
+        "id": "page/UserDetail/parameter",
+        "name": "user",
+        "entity": "User"
+      },
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "id": "page/UserDetail/view/detail/User",
+          "kind": "detail",
+          "entity": "User",
+          "binding": "user",
+          "mode": "read",
+          "fields": [
+            "name",
+            "email",
+            "team",
+            "status"
+          ],
+          "actions": [
+            {
+              "id": "page/UserDetail/view/detail/User/action/edit",
+              "name": "edit",
+              "kind": "standard",
+              "targetPage": "UserEdit",
+              "successPage": "UserDetail",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/edit/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/UserEdit",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "id": "page/UserDetail/view/detail/User/action/delete",
+              "name": "delete",
+              "kind": "standard",
+              "successPage": "Users",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/delete/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "id": "page/UserDetail/view/detail/User/action/confirm",
+              "name": "confirm",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/confirm/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "id": "page/UserDetail/view/detail/User/action/activate",
+              "name": "activate",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/activate/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "id": "page/UserDetail/view/detail/User/action/suspend",
+              "name": "suspend",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/suspend/access",
+                "allOf": [
+                  {
+                    "source": "action/User/suspend",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            },
+            {
+              "id": "page/UserDetail/view/detail/User/action/reinstate",
+              "name": "reinstate",
+              "kind": "transition",
+              "successPage": "UserDetail",
+              "access": {
+                "id": "page/UserDetail/view/detail/User/action/reinstate/access",
+                "allOf": [
+                  {
+                    "source": "action/User/reinstate",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
+              "preventDuplicateDispatch": true,
+              "failureFeedback": true
+            }
+          ],
+          "interactionStates": [
+            "loading",
+            "ready",
+            "empty",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/UserEdit",
+      "name": "UserEdit",
+      "param": {
+        "id": "page/UserEdit/parameter",
+        "name": "user",
+        "entity": "User"
+      },
+      "allows": [
+        "admin"
+      ],
+      "views": [
+        {
+          "id": "page/UserEdit/view/form/edit/User",
+          "kind": "form",
+          "entity": "User",
+          "binding": "user",
+          "mode": "edit",
+          "fields": [
+            "name",
+            "email",
+            "team"
+          ],
+          "relationChoices": [
+            {
+              "id": "page/UserEdit/view/form/edit/User/relation-choice/team",
+              "field": "team",
+              "entity": "Team",
+              "label": "name"
+            }
+          ],
+          "submit": {
+            "id": "page/UserEdit/view/form/edit/User/submit",
+            "action": "edit",
+            "success": {
+              "id": "page/UserEdit/view/form/edit/User/submit/success",
+              "kind": "page",
+              "page": "UserDetail",
+              "recheckAccess": true
+            },
+            "access": {
+              "id": "page/UserEdit/view/form/edit/User/submit/access",
+              "allOf": [
+                {
+                  "source": "page/UserDetail",
+                  "anyOf": [
+                    "admin"
+                  ]
+                },
+                {
+                  "source": "page/UserEdit",
+                  "anyOf": [
+                    "admin"
+                  ]
+                }
+              ]
+            },
+            "preventDuplicateDispatch": true,
+            "failureFeedback": true
+          },
+          "interactionStates": [
+            "ready",
+            "invalid",
+            "pending",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/Users",
       "name": "Users",
       "allows": [
         "admin"
       ],
       "views": [
         {
+          "id": "page/Users/view/list/User",
           "kind": "list",
           "entity": "User",
           "fields": [
@@ -130,6 +455,7 @@
             "team"
           ],
           "sort": {
+            "id": "page/Users/view/list/User/sort",
             "field": "name",
             "direction": "asc",
             "tieBreak": "identity"
@@ -137,45 +463,130 @@
           "pageSize": 20,
           "actions": [
             {
+              "id": "page/Users/view/list/User/action/create",
               "name": "create",
               "kind": "standard",
               "targetPage": "UserCreate",
               "successPage": "UserDetail",
+              "access": {
+                "id": "page/Users/view/list/User/action/create/access",
+                "allOf": [
+                  {
+                    "source": "page/UserCreate",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
               "preventDuplicateDispatch": true,
               "failureFeedback": true
             },
             {
+              "id": "page/Users/view/list/User/action/view",
               "name": "view",
               "kind": "standard",
               "targetPage": "UserDetail",
+              "access": {
+                "id": "page/Users/view/list/User/action/view/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
               "preventDuplicateDispatch": true,
               "failureFeedback": true
             },
             {
+              "id": "page/Users/view/list/User/action/edit",
               "name": "edit",
               "kind": "standard",
               "targetPage": "UserEdit",
               "successPage": "UserDetail",
+              "access": {
+                "id": "page/Users/view/list/User/action/edit/access",
+                "allOf": [
+                  {
+                    "source": "page/UserEdit",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
               "preventDuplicateDispatch": true,
               "failureFeedback": true
             },
             {
+              "id": "page/Users/view/list/User/action/delete",
               "name": "delete",
               "kind": "standard",
               "successPage": "Users",
+              "access": {
+                "id": "page/Users/view/list/User/action/delete/access",
+                "allOf": [
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
               "preventDuplicateDispatch": true,
               "failureFeedback": true
             },
             {
+              "id": "page/Users/view/list/User/action/suspend",
               "name": "suspend",
               "kind": "transition",
               "successPage": "Users",
+              "access": {
+                "id": "page/Users/view/list/User/action/suspend/access",
+                "allOf": [
+                  {
+                    "source": "action/User/suspend",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/Users",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              },
               "preventDuplicateDispatch": true,
               "failureFeedback": true
             }
           ],
           "relationChoices": [
             {
+              "id": "page/Users/view/list/User/relation-choice/team",
               "field": "team",
               "entity": "Team",
               "label": "name"
@@ -185,148 +596,6 @@
             "loading",
             "ready",
             "empty",
-            "failure"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "UserCreate",
-      "allows": [
-        "admin"
-      ],
-      "views": [
-        {
-          "kind": "form",
-          "entity": "User",
-          "mode": "create",
-          "fields": [
-            "name",
-            "email",
-            "team"
-          ],
-          "relationChoices": [
-            {
-              "field": "team",
-              "entity": "Team",
-              "label": "name"
-            }
-          ],
-          "interactionStates": [
-            "ready",
-            "invalid",
-            "pending",
-            "failure"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "UserDetail",
-      "param": {
-        "name": "user",
-        "entity": "User"
-      },
-      "allows": [
-        "admin"
-      ],
-      "views": [
-        {
-          "kind": "detail",
-          "entity": "User",
-          "binding": "user",
-          "mode": "read",
-          "fields": [
-            "name",
-            "email",
-            "team",
-            "status"
-          ],
-          "actions": [
-            {
-              "name": "edit",
-              "kind": "standard",
-              "targetPage": "UserEdit",
-              "successPage": "UserDetail",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            },
-            {
-              "name": "delete",
-              "kind": "standard",
-              "successPage": "Users",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            },
-            {
-              "name": "confirm",
-              "kind": "transition",
-              "successPage": "UserDetail",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            },
-            {
-              "name": "activate",
-              "kind": "transition",
-              "successPage": "UserDetail",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            },
-            {
-              "name": "suspend",
-              "kind": "transition",
-              "successPage": "UserDetail",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            },
-            {
-              "name": "reinstate",
-              "kind": "transition",
-              "successPage": "UserDetail",
-              "preventDuplicateDispatch": true,
-              "failureFeedback": true
-            }
-          ],
-          "interactionStates": [
-            "loading",
-            "ready",
-            "empty",
-            "failure"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "UserEdit",
-      "param": {
-        "name": "user",
-        "entity": "User"
-      },
-      "allows": [
-        "admin"
-      ],
-      "views": [
-        {
-          "kind": "form",
-          "entity": "User",
-          "binding": "user",
-          "mode": "edit",
-          "fields": [
-            "name",
-            "email",
-            "team"
-          ],
-          "relationChoices": [
-            {
-              "field": "team",
-              "entity": "Team",
-              "label": "name"
-            }
-          ],
-          "interactionStates": [
-            "ready",
-            "invalid",
-            "pending",
             "failure"
           ]
         }

@@ -2,7 +2,7 @@
 
 [English](README.md) | **日本語**
 
-**アプリケーションを構築するための、より高水準なプログラミング言語。**
+**アプリケーションそのものを高水準に記述する言語。**
 
 Formaは、framework固有の実装方法ではなく、entity、state、relation、action、page、list、form
 といったアプリケーション概念によってソフトウェアを記述する、実験的なプログラミング言語です。
@@ -62,7 +62,7 @@ AI-assisted developmentによって、人間とsource codeの関係は変わり�
 それでも現在の開発では、frontend、backend、database、schema、testなどに異なる言語が使われ、
 アプリケーションの仕様は設計書、実装コード、API spec、issue、promptへ分散したままです。
 
-Kiroの`design.md`に代表されるspec-drivenな方法は、この分散を減らす有効な試みです。しかし、散文の
+Spec-Driven Development（SDD、仕様駆動開発）は、この分散を減らす有効な試みです。しかし、散文の
 仕様書はそれ自体を継続的に読み、実装との対応を確認し、変更のたびに同期しなければなりません。
 機械が実装の大部分を担う時代に、人間が長い仕様書と生成コードの両方を運用し続けるのは退屈で、
 driftも起こりやすい作業です。
@@ -243,23 +243,30 @@ Formaは、次のものを目指しません。
 
 Formaは初期設計段階であり、compilerはまだreleaseされていません。現在の未release Go
 front-endは、design draft v0.4のsurface syntaxを部分実装し、lexer、parser、syntax AST、名前解決、
-型検査、semantic validation、diagnostic、`forma/v0.3` core Semantic IRまで実装しています。
+型検査、semantic validation、diagnostic、`forma/v0.4` core Semantic IR、Source Mapまで実装しています。
 
-規範仕様の全機能が実装済みという意味ではありません。conformance contract、IR source map、
-target profile capability check、artifact生成・検証protocolは未実装です。規範文書はこれらを含む
+規範仕様の全機能が実装済みという意味ではありません。conformance contract、target profile
+capability check、artifact生成・検証protocolは未実装です。規範文書はこれらを含む
 design draft v0.4で、reference実装はその一部です。
 
 - [Forma v0仕様](docs/v0-primitives.md)
 - [開発ロードマップ](docs/roadmap.md)
 - [ユーザー管理の完全例](examples/users.forma)
+- [注文承認・在庫のprobe](examples/orders.forma)
 - [Architecture Manifest案（検討中）](docs/architecture-manifest.md)
 - [表側の会員登録・identity案（検討中）](docs/public-membership-proposal.md)
+- [注文承認・在庫・effect案（検討中）](docs/order-approval-proposal.md)
 
 Go 1.24以降でcheckerを実行できます。
 
 ```bash
 go run ./cmd/forma check examples/users.forma
+go run ./cmd/forma check examples/orders.forma
 go test ./...
 ```
+
+1回の`forma check`へ渡したfile/directory集合は、1つのcompilation unit、1つのapplicationとして
+まとめて検査されます。directory構造からapplication境界は推測しません。このrepositoryの2つの
+exampleは独立したapplicationなので、上記のように個別に指定します。
 
 `forma build`、`forma conformance`、`forma run`は今後実装します。
