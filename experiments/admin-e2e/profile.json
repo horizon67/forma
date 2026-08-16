@@ -1,0 +1,8 @@
+{
+  "schema": "forma/experiment-profile/v0",
+  "id": "go-stdlib-admin/v0",
+  "runtime": "go-stdlib",
+  "persistence": "memory",
+  "principalAdapter": "test-cookie",
+  "defaultAddress": "127.0.0.1:4317"
+}

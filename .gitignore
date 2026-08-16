@@ -1,4 +1,5 @@
 /forma
 /coverage.out
+/.forma-build/
+/.claude/skills/
 .DS_Store
-

@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Team": [
+      {
+        "id": "team-platform",
+        "values": {
+          "name": "Platform"
+        }
+      },
+      {
+        "id": "team-design",
+        "values": {
+          "name": "Design"
+        }
+      }
+    ],
+    "User": [
+      {
+        "id": "user-alice",
+        "values": {
+          "name": "Alice Tanaka",
+          "email": "alice@example.com",
+          "team": "team-platform",
+          "status": "Active"
+        }
+      },
+      {
+        "id": "user-bob",
+        "values": {
+          "name": "Bob Sato",
+          "email": "bob@example.com",
+          "team": "team-design",
+          "status": "Pending"
+        }
+      },
+      {
+        "id": "user-carol",
+        "values": {
+          "name": "Carol Ito",
+          "email": "carol@example.com",
+          "team": "",
+          "status": "Suspended"
+        }
+      }
+    ]
+  }
+}

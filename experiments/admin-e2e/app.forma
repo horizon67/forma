@@ -1,0 +1,44 @@
+// Focused input for the go-stdlib-admin/v0 generation experiment.
+
+role admin
+
+type Email = String
+
+entity Team {
+    name String required label
+}
+
+entity User {
+    name  String required label
+    email Email required
+    team  Team
+
+    state status Pending | Confirmed | Active | Suspended initial Pending
+}
+
+page Users {
+    allow admin
+
+    list User {
+        columns name, email, team, status
+        actions view, edit
+    }
+}
+
+page UserDetail(user User) {
+    allow admin
+
+    detail user {
+        fields name, email, team, status
+        actions edit
+    }
+}
+
+page UserEdit(user User) {
+    allow admin
+
+    form user {
+        fields name, email, team
+        submit edit
+    }
+}

@@ -18,9 +18,9 @@ Semantic IR、conformance、profile、artifactの境界を固定する。
 | reference front-end | 部分実装 | v0 front-endに加え、self-only Invariant `field <= field`のexperimental sliceとResolved Expression IRを実装 |
 | 完全例 | check可能 | `examples/users.forma`をparse・検査し、golden IRを生成可能 |
 | conformance | 未実装 | contract schema、fixture、adapter、実行protocolが未決定 |
-| target generation | 未実装 | profile manifest、artifact protocol、reference generatorが未決定 |
+| target generation | experimental slice | Go標準libraryの管理画面profileでlist/detail/editを決定的にlowering。正式なprofile manifestとartifact protocolは未決定 |
 | architecture selection | exploratory | Architecture Manifest案を記録したが未決定 |
-| end-to-end application | 未着手 | 生成、build、conformance、再生成を通したartifactはまだない |
+| end-to-end application | experimental slice | User管理画面の生成、build、HTTP/browser flow、再生成を実測。独立したConformance Contractは未実装 |
 
 ## Milestone 0 — 言語設計の基準を固定する
 
@@ -125,6 +125,15 @@ command名と出力形式は未決定である。可読性のために必要なc
 
 具体的なframework、provider、modelはMilestone 2の検証後に選ぶ。最初の実装を容易にするためだけに
 Forma semanticsをそのstackへ寄せない。
+
+### 先行experiment
+
+[Admin E2E Generation Experiment](../experiments/admin-e2e/README.md)で、完全例からlist/detail/editだけを
+切り出した`experiments/admin-e2e/app.forma`のUser一覧・詳細・
+編集flowをstandalone Go artifactへ生成し、build、HTTP test、browser操作、byte-identicalな再生成まで
+実測した。unionとempty stateは実現し、未実現のfield constraint、to-many、default、view、
+search/filter/sort/pagination/actionは生成errorにする。これはprofile boundaryを探る
+先行sliceであり、正式なreference profileやConformance Contractの完成を意味しない。
 
 ### 生成するcapability
 
