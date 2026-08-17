@@ -322,7 +322,7 @@
     ]
   },
   "acceptanceFacts": {
-    "version": "forma/acceptance-facts/v0alpha1",
+    "version": "forma/acceptance-facts/v0alpha2",
     "intentVersion": "forma/resolved-intent/v0.5",
     "facts": [
       {
@@ -1735,10 +1735,10 @@
   "requestedChange": {
     "kind": "incremental",
     "baseline": {
-      "requestSha256": "4b18d9ee13c52e8528bc49dddcfeb5540d1c4c817646974f69509a4f612e3497",
+      "requestSha256": "2b0426935a3b26bff31a90e8629ce228d40a6337d36ec31afc0214fa0de56b96",
       "requestSchema": "forma/generation-request/v0alpha1",
       "resolvedIntentVersion": "forma/resolved-intent/v0.5",
-      "acceptanceFactsVersion": "forma/acceptance-facts/v0alpha1"
+      "acceptanceFactsVersion": "forma/acceptance-facts/v0alpha2"
     },
     "intentNodes": [
       "entity/User",

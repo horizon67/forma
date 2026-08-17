@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B implementation — B1 schema/canonical fixture complete; B2 Acceptance Facts next; not valid Forma syntax
+Status: Stage B implementation — B1 schema and B2 Acceptance Facts complete; B3 Review Requirements next; not valid Forma syntax
 
 ## 1. 目的
 
@@ -105,7 +105,8 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
 この表の名前はproposal上の候補であり、implementationとgoldenを同時に更新した時点で規範になる。
-Resolved Intent `v0.5`とSource Map `v0.3`はB1で採用済みである。Acceptance Facts以降は後続sliceの候補である。
+Resolved Intent `v0.5`とSource Map `v0.3`はB1、Acceptance Facts `v0alpha2`はB2で採用済みである。
+Review Requirements以降は後続sliceの候補である。
 
 ## 5. Resolved Intentのtop-level shape
 
@@ -642,7 +643,9 @@ compilerはFact kindごとにrequired execution/preconditionとforbidden setup/i
 expectationの値が等しいかだけでは判定しない。拒否Factでは「state不変」が正しいexpectationなので、pre-stateと
 post-stateが同じこと自体は違反ではないためである。
 
-最初の29 Factsに現れる27 kindすべてへcontractを定義する。`navigation`、`access-allowed`、`access-denied`は
+canonical membership fixtureの29 Factsに現れる27 kindすべてへcontractを定義する。完全一致はこのfixtureの
+regression testで固定する。一般のprogramが27 kindの部分集合だけを生成することは正常であり、汎用validatorは
+生成された各kindにcontractが存在することだけを要求する。`navigation`、`access-allowed`、`access-denied`は
 既存admin Factでも使うため、Identity payloadを持つ場合だけ次のIdentity contractを適用する。
 
 | Fact kind | required execution / setup | 禁止するsetup / input |
@@ -662,7 +665,7 @@ post-stateが同じこと自体は違反ではないためである。
 | `verification-accepted` | Pending subject、issued evidence、before-expiryでverifyを1回dispatch | Active subject、consumed evidence |
 | `verification-consumed` | issued evidenceでverifyを1回dispatch | consumed evidence |
 | `verification-rejected` | invalid/expired/consumed各caseでverifyを1回dispatchし、state before/afterを観測 | operation実行なしでPending stateだけを期待結果に使うsetup |
-| `verification-resent` | Pending subjectをsetupし、resendを1回dispatchしてcount deltaを観測 | resend結果として生じる新evidence、新emission |
+| `verification-resent` | Pending subjectと既存issued evidence 1件をsetupし、resendを1回dispatchして1→2のtotal countと+1 deltaを観測 | resend結果として生じる新evidence、新emission |
 | `verification-rotated` | Pending subjectと以前のissued evidenceでresendを1回dispatch | 以前のevidenceがsuperseded |
 | `enumeration-safe-outcome` | unknown/Active/Pendingの3隔離caseでresendを各1回dispatchし、結果を比較 | 1 caseの結果を3 caseへ複製、またはuser-visible outcomeの直接注入 |
 | `authentication-ineligible-state` | Pending subject + matching bindingでsigninを1回dispatchし、session before/afterを観測 | active session、またはsignin実行なしのsession absenceだけの観測 |
@@ -747,8 +750,8 @@ type FactExpectation struct {
 
 - subject countとstate。
 - credential bindingの成立／不成立。
-- evidence count、condition、rotation。
-- durable notice emission count。
+- evidenceのpost-operation total countと追加delta（`count` / `added`）、condition、rotation。
+- durable notice emissionのpost-operation total countと追加delta（`count` / `added`）。
 - sessionの開始／終了。
 - user-visible disclosure class。
 - page navigation。
@@ -778,7 +781,7 @@ Stage Aの番号と1対1に対応するcandidate IDを固定する。表のsetup
 | 14 | `fact/identity/UserAccount/operation/verify/evidence/consumed` | `verification-consumed` | 成功後evidenceを再利用不可 |
 | 15 | `fact/identity/UserAccount/operation/verify/evidence/rejected` | `verification-rejected` | invalid/expired/consumedでstate不変 |
 | 16 | `fact/page/VerifyEmail/identity/verify/UserAccount/navigation` | `navigation` | RegistrationCompleteを表示しSignInへ進める |
-| 17 | `fact/identity/UserAccount/operation/resend/accepted` | `verification-resent` | Pendingのstate不変、新evidence/emission |
+| 17 | `fact/identity/UserAccount/operation/resend/accepted` | `verification-resent` | Pending + 既存issued evidence 1件から、state不変のままevidence/emissionを各1件追加 |
 | 18 | `fact/identity/UserAccount/operation/resend/evidence/rotated` | `verification-rotated` | 以前のunused evidenceをsupersededへ |
 | 19 | `fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform` | `enumeration-safe-outcome` | unknown/Active/Pendingで同じuser-visible outcome |
 | 20 | `fact/identity/UserAccount/operation/resend/at-most-once` | `operation-at-most-once` | 同じdispatch 2回でもemission 1件 |
@@ -964,14 +967,15 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 
 ### B2 — 29 Facts
 
-- Fact-local semantic setupとIdentity payloadを追加する。
-- `membershipIntentFixture`から29件を完全導出する。
-- Fact ID、kind、setup handle、sourceNodesのgoldenを固定する。
-- credential nodeが`preserveInput`と`stored: "input"`へ入らないnegative testを追加する。
-- Fact schemaにcredential/evidence raw value用fieldがないことをstructural testで固定する。
-- Fact kindごとのrequired execution/setupとforbidden setup/inputを検査し、self-fulfilling setupをnegative testで
-  拒否する。
-- canonical Factのdistinct kind集合と`FactKindContract` registry key集合の完全一致をtestする。
+- [x] Fact-local semantic setupとIdentity payloadを追加した。
+- [x] `membershipIntentFixture`からIdentity専用29件を完全導出した。
+- [x] Fact ID、kind、setup handle、sourceNodesのgoldenを固定した。
+- [x] credential nodeが`preserveInput`と`stored: "input"`へ入らないnegative testを追加した。
+- [x] Fact schemaにcredential/evidence raw value用fieldがないことをstructural testで固定した。
+- [x] Fact kindごとのrequired execution/setupとforbidden setup/inputを検査し、self-fulfilling setupをnegative testで
+  拒否した。
+- [x] canonical Factの27 kindと`FactKindContract` registry key集合の完全一致をfixture testで固定し、汎用validatorは
+  contractを持つkindの部分集合を受理するようにした。
 
 ### B3 — 3 Review Requirements
 

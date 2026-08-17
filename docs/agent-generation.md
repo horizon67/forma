@@ -116,7 +116,8 @@ Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromp
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
 各factは少なくとも次を持つ。管理画面list/detail/edit向けの最小kindは
-`forma/acceptance-facts/v0alpha1`として実装し、追加domainのkindは実例から拡張する。
+`forma/acceptance-facts/v0alpha2`として実装し、admin flowに加えてIdentity専用29 Factsを持つ。追加domainのkindは
+引き続き実例から拡張する。
 
 ```text
 AcceptanceFact

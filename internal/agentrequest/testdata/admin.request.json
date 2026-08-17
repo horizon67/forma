@@ -313,7 +313,7 @@
     ]
   },
   "acceptanceFacts": {
-    "version": "forma/acceptance-facts/v0alpha1",
+    "version": "forma/acceptance-facts/v0alpha2",
     "intentVersion": "forma/resolved-intent/v0.5",
     "facts": [
       {

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha1"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha2"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -22,21 +22,26 @@ type AcceptanceFact struct {
 	Kind        string          `json:"kind"`
 	Subject     SemanticID      `json:"subject"`
 	Principal   *FactPrincipal  `json:"principal,omitempty"`
+	Setup       *FactSetup      `json:"setup,omitempty"`
 	Input       *FactInput      `json:"input,omitempty"`
 	Expected    FactExpectation `json:"expected"`
 	SourceNodes []SemanticID    `json:"sourceNodes"`
 }
 
 type FactPrincipal struct {
-	Kind  string   `json:"kind"`
-	Roles []string `json:"roles,omitempty"`
+	Kind     string     `json:"kind"`
+	Roles    []string   `json:"roles,omitempty"`
+	Identity SemanticID `json:"identity,omitempty"`
+	Subject  string     `json:"subject,omitempty"`
+	Session  string     `json:"session,omitempty"`
 }
 
 type FactInput struct {
-	Fields          []SemanticID   `json:"fields,omitempty"`
-	ExistingRecords int            `json:"existingRecords,omitempty"`
-	Dispatches      int            `json:"dispatches,omitempty"`
-	Violation       *FactViolation `json:"violation,omitempty"`
+	Fields          []SemanticID       `json:"fields,omitempty"`
+	ExistingRecords int                `json:"existingRecords,omitempty"`
+	Dispatches      int                `json:"dispatches,omitempty"`
+	Violation       *FactViolation     `json:"violation,omitempty"`
+	Identity        *IdentityFactInput `json:"identity,omitempty"`
 }
 
 type FactViolation struct {
@@ -46,19 +51,172 @@ type FactViolation struct {
 }
 
 type FactExpectation struct {
-	Outcome          string          `json:"outcome,omitempty"`
-	Fields           []SemanticID    `json:"fields,omitempty"`
-	Actions          []SemanticID    `json:"actions,omitempty"`
-	Feedback         []string        `json:"feedback,omitempty"`
-	RecordCount      int             `json:"recordCount,omitempty"`
-	PageSize         int             `json:"pageSize,omitempty"`
-	AppliedMutations int             `json:"appliedMutations,omitempty"`
-	Enforcement      string          `json:"enforcement,omitempty"`
-	Stored           string          `json:"stored,omitempty"`
-	PreserveInput    []SemanticID    `json:"preserveInput,omitempty"`
-	Relation         *FactRelation   `json:"relation,omitempty"`
-	Sort             *FactSort       `json:"sort,omitempty"`
-	Navigation       *FactNavigation `json:"navigation,omitempty"`
+	Outcome          string                   `json:"outcome,omitempty"`
+	Fields           []SemanticID             `json:"fields,omitempty"`
+	Actions          []SemanticID             `json:"actions,omitempty"`
+	Feedback         []string                 `json:"feedback,omitempty"`
+	RecordCount      int                      `json:"recordCount,omitempty"`
+	PageSize         int                      `json:"pageSize,omitempty"`
+	AppliedMutations int                      `json:"appliedMutations,omitempty"`
+	Enforcement      string                   `json:"enforcement,omitempty"`
+	Stored           string                   `json:"stored,omitempty"`
+	PreserveInput    []SemanticID             `json:"preserveInput,omitempty"`
+	Relation         *FactRelation            `json:"relation,omitempty"`
+	Sort             *FactSort                `json:"sort,omitempty"`
+	Navigation       *FactNavigation          `json:"navigation,omitempty"`
+	Identity         *IdentityFactExpectation `json:"identity,omitempty"`
+}
+
+// FactSetup describes target-neutral preconditions for one isolated fact. Its
+// handles have fact-local identity and never contain runtime credential,
+// evidence, or session values.
+type FactSetup struct {
+	Subjects []FactSubjectSetup  `json:"subjects,omitempty"`
+	Evidence []FactEvidenceSetup `json:"evidence,omitempty"`
+	Sessions []FactSessionSetup  `json:"sessions,omitempty"`
+	Clock    *FactClockSetup     `json:"clock,omitempty"`
+	Delivery *FactDeliverySetup  `json:"delivery,omitempty"`
+}
+
+type FactSubjectSetup struct {
+	Handle      string                       `json:"handle"`
+	Identity    SemanticID                   `json:"identity"`
+	State       *IRStateValueRef             `json:"state,omitempty"`
+	Credentials []FactCredentialBindingSetup `json:"credentials,omitempty"`
+}
+
+type FactCredentialBindingSetup struct {
+	Handle     string     `json:"handle"`
+	Credential SemanticID `json:"credential"`
+	Condition  string     `json:"condition"`
+}
+
+type FactEvidenceSetup struct {
+	Handle       string     `json:"handle"`
+	Verification SemanticID `json:"verification"`
+	Subject      string     `json:"subject"`
+	Condition    string     `json:"condition"`
+}
+
+type FactSessionSetup struct {
+	Handle    string     `json:"handle"`
+	Session   SemanticID `json:"session"`
+	Subject   string     `json:"subject"`
+	Condition string     `json:"condition"`
+}
+
+type FactClockSetup struct {
+	Evidence string `json:"evidence"`
+	Relation string `json:"relation"`
+}
+
+type FactDeliverySetup struct {
+	Notice    SemanticID `json:"notice"`
+	Condition string     `json:"condition"`
+}
+
+type IdentityFactInput struct {
+	Operation   SemanticID           `json:"operation,omitempty"`
+	Interaction SemanticID           `json:"interaction,omitempty"`
+	Inputs      []IRIdentityInputRef `json:"inputs,omitempty"`
+	Cases       []IdentityFactCase   `json:"cases,omitempty"`
+	Dispatches  int                  `json:"dispatches,omitempty"`
+	Subject     string               `json:"subject,omitempty"`
+	Identifier  *FactIdentifierInput `json:"identifier,omitempty"`
+	Credential  *FactCredentialInput `json:"credential,omitempty"`
+	Evidence    string               `json:"evidence,omitempty"`
+	Session     string               `json:"session,omitempty"`
+	Resource    string               `json:"resource,omitempty"`
+	Delivery    string               `json:"delivery,omitempty"`
+	Observe     []string             `json:"observe,omitempty"`
+}
+
+type IdentityFactCase struct {
+	Kind       string               `json:"kind"`
+	Setup      *FactSetup           `json:"setup,omitempty"`
+	Identifier *FactIdentifierInput `json:"identifier,omitempty"`
+	Credential *FactCredentialInput `json:"credential,omitempty"`
+	Evidence   string               `json:"evidence,omitempty"`
+	Session    string               `json:"session,omitempty"`
+	Resource   string               `json:"resource,omitempty"`
+	Clock      string               `json:"clock,omitempty"`
+	Delivery   string               `json:"delivery,omitempty"`
+	Dispatches int                  `json:"dispatches,omitempty"`
+}
+
+type FactIdentifierInput struct {
+	Identifier SemanticID `json:"identifier"`
+	Handle     string     `json:"handle"`
+	Relation   string     `json:"relation"`
+}
+
+type FactCredentialInput struct {
+	Credential SemanticID `json:"credential"`
+	Binding    string     `json:"binding"`
+	Relation   string     `json:"relation"`
+}
+
+type IdentityFactExpectation struct {
+	Outcome             string                        `json:"outcome,omitempty"`
+	Inputs              []IRIdentityInputRef          `json:"inputs,omitempty"`
+	Subject             *FactSubjectExpectation       `json:"subject,omitempty"`
+	Credential          *FactCredentialExpectation    `json:"credential,omitempty"`
+	Evidence            *FactEvidenceExpectation      `json:"evidence,omitempty"`
+	Notice              *FactNoticeExpectation        `json:"notice,omitempty"`
+	Session             *FactSessionExpectation       `json:"session,omitempty"`
+	Disclosure          string                        `json:"disclosure,omitempty"`
+	Navigation          *FactNavigation               `json:"navigation,omitempty"`
+	PreserveFields      []SemanticID                  `json:"preserveFields,omitempty"`
+	ExcludedCredentials []SemanticID                  `json:"excludedCredentials,omitempty"`
+	Surfaces            []SemanticID                  `json:"surfaces,omitempty"`
+	AppliedOperations   int                           `json:"appliedOperations,omitempty"`
+	Cases               []IdentityFactCaseExpectation `json:"cases,omitempty"`
+}
+
+type FactSubjectExpectation struct {
+	Count     *int             `json:"count,omitempty"`
+	State     *IRStateValueRef `json:"state,omitempty"`
+	Unchanged bool             `json:"unchanged,omitempty"`
+}
+
+type FactCredentialExpectation struct {
+	Credential    SemanticID `json:"credential"`
+	Subject       string     `json:"subject"`
+	Condition     string     `json:"condition"`
+	ObservableVia SemanticID `json:"observableVia,omitempty"`
+}
+
+type FactEvidenceExpectation struct {
+	Verification SemanticID  `json:"verification"`
+	Count        *int        `json:"count,omitempty"`
+	Added        *int        `json:"added,omitempty"`
+	Condition    string      `json:"condition,omitempty"`
+	MaxUses      int         `json:"maxUses,omitempty"`
+	Lifetime     *IRDuration `json:"lifetime,omitempty"`
+	Rotation     string      `json:"rotation,omitempty"`
+}
+
+type FactNoticeExpectation struct {
+	Notice   SemanticID `json:"notice"`
+	Count    *int       `json:"count,omitempty"`
+	Added    *int       `json:"added,omitempty"`
+	Emission string     `json:"emission,omitempty"`
+	Delivery string     `json:"delivery,omitempty"`
+}
+
+type FactSessionExpectation struct {
+	Session   SemanticID `json:"session"`
+	Subject   string     `json:"subject"`
+	Condition string     `json:"condition"`
+}
+
+type IdentityFactCaseExpectation struct {
+	Kind              string           `json:"kind"`
+	Outcome           string           `json:"outcome,omitempty"`
+	SubjectState      *IRStateValueRef `json:"subjectState,omitempty"`
+	EvidenceCondition string           `json:"evidenceCondition,omitempty"`
+	SessionCondition  string           `json:"sessionCondition,omitempty"`
+	Disclosure        string           `json:"disclosure,omitempty"`
 }
 
 type FactRelation struct {
@@ -73,10 +231,11 @@ type FactSort struct {
 }
 
 type FactNavigation struct {
-	TargetPage   SemanticID `json:"targetPage,omitempty"`
-	SuccessKind  string     `json:"successKind,omitempty"`
-	SuccessPage  SemanticID `json:"successPage,omitempty"`
-	FallbackPage SemanticID `json:"fallbackPage,omitempty"`
+	TargetPage       SemanticID `json:"targetPage,omitempty"`
+	SuccessKind      string     `json:"successKind,omitempty"`
+	SuccessPage      SemanticID `json:"successPage,omitempty"`
+	FallbackPage     SemanticID `json:"fallbackPage,omitempty"`
+	ContinuationPage SemanticID `json:"continuationPage,omitempty"`
 }
 
 // BuildAcceptanceFacts derives a deterministic, target-neutral fact set from
@@ -110,9 +269,13 @@ func BuildAcceptanceFacts(intent *ResolvedIntent) (*AcceptanceFacts, error) {
 			return nil, fmt.Errorf("build Acceptance Facts: duplicate fact ID %s", b.facts[index].ID)
 		}
 	}
-	return &AcceptanceFacts{
+	result := &AcceptanceFacts{
 		Version: AcceptanceFactsVersion, IntentVersion: intent.Version, Facts: b.facts,
-	}, nil
+	}
+	if err := ValidateAcceptanceFacts(intent, result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func MarshalAcceptanceFacts(facts *AcceptanceFacts) ([]byte, error) {
@@ -144,6 +307,11 @@ func (b *acceptanceBuilder) build() error {
 			if err := b.addViewFacts(page, view, entity); err != nil {
 				return err
 			}
+		}
+	}
+	for _, identity := range b.intent.Identities {
+		if err := b.addIdentityFacts(identity); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -221,6 +389,12 @@ func (b *acceptanceBuilder) addViewFacts(page IRPage, view IRView, entity IREnti
 }
 
 func (b *acceptanceBuilder) addPageAccessFacts(page IRPage, view IRView) error {
+	if page.Access != nil {
+		if !roleOnlyAccess(*page.Access) {
+			return nil
+		}
+		return b.addAccessFacts(view.ID, *page.Access, []SemanticID{view.ID, page.ID, page.Access.ID})
+	}
 	access := IRAccess{ID: page.ID}
 	if len(page.Allows) != 0 {
 		access.AllOf = []IRAccessRequirement{{Source: page.ID, Kind: "roles", AnyOf: append([]string(nil), page.Allows...)}}
@@ -419,6 +593,9 @@ func (b *acceptanceBuilder) addSubmitNavigationFact(submit IRSubmitIntent) error
 }
 
 func (b *acceptanceBuilder) addAccessFacts(subject SemanticID, access IRAccess, sources []SemanticID) error {
+	if !roleOnlyAccess(access) {
+		return nil
+	}
 	if len(access.AllOf) == 0 {
 		b.addAccessFact(subject, "allowed", FactPrincipal{Kind: "anonymous"}, sources)
 		return nil
@@ -442,6 +619,15 @@ func (b *acceptanceBuilder) addAccessFacts(subject SemanticID, access IRAccess, 
 	return nil
 }
 
+func roleOnlyAccess(access IRAccess) bool {
+	for _, requirement := range access.AllOf {
+		if requirement.Kind != "roles" {
+			return false
+		}
+	}
+	return true
+}
+
 func (b *acceptanceBuilder) addAccessFact(subject SemanticID, outcome string, principal FactPrincipal, sources []SemanticID) {
 	caseName := principal.Kind
 	if len(principal.Roles) != 0 {
@@ -455,7 +641,33 @@ func (b *acceptanceBuilder) addAccessFact(subject SemanticID, outcome string, pr
 
 func (b *acceptanceBuilder) add(fact AcceptanceFact) {
 	fact.SourceNodes = canonicalSemanticIDs(fact.SourceNodes)
+	canonicalizeFactSetup(fact.Setup)
+	if fact.Input != nil && fact.Input.Identity != nil {
+		fact.Input.Identity.Observe = canonicalStrings(fact.Input.Identity.Observe)
+		for index := range fact.Input.Identity.Cases {
+			canonicalizeFactSetup(fact.Input.Identity.Cases[index].Setup)
+		}
+	}
+	if fact.Expected.Identity != nil {
+		fact.Expected.Identity.PreserveFields = canonicalSemanticIDs(fact.Expected.Identity.PreserveFields)
+		fact.Expected.Identity.ExcludedCredentials = canonicalSemanticIDs(fact.Expected.Identity.ExcludedCredentials)
+		fact.Expected.Identity.Surfaces = canonicalSemanticIDs(fact.Expected.Identity.Surfaces)
+	}
 	b.facts = append(b.facts, fact)
+}
+
+func canonicalizeFactSetup(setup *FactSetup) {
+	if setup == nil {
+		return
+	}
+	sort.Slice(setup.Subjects, func(i, j int) bool { return setup.Subjects[i].Handle < setup.Subjects[j].Handle })
+	for index := range setup.Subjects {
+		sort.Slice(setup.Subjects[index].Credentials, func(i, j int) bool {
+			return setup.Subjects[index].Credentials[i].Handle < setup.Subjects[index].Credentials[j].Handle
+		})
+	}
+	sort.Slice(setup.Evidence, func(i, j int) bool { return setup.Evidence[i].Handle < setup.Evidence[j].Handle })
+	sort.Slice(setup.Sessions, func(i, j int) bool { return setup.Sessions[i].Handle < setup.Sessions[j].Handle })
 }
 
 func (b *acceptanceBuilder) typeVariants(typeName string) []string {

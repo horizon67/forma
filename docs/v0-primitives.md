@@ -888,7 +888,7 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 | --- | --- | --- |
 | Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.5`として部分実装。syntax非依存のIdentity B1 fixtureを含む |
 | Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.3`として実装済み |
-| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha1`のadmin-flow sliceを実装 |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha2`。admin flowとIdentity専用29 Factsを実装 |
 | Generation Request | intent、facts、source map、implementation policy、requested change、verification policy | historical `v0alpha1` full requestと`v0alpha2` incremental requestを実装 |
 | Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、43 facts・3 policiesのincremental runを実装。自動repair loopは未実装 |
 

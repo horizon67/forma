@@ -1,0 +1,294 @@
+package compiler
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+)
+
+func TestMembershipIdentityAcceptanceFactsGolden(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identityFacts := membershipIdentityFacts(facts.Facts)
+	if len(identityFacts) != 29 {
+		t.Fatalf("Identity fact count = %d, want 29", len(identityFacts))
+	}
+	wantIDs := []SemanticID{
+		"fact/identity/UserAccount/credential/password/non-projectable",
+		"fact/identity/UserAccount/operation/register/at-most-once",
+		"fact/identity/UserAccount/operation/register/credential/bound",
+		"fact/identity/UserAccount/operation/register/identifier/duplicate",
+		"fact/identity/UserAccount/operation/register/notice/emitted",
+		"fact/identity/UserAccount/operation/register/subject/created",
+		"fact/identity/UserAccount/operation/register/validation/rejected",
+		"fact/identity/UserAccount/operation/register/verification/issued",
+		"fact/identity/UserAccount/operation/resend/accepted",
+		"fact/identity/UserAccount/operation/resend/at-most-once",
+		"fact/identity/UserAccount/operation/resend/evidence/rotated",
+		"fact/identity/UserAccount/operation/signin/accepted",
+		"fact/identity/UserAccount/operation/signin/rejected/generic",
+		"fact/identity/UserAccount/operation/signin/state/ineligible",
+		"fact/identity/UserAccount/operation/signout/session/terminated",
+		"fact/identity/UserAccount/operation/verify/accepted",
+		"fact/identity/UserAccount/operation/verify/evidence/consumed",
+		"fact/identity/UserAccount/operation/verify/evidence/rejected",
+		"fact/identity/UserAccount/operation/verify/expiry/boundary",
+		"fact/identity/UserAccount/ownership/self/access/allowed/self",
+		"fact/identity/UserAccount/ownership/self/access/denied/anonymous",
+		"fact/identity/UserAccount/ownership/self/access/denied/other-subject",
+		"fact/identity/UserAccount/verification/email/notice/delivery/failure",
+		"fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
+		"fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
+		"fact/page/SignUp/identity/register/UserAccount/inputs",
+		"fact/page/SignUp/identity/register/UserAccount/navigation",
+		"fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
+		"fact/page/VerifyEmail/identity/verify/UserAccount/navigation",
+	}
+	// The canonical list above intentionally catches an extra or missing fact;
+	// sort order comes from BuildAcceptanceFacts.
+	var gotIDs []SemanticID
+	for _, fact := range identityFacts {
+		gotIDs = append(gotIDs, fact.ID)
+	}
+	if !reflect.DeepEqual(gotIDs, wantIDs) {
+		t.Fatalf("Identity fact IDs =\n%v\nwant\n%v", gotIDs, wantIDs)
+	}
+	content, err := MarshalAcceptanceFacts(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content = append(content, '\n')
+	path := filepath.Join("testdata", "membership.facts.json")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, content, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expected, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file: %v (run with UPDATE_GOLDEN=1)", err)
+	}
+	if !bytes.Equal(content, expected) {
+		t.Fatalf("Acceptance Facts differ from %s", path)
+	}
+	second, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondContent, err := MarshalAcceptanceFacts(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bytes.TrimSpace(content), secondContent) {
+		t.Fatal("same Resolved Intent did not produce byte-identical Acceptance Facts")
+	}
+	for _, forbidden := range []string{
+		`"dependsOn"`, `"passwordValue"`, `"tokenValue"`, `"rawValue"`, `"hash"`,
+		`"cookie"`, `"header"`, `"httpMethod"`, `"route"`, `"sql"`, `"smtp"`,
+	} {
+		if bytes.Contains(content, []byte(forbidden)) {
+			t.Errorf("Acceptance Facts contain forbidden target or secret vocabulary %s", forbidden)
+		}
+	}
+}
+
+func TestIdentityFactKindRegistryExactlyCoversCanonicalKinds(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := map[string]bool{}
+	for _, fact := range membershipIdentityFacts(facts.Facts) {
+		kinds[fact.Kind] = true
+	}
+	if len(kinds) != 27 || len(identityFactKindContracts) != 27 {
+		t.Fatalf("fact kinds = %d, contracts = %d, want 27 each", len(kinds), len(identityFactKindContracts))
+	}
+	if err := validateFactKindContractCoverage(kinds); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateAcceptanceFactsAllowsSupportedIdentityKindSubset(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	facts.Facts = []AcceptanceFact{identityFactByKind(t, facts.Facts, "identity-inputs")}
+	if err := ValidateAcceptanceFacts(intent, facts); err != nil {
+		t.Fatalf("supported Identity Fact subset was rejected: %v", err)
+	}
+}
+
+func TestIdentityFactsNeverPreserveOrStoreCredentialInput(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential := intent.Identities[0].Credentials[0].ID
+	for _, fact := range facts.Facts {
+		if containsSemanticID(fact.Expected.PreserveInput, credential) {
+			t.Errorf("fact %s preserves Credential %s", fact.ID, credential)
+		}
+		if fact.Expected.Stored == "input" && fact.Input != nil && containsSemanticID(fact.Input.Fields, credential) {
+			t.Errorf("fact %s stores Credential input", fact.ID)
+		}
+		if fact.Expected.Identity != nil {
+			if containsSemanticID(fact.Expected.Identity.PreserveFields, credential) {
+				t.Errorf("fact %s preserves Credential as a field", fact.ID)
+			}
+		}
+	}
+	preserve := identityFactByKind(t, facts.Facts, "secret-input-not-preserved")
+	if !containsSemanticID(preserve.Expected.Identity.ExcludedCredentials, credential) {
+		t.Fatalf("secret input fact does not exclude %s", credential)
+	}
+}
+
+func TestIdentityFactSchemaHasNoCredentialOrEvidenceRawValueSlot(t *testing.T) {
+	for _, value := range []any{
+		FactCredentialBindingSetup{}, FactEvidenceSetup{}, FactSessionSetup{},
+		FactIdentifierInput{}, FactCredentialInput{}, IdentityFactCase{}, IdentityFactInput{},
+		FactCredentialExpectation{}, FactEvidenceExpectation{}, FactSessionExpectation{},
+	} {
+		typeOf := reflect.TypeOf(value)
+		for index := 0; index < typeOf.NumField(); index++ {
+			name := strings.ToLower(typeOf.Field(index).Name)
+			for _, forbidden := range []string{"raw", "password", "token", "secret", "value", "hash", "salt"} {
+				if strings.Contains(name, forbidden) {
+					t.Errorf("%s exposes forbidden value-bearing field %s", typeOf.Name(), typeOf.Field(index).Name)
+				}
+			}
+		}
+	}
+}
+
+func TestIdentityFactSetupRejectsSelfFulfillment(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := intent.Identities[0]
+	state := *intent.Entities[0].State
+	active := IRStateValueRef{State: state.ID, Value: "Active"}
+
+	registration := identityFactByKind(t, facts.Facts, "registration-created")
+	registration.Setup = identitySetup(subjectSetup("subject/created", identity.ID, &active))
+	if err := ValidateFactSetup(registration); err == nil || !strings.Contains(err.Error(), "pre-installs a fresh registration result") {
+		t.Fatalf("registration setup error = %v", err)
+	}
+
+	atMostOnce := identityFactByKind(t, facts.Facts, "operation-at-most-once")
+	atMostOnce.Input.Identity.Dispatches = 1
+	if err := ValidateFactSetup(atMostOnce); err == nil || !strings.Contains(err.Error(), "at least 2 dispatches") {
+		t.Fatalf("at-most-once setup error = %v", err)
+	}
+
+	authenticated := identityFactByKind(t, facts.Facts, "authentication-accepted")
+	authenticated.Setup.Sessions = []FactSessionSetup{{
+		Handle: "subject/alice/session/current", Session: identity.Authentication.Session.ID,
+		Subject: "subject/alice", Condition: "active",
+	}}
+	if err := ValidateFactSetup(authenticated); err == nil || !strings.Contains(err.Error(), "session is pre-installed") {
+		t.Fatalf("authentication setup error = %v", err)
+	}
+
+	expiry := identityFactByKind(t, facts.Facts, "verification-expiry-boundary")
+	expiry.Input.Identity.Cases[0].Setup.Evidence[0].Condition = "consumed"
+	if err := ValidateFactSetup(expiry); err == nil || !strings.Contains(err.Error(), "self-fulfilled or incomplete") {
+		t.Fatalf("expiry setup error = %v", err)
+	}
+
+	resent := identityFactByKind(t, facts.Facts, "verification-resent")
+	if len(resent.Setup.Evidence) != 1 || resent.Setup.Evidence[0].Condition != "issued" {
+		t.Fatalf("resend setup evidence = %#v, want one prior issued evidence", resent.Setup.Evidence)
+	}
+	if !countEquals(resent.Expected.Identity.Evidence.Count, 2) || !countEquals(resent.Expected.Identity.Evidence.Added, 1) || !countEquals(resent.Expected.Identity.Notice.Added, 1) {
+		t.Fatalf("resend deltas = evidence %#v, notice %#v", resent.Expected.Identity.Evidence, resent.Expected.Identity.Notice)
+	}
+	resent.Setup.Evidence[0].Condition = "superseded"
+	if err := ValidateFactSetup(resent); err == nil || !strings.Contains(err.Error(), "exactly one prior issued evidence") {
+		t.Fatalf("resend setup error = %v", err)
+	}
+}
+
+func TestIdentityFactHandlesAreScopedPerSubject(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fact := identityFactByKind(t, facts.Facts, "ownership-denied")
+	if len(fact.Setup.Subjects) != 2 || fact.Setup.Subjects[0].Handle != "subject/alice" || fact.Setup.Subjects[1].Handle != "subject/bob" {
+		t.Fatalf("ownership setup subjects = %#v", fact.Setup.Subjects)
+	}
+	for _, subject := range fact.Setup.Subjects {
+		if len(subject.Credentials) != 1 || !strings.HasPrefix(subject.Credentials[0].Handle, subject.Handle+"/credential/") {
+			t.Fatalf("credential handle is not subject-scoped: %#v", subject)
+		}
+	}
+}
+
+func TestIdentityAcceptanceFactsRejectBrokenSemanticReferences(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fact := identityFactByKind(t, facts.Facts, "authentication-accepted")
+	fact.Setup.Subjects[0].Credentials[0].Credential = "identity/UserAccount/credential/missing"
+	for index := range facts.Facts {
+		if facts.Facts[index].ID == fact.ID {
+			facts.Facts[index] = fact
+		}
+	}
+	if err := ValidateAcceptanceFacts(intent, facts); err == nil || !strings.Contains(err.Error(), "missing semantic node") {
+		t.Fatalf("reference validation error = %v", err)
+	}
+
+	facts, err = BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fact = identityFactByKind(t, facts.Facts, "verification-accepted")
+	fact.Setup.Subjects[0].State.Value = "Missing"
+	for index := range facts.Facts {
+		if facts.Facts[index].ID == fact.ID {
+			facts.Facts[index] = fact
+		}
+	}
+	if err := ValidateAcceptanceFacts(intent, facts); err == nil || !strings.Contains(err.Error(), "invalid state value") {
+		t.Fatalf("state validation error = %v", err)
+	}
+}
+
+func membershipIdentityFacts(facts []AcceptanceFact) []AcceptanceFact {
+	result := make([]AcceptanceFact, 0, 29)
+	for _, fact := range facts {
+		if isIdentityFact(fact) {
+			result = append(result, fact)
+		}
+	}
+	return result
+}
+
+func identityFactByKind(t *testing.T, facts []AcceptanceFact, kind string) AcceptanceFact {
+	t.Helper()
+	for _, fact := range facts {
+		if fact.Kind == kind && isIdentityFact(fact) {
+			return fact
+		}
+	}
+	t.Fatalf("Identity fact kind %s is missing", kind)
+	return AcceptanceFact{}
+}

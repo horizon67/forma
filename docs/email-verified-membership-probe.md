@@ -1,6 +1,6 @@
 # Email-verified Membership Flow Probe
 
-Status: active P1 probe — Stage B1 semantic schema/canonical fixture complete; B2 Acceptance Facts next; syntax undecided
+Status: active P1 probe — Stage B1 schema and B2 Acceptance Facts complete; B3 Review Requirements next; syntax undecided
 
 Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
@@ -319,22 +319,23 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - 現行v0の受理・拒否境界を実測する。
 - syntaxを決めない。
 
-### Stage B — target-neutral semantic model（B1 complete、B2 next）
+### Stage B — target-neutral semantic model（B1/B2 complete、B3 next）
 
 具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
 
 - [x] Identity / Credential / Verification / Authentication / Ownershipの最小Resolved Intent shapeを作る。
 - [x] 各nodeへstable semantic IDとSource Map entryを与える。
-- 上の29 factsを正常系・拒否系として機械的に導出する。
-- credential、verification、sessionを必要とするFactへ、値を含まないsymbolic handleとsemantic setupを導出する。
-- 各Factを新しいscenarioから独立実行可能にし、Fact間の`dependsOn` graphは導入しない。
-- `preserveInput`からCredential nodeを除外し、registrationの保存期待をdomain fieldとcredential bindingへ分ける。
-- Credentialを含むFactに`stored: "input"`が現れないことをnegative testで固定する。
-- Generation Request schemaに平文credential/evidenceを格納できるfixture fieldがないことを構造testで固定する。
-- secret valueを保持できるfieldがResolved Intent / Source Map schemaにないことを構造testで固定する。
-- Fact kindごとのpre/post contractでself-fulfillingなsemantic setupをcompilerが拒否する。
-- Identity Factのdistinct kind集合とpre/post contract registryを完全一致させ、規則未定義のkindを拒否する。
+- [x] 上の29 factsを正常系・拒否系として機械的に導出した。
+- [x] credential、verification、sessionを必要とするFactへ、値を含まないsymbolic handleとsemantic setupを導出した。
+- [x] 各Factを新しいscenarioから独立実行可能にし、Fact間の`dependsOn` graphを導入していない。
+- [x] `preserveInput`からCredential nodeを除外し、registrationの保存期待をdomain fieldとcredential bindingへ分けた。
+- [x] Credentialを含むFactに`stored: "input"`が現れないことをnegative testで固定した。
+- [x] Acceptance Fact schemaに平文credential/evidenceを格納できるfixture fieldがないことを構造testで固定した。
+- [x] secret valueを保持できるfieldがResolved Intent / Source Map schemaにないことを構造testで固定した。
+- [x] Fact kindごとのpre/post contractでself-fulfillingなsemantic setupをcompilerが拒否する。
+- [x] canonical membership fixtureの27 kindとpre/post contract registryをfixture testで完全一致させ、汎用validatorは
+  規則未定義の生成kindを拒否しつつ、定義済みkindの部分集合を受理する。
 - 再計算できないsecret redaction、storage、repository fixture fidelityを、Factとは別のstable review requirementsとして
   出力する。
 - `forma verify`が未解決のreview requirementsを必ず人間へ表示する境界を設計する。

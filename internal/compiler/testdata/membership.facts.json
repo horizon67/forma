@@ -1,0 +1,1952 @@
+{
+  "version": "forma/acceptance-facts/v0alpha2",
+  "intentVersion": "forma/resolved-intent/v0.5",
+  "facts": [
+    {
+      "id": "fact/identity/UserAccount/credential/password/non-projectable",
+      "kind": "credential-non-projectable",
+      "subject": "identity/UserAccount/credential/password",
+      "input": {
+        "identity": {
+          "observe": [
+            "artifact-projections",
+            "resolved-intent-projections"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "absent-from-domain-projections",
+          "excludedCredentials": [
+            "identity/UserAccount/credential/password"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount",
+        "identity/UserAccount/credential/password"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/at-most-once",
+      "kind": "operation-at-most-once",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 2,
+          "observe": [
+            "notice-emission-count",
+            "subject-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "applied-once",
+          "subject": {
+            "count": 1
+          },
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "count": 1
+          },
+          "appliedOperations": 1
+        }
+      },
+      "sourceNodes": [
+        "entity/User",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/credential/bound",
+      "kind": "credential-bound",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 1,
+          "observe": [
+            "authentication-result"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "credential": {
+            "credential": "identity/UserAccount/credential/password",
+            "subject": "subject/created",
+            "condition": "satisfies-policy",
+            "observableVia": "identity/UserAccount/operation/signin"
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/operation/signin"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/identifier/duplicate",
+      "kind": "duplicate-identifier-rejected",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "cases": [
+            {
+              "kind": "exact",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/existing",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    },
+                    "credentials": [
+                      {
+                        "handle": "subject/existing/credential/primary",
+                        "credential": "identity/UserAccount/credential/password",
+                        "condition": "satisfies-policy"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "subject/existing/identifier/primary",
+                "relation": "exact"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "canonical-equivalent",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/existing",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    },
+                    "credentials": [
+                      {
+                        "handle": "subject/existing/credential/primary",
+                        "credential": "identity/UserAccount/credential/password",
+                        "condition": "satisfies-policy"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "input/identifier/canonical-equivalent",
+                "relation": "canonical-equivalent"
+              },
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "credential-binding-count",
+            "evidence-count",
+            "notice-emission-count",
+            "subject-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "rejected",
+          "subject": {
+            "count": 1,
+            "unchanged": true
+          },
+          "credential": {
+            "credential": "identity/UserAccount/credential/password",
+            "subject": "subject/existing",
+            "condition": "unchanged"
+          },
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 0
+          },
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "count": 0
+          },
+          "disclosure": "guide-resend",
+          "cases": [
+            {
+              "kind": "exact",
+              "outcome": "rejected",
+              "disclosure": "guide-resend"
+            },
+            {
+              "kind": "canonical-equivalent",
+              "outcome": "rejected",
+              "disclosure": "guide-resend"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/identifier/email",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/verification/email",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/notice/emitted",
+      "kind": "notice-emitted",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 1,
+          "observe": [
+            "notice-emission-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "count": 1,
+            "emission": "durable-record-required"
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/subject/created",
+      "kind": "registration-created",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 1,
+          "observe": [
+            "subject-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "created",
+          "subject": {
+            "count": 1,
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        }
+      },
+      "sourceNodes": [
+        "entity/User",
+        "entity/User/state/status",
+        "identity/UserAccount/operation/register"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/validation/rejected",
+      "kind": "registration-validation-rejected",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "cases": [
+            {
+              "kind": "invalid-name",
+              "dispatches": 1
+            },
+            {
+              "kind": "invalid-identifier",
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "input/identifier/invalid",
+                "relation": "invalid"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "invalid-credential",
+              "credential": {
+                "credential": "identity/UserAccount/credential/password",
+                "binding": "input/credential/invalid",
+                "relation": "violates-policy"
+              },
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "credential-binding-count",
+            "evidence-count",
+            "notice-emission-count",
+            "subject-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "rejected",
+          "subject": {
+            "count": 0
+          },
+          "credential": {
+            "credential": "identity/UserAccount/credential/password",
+            "subject": "subject/created",
+            "condition": "absent"
+          },
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 0
+          },
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "count": 0
+          },
+          "cases": [
+            {
+              "kind": "invalid-name",
+              "outcome": "rejected"
+            },
+            {
+              "kind": "invalid-identifier",
+              "outcome": "rejected"
+            },
+            {
+              "kind": "invalid-credential",
+              "outcome": "rejected"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/identifier/email",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/verification/email",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/register/verification/issued",
+      "kind": "verification-issued",
+      "subject": "identity/UserAccount/operation/register",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 1,
+          "observe": [
+            "evidence-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 1,
+            "condition": "issued",
+            "maxUses": 1,
+            "lifetime": {
+              "amount": 30,
+              "unit": "minute"
+            }
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/resend/accepted",
+      "kind": "verification-resent",
+      "subject": "identity/UserAccount/operation/resend",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/resend",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "observe": [
+            "evidence-count",
+            "notice-emission-count",
+            "subject-state"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "accepted",
+          "subject": {
+            "count": 1,
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            },
+            "unchanged": true
+          },
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 2,
+            "added": 1,
+            "condition": "issued"
+          },
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "added": 1
+          }
+        }
+      },
+      "sourceNodes": [
+        "entity/User/state/status",
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/verification/email",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/resend/at-most-once",
+      "kind": "operation-at-most-once",
+      "subject": "identity/UserAccount/operation/resend",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/resend",
+          "dispatches": 2,
+          "subject": "subject/alice",
+          "observe": [
+            "notice-emission-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "applied-once",
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "added": 1
+          },
+          "appliedOperations": 1
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/resend/evidence/rotated",
+      "kind": "verification-rotated",
+      "subject": "identity/UserAccount/operation/resend",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ],
+        "clock": {
+          "evidence": "subject/alice/evidence/email-verification",
+          "relation": "before-expiry"
+        }
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/resend",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "evidence": "subject/alice/evidence/email-verification",
+          "observe": [
+            "evidence-condition",
+            "evidence-count"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 2,
+            "condition": "superseded",
+            "rotation": "invalidate-prior-unconsumed"
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/signin/accepted",
+      "kind": "authentication-accepted",
+      "subject": "identity/UserAccount/operation/signin",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            },
+            "credentials": [
+              {
+                "handle": "subject/alice/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/signin",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "identifier": {
+            "identifier": "identity/UserAccount/identifier/email",
+            "handle": "subject/alice/identifier/primary",
+            "relation": "matching"
+          },
+          "credential": {
+            "credential": "identity/UserAccount/credential/password",
+            "binding": "subject/alice/credential/primary",
+            "relation": "matching"
+          },
+          "observe": [
+            "session-count",
+            "user-visible-outcome"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "accepted",
+          "session": {
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "active"
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/authentication",
+        "identity/UserAccount/operation/signin",
+        "identity/UserAccount/session/current"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/signin/rejected/generic",
+      "kind": "authentication-rejected",
+      "subject": "identity/UserAccount/operation/signin",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/signin",
+          "cases": [
+            {
+              "kind": "unknown-identifier",
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "input/identifier/unknown",
+                "relation": "unknown"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "non-matching-credential",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Active"
+                    },
+                    "credentials": [
+                      {
+                        "handle": "subject/alice/credential/primary",
+                        "credential": "identity/UserAccount/credential/password",
+                        "condition": "satisfies-policy"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "subject/alice/identifier/primary",
+                "relation": "matching"
+              },
+              "credential": {
+                "credential": "identity/UserAccount/credential/password",
+                "binding": "subject/alice/credential/primary",
+                "relation": "non-matching"
+              },
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "session-count",
+            "user-visible-outcome"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "rejected",
+          "disclosure": "generic",
+          "cases": [
+            {
+              "kind": "unknown-identifier",
+              "outcome": "rejected",
+              "sessionCondition": "absent",
+              "disclosure": "generic"
+            },
+            {
+              "kind": "non-matching-credential",
+              "outcome": "rejected",
+              "sessionCondition": "absent",
+              "disclosure": "generic"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/authentication",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/identifier/email",
+        "identity/UserAccount/operation/signin"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/signin/state/ineligible",
+      "kind": "authentication-ineligible-state",
+      "subject": "identity/UserAccount/operation/signin",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            },
+            "credentials": [
+              {
+                "handle": "subject/alice/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/signin",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "identifier": {
+            "identifier": "identity/UserAccount/identifier/email",
+            "handle": "subject/alice/identifier/primary",
+            "relation": "matching"
+          },
+          "credential": {
+            "credential": "identity/UserAccount/credential/password",
+            "binding": "subject/alice/credential/primary",
+            "relation": "matching"
+          },
+          "observe": [
+            "session-count",
+            "user-visible-outcome"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "rejected",
+          "subject": {
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            },
+            "unchanged": true
+          },
+          "session": {
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "absent"
+          }
+        }
+      },
+      "sourceNodes": [
+        "entity/User/state/status",
+        "identity/UserAccount/authentication",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/operation/signin",
+        "identity/UserAccount/session/current"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/signout/session/terminated",
+      "kind": "session-terminated",
+      "subject": "identity/UserAccount/operation/signout",
+      "principal": {
+        "kind": "authenticated",
+        "identity": "identity/UserAccount",
+        "subject": "subject/alice",
+        "session": "subject/alice/session/current"
+      },
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            },
+            "credentials": [
+              {
+                "handle": "subject/alice/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          }
+        ],
+        "sessions": [
+          {
+            "handle": "subject/alice/session/current",
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "active"
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/signout",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "session": "subject/alice/session/current",
+          "observe": [
+            "protected-access",
+            "session-condition"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "terminated-and-access-denied",
+          "session": {
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "terminated"
+          },
+          "surfaces": [
+            "page/Profile",
+            "page/Profile/view/detail/User",
+            "page/ProfileEdit",
+            "page/ProfileEdit/view/form/edit/User"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/signout",
+        "identity/UserAccount/session/current",
+        "page/Profile",
+        "page/Profile/identity/signout/UserAccount",
+        "page/Profile/view/detail/User",
+        "page/ProfileEdit",
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/verify/accepted",
+      "kind": "verification-accepted",
+      "subject": "identity/UserAccount/operation/verify",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ],
+        "clock": {
+          "evidence": "subject/alice/evidence/email-verification",
+          "relation": "before-expiry"
+        }
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/verify",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "evidence": "subject/alice/evidence/email-verification",
+          "observe": [
+            "subject-state"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "accepted",
+          "subject": {
+            "count": 1,
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            }
+          }
+        }
+      },
+      "sourceNodes": [
+        "action/User/activate",
+        "entity/User/state/status",
+        "identity/UserAccount/operation/verify",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/verify/evidence/consumed",
+      "kind": "verification-consumed",
+      "subject": "identity/UserAccount/operation/verify",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ],
+        "clock": {
+          "evidence": "subject/alice/evidence/email-verification",
+          "relation": "before-expiry"
+        }
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/verify",
+          "dispatches": 1,
+          "subject": "subject/alice",
+          "evidence": "subject/alice/evidence/email-verification",
+          "observe": [
+            "evidence-condition"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 1,
+            "condition": "consumed"
+          }
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/operation/verify",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/verify/evidence/rejected",
+      "kind": "verification-rejected",
+      "subject": "identity/UserAccount/operation/verify",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/verify",
+          "cases": [
+            {
+              "kind": "invalid",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ]
+              },
+              "evidence": "input/evidence/invalid",
+              "dispatches": 1
+            },
+            {
+              "kind": "expired",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/alice/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/alice",
+                    "condition": "issued"
+                  }
+                ],
+                "clock": {
+                  "evidence": "subject/alice/evidence/email-verification",
+                  "relation": "after-expiry"
+                }
+              },
+              "evidence": "subject/alice/evidence/email-verification",
+              "clock": "after-expiry",
+              "dispatches": 1
+            },
+            {
+              "kind": "consumed",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/alice/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/alice",
+                    "condition": "consumed"
+                  }
+                ],
+                "clock": {
+                  "evidence": "subject/alice/evidence/email-verification",
+                  "relation": "before-expiry"
+                }
+              },
+              "evidence": "subject/alice/evidence/email-verification",
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "evidence-condition",
+            "subject-state"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "rejected",
+          "cases": [
+            {
+              "kind": "invalid",
+              "outcome": "rejected",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            },
+            {
+              "kind": "expired",
+              "outcome": "rejected",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            },
+            {
+              "kind": "consumed",
+              "outcome": "rejected",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "entity/User/state/status",
+        "identity/UserAccount/operation/verify",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/operation/verify/expiry/boundary",
+      "kind": "verification-expiry-boundary",
+      "subject": "identity/UserAccount/operation/verify",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/verify",
+          "cases": [
+            {
+              "kind": "before-expiry",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/alice/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/alice",
+                    "condition": "issued"
+                  }
+                ],
+                "clock": {
+                  "evidence": "subject/alice/evidence/email-verification",
+                  "relation": "before-expiry"
+                }
+              },
+              "evidence": "subject/alice/evidence/email-verification",
+              "clock": "before-expiry",
+              "dispatches": 1
+            },
+            {
+              "kind": "at-expiry",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/alice/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/alice",
+                    "condition": "issued"
+                  }
+                ],
+                "clock": {
+                  "evidence": "subject/alice/evidence/email-verification",
+                  "relation": "at-expiry"
+                }
+              },
+              "evidence": "subject/alice/evidence/email-verification",
+              "clock": "at-expiry",
+              "dispatches": 1
+            },
+            {
+              "kind": "after-expiry",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/alice/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/alice",
+                    "condition": "issued"
+                  }
+                ],
+                "clock": {
+                  "evidence": "subject/alice/evidence/email-verification",
+                  "relation": "after-expiry"
+                }
+              },
+              "evidence": "subject/alice/evidence/email-verification",
+              "clock": "after-expiry",
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "evidence-condition",
+            "subject-state"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "cases": [
+            {
+              "kind": "before-expiry",
+              "outcome": "accepted",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "evidenceCondition": "consumed"
+            },
+            {
+              "kind": "at-expiry",
+              "outcome": "rejected",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              },
+              "evidenceCondition": "issued"
+            },
+            {
+              "kind": "after-expiry",
+              "outcome": "rejected",
+              "subjectState": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              },
+              "evidenceCondition": "issued"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "entity/User/state/status",
+        "identity/UserAccount/operation/verify",
+        "identity/UserAccount/verification/email"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/ownership/self/access/allowed/self",
+      "kind": "ownership-allowed",
+      "subject": "identity/UserAccount/ownership/self",
+      "principal": {
+        "kind": "authenticated",
+        "identity": "identity/UserAccount",
+        "subject": "subject/alice",
+        "session": "subject/alice/session/current"
+      },
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            },
+            "credentials": [
+              {
+                "handle": "subject/alice/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          }
+        ],
+        "sessions": [
+          {
+            "handle": "subject/alice/session/current",
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "active"
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "resource": "subject/alice",
+          "observe": [
+            "edit-access",
+            "view-access"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "allowed",
+          "surfaces": [
+            "page/Profile",
+            "page/Profile/view/detail/User",
+            "page/ProfileEdit",
+            "page/ProfileEdit/view/form/edit/User"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/ownership/self",
+        "identity/UserAccount/session/current",
+        "page/Profile",
+        "page/Profile/view/detail/User",
+        "page/ProfileEdit",
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/ownership/self/access/denied/anonymous",
+      "kind": "access-denied",
+      "subject": "identity/UserAccount/ownership/self",
+      "principal": {
+        "kind": "anonymous"
+      },
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            }
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "resource": "subject/alice",
+          "observe": [
+            "protected-access"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "denied",
+          "surfaces": [
+            "page/Profile",
+            "page/Profile/view/detail/User",
+            "page/ProfileEdit",
+            "page/ProfileEdit/view/form/edit/User"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/ownership/self",
+        "identity/UserAccount/session/current",
+        "page/Profile",
+        "page/Profile/view/detail/User",
+        "page/ProfileEdit",
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/ownership/self/access/denied/other-subject",
+      "kind": "ownership-denied",
+      "subject": "identity/UserAccount/ownership/self",
+      "principal": {
+        "kind": "authenticated",
+        "identity": "identity/UserAccount",
+        "subject": "subject/alice",
+        "session": "subject/alice/session/current"
+      },
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            },
+            "credentials": [
+              {
+                "handle": "subject/alice/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          },
+          {
+            "handle": "subject/bob",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Active"
+            },
+            "credentials": [
+              {
+                "handle": "subject/bob/credential/primary",
+                "credential": "identity/UserAccount/credential/password",
+                "condition": "satisfies-policy"
+              }
+            ]
+          }
+        ],
+        "sessions": [
+          {
+            "handle": "subject/alice/session/current",
+            "session": "identity/UserAccount/session/current",
+            "subject": "subject/alice",
+            "condition": "active"
+          }
+        ]
+      },
+      "input": {
+        "identity": {
+          "resource": "subject/bob",
+          "observe": [
+            "edit-access",
+            "view-access"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "denied",
+          "surfaces": [
+            "page/Profile",
+            "page/Profile/view/detail/User",
+            "page/ProfileEdit",
+            "page/ProfileEdit/view/form/edit/User"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/ownership/self",
+        "identity/UserAccount/session/current",
+        "page/Profile",
+        "page/Profile/view/detail/User",
+        "page/ProfileEdit",
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/identity/UserAccount/verification/email/notice/delivery/failure",
+      "kind": "delivery-failure-separated",
+      "subject": "identity/UserAccount/verification/email/notice",
+      "setup": {
+        "delivery": {
+          "notice": "identity/UserAccount/verification/email/notice",
+          "condition": "fails"
+        }
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "dispatches": 1,
+          "delivery": "fails",
+          "observe": [
+            "delivery-result",
+            "notice-emission-count",
+            "resend-availability",
+            "subject-state"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "retryable",
+          "subject": {
+            "count": 1,
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          },
+          "evidence": {
+            "verification": "identity/UserAccount/verification/email",
+            "count": 1,
+            "condition": "issued"
+          },
+          "notice": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "count": 1,
+            "emission": "durable-record-required",
+            "delivery": "failed"
+          }
+        }
+      },
+      "sourceNodes": [
+        "entity/User/state/status",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/verification/email",
+        "identity/UserAccount/verification/email/notice"
+      ]
+    },
+    {
+      "id": "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
+      "kind": "enumeration-safe-outcome",
+      "subject": "page/CheckEmail/identity/resend/UserAccount",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/resend",
+          "interaction": "page/CheckEmail/identity/resend/UserAccount",
+          "cases": [
+            {
+              "kind": "unknown",
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "input/identifier/unknown",
+                "relation": "unknown"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "active",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Active"
+                    }
+                  }
+                ]
+              },
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "subject/alice/identifier/primary",
+                "relation": "matching"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "pending",
+              "setup": {
+                "subjects": [
+                  {
+                    "handle": "subject/alice",
+                    "identity": "identity/UserAccount",
+                    "state": {
+                      "state": "entity/User/state/status",
+                      "value": "Pending"
+                    }
+                  }
+                ]
+              },
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "subject/alice/identifier/primary",
+                "relation": "matching"
+              },
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "user-visible-outcome"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "disclosure": "uniform-for-pending-active-and-unknown",
+          "cases": [
+            {
+              "kind": "unknown",
+              "outcome": "accepted",
+              "disclosure": "uniform-for-pending-active-and-unknown"
+            },
+            {
+              "kind": "active",
+              "outcome": "accepted",
+              "disclosure": "uniform-for-pending-active-and-unknown"
+            },
+            {
+              "kind": "pending",
+              "outcome": "accepted",
+              "disclosure": "uniform-for-pending-active-and-unknown"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "identity/UserAccount/identifier/email",
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/verification/email",
+        "page/CheckEmail/identity/resend/UserAccount"
+      ]
+    },
+    {
+      "id": "fact/page/Profile/view/detail/User/feedback",
+      "kind": "observable-feedback",
+      "subject": "page/Profile/view/detail/User",
+      "expected": {
+        "feedback": [
+          "empty",
+          "failure"
+        ]
+      },
+      "sourceNodes": [
+        "page/Profile/view/detail/User"
+      ]
+    },
+    {
+      "id": "fact/page/Profile/view/detail/User/fields",
+      "kind": "view-fields",
+      "subject": "page/Profile/view/detail/User",
+      "expected": {
+        "fields": [
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/email",
+          "entity/User/state/status"
+        ]
+      },
+      "sourceNodes": [
+        "entity/User/field/email",
+        "entity/User/field/name",
+        "entity/User/field/nickname",
+        "entity/User/state/status",
+        "page/Profile/view/detail/User"
+      ]
+    },
+    {
+      "id": "fact/page/Profile/view/detail/User/records/visible",
+      "kind": "records-visible",
+      "subject": "page/Profile/view/detail/User",
+      "input": {
+        "existingRecords": 1
+      },
+      "expected": {
+        "outcome": "record-visible",
+        "recordCount": 1
+      },
+      "sourceNodes": [
+        "page/Profile/view/detail/User"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/feedback",
+      "kind": "observable-feedback",
+      "subject": "page/ProfileEdit/view/form/edit/User",
+      "expected": {
+        "feedback": [
+          "invalid",
+          "failure"
+        ]
+      },
+      "sourceNodes": [
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/fields",
+      "kind": "view-fields",
+      "subject": "page/ProfileEdit/view/form/edit/User",
+      "expected": {
+        "fields": [
+          "entity/User/field/name",
+          "entity/User/field/nickname"
+        ]
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "entity/User/field/nickname",
+        "page/ProfileEdit/view/form/edit/User"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted",
+      "kind": "mutation-accepted",
+      "subject": "page/ProfileEdit/view/form/edit/User/submit",
+      "input": {
+        "fields": [
+          "entity/User/field/name",
+          "entity/User/field/nickname"
+        ]
+      },
+      "expected": {
+        "outcome": "accepted",
+        "stored": "input"
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "entity/User/field/nickname",
+        "page/ProfileEdit/view/form/edit/User",
+        "page/ProfileEdit/view/form/edit/User/submit"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "kind": "mutation-at-most-once",
+      "subject": "page/ProfileEdit/view/form/edit/User/submit",
+      "input": {
+        "fields": [
+          "entity/User/field/name",
+          "entity/User/field/nickname"
+        ],
+        "dispatches": 2
+      },
+      "expected": {
+        "outcome": "accepted-once",
+        "appliedMutations": 1
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "entity/User/field/nickname",
+        "page/ProfileEdit/view/form/edit/User",
+        "page/ProfileEdit/view/form/edit/User/submit"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/submit/navigation",
+      "kind": "navigation",
+      "subject": "page/ProfileEdit/view/form/edit/User/submit",
+      "expected": {
+        "navigation": {
+          "successKind": "page",
+          "successPage": "page/Profile"
+        }
+      },
+      "sourceNodes": [
+        "page/Profile",
+        "page/ProfileEdit/view/form/edit/User/submit",
+        "page/ProfileEdit/view/form/edit/User/submit/success"
+      ]
+    },
+    {
+      "id": "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name",
+      "kind": "validation-rejected",
+      "subject": "page/ProfileEdit/view/form/edit/User/submit",
+      "input": {
+        "violation": {
+          "kind": "required",
+          "field": "entity/User/field/name"
+        }
+      },
+      "expected": {
+        "outcome": "rejected",
+        "stored": "unchanged",
+        "preserveInput": [
+          "entity/User/field/nickname"
+        ]
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "page/ProfileEdit/view/form/edit/User/submit"
+      ]
+    },
+    {
+      "id": "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
+      "kind": "access-allowed",
+      "subject": "page/SignUp/identity/register/UserAccount",
+      "principal": {
+        "kind": "anonymous"
+      },
+      "input": {
+        "identity": {
+          "interaction": "page/SignUp/identity/register/UserAccount",
+          "observe": [
+            "access"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "allowed",
+          "surfaces": [
+            "page/SignUp",
+            "page/SignUp/identity/register/UserAccount"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "page/SignUp",
+        "page/SignUp/identity/register/UserAccount"
+      ]
+    },
+    {
+      "id": "fact/page/SignUp/identity/register/UserAccount/inputs",
+      "kind": "identity-inputs",
+      "subject": "page/SignUp/identity/register/UserAccount",
+      "input": {
+        "identity": {
+          "interaction": "page/SignUp/identity/register/UserAccount",
+          "observe": [
+            "resolved-inputs"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "inputs": [
+            {
+              "kind": "field",
+              "node": "entity/User/field/name"
+            },
+            {
+              "kind": "identifier",
+              "node": "identity/UserAccount/identifier/email"
+            },
+            {
+              "kind": "credential",
+              "node": "identity/UserAccount/credential/password"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "entity/User/field/name",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/identifier/email",
+        "page/SignUp/identity/register/UserAccount"
+      ]
+    },
+    {
+      "id": "fact/page/SignUp/identity/register/UserAccount/navigation",
+      "kind": "navigation",
+      "subject": "page/SignUp/identity/register/UserAccount",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "interaction": "page/SignUp/identity/register/UserAccount",
+          "dispatches": 1,
+          "observe": [
+            "navigation"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "navigation": {
+            "successKind": "page",
+            "successPage": "page/CheckEmail"
+          }
+        }
+      },
+      "sourceNodes": [
+        "page/CheckEmail",
+        "page/SignUp/identity/register/UserAccount",
+        "page/SignUp/identity/register/UserAccount/success"
+      ]
+    },
+    {
+      "id": "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
+      "kind": "secret-input-not-preserved",
+      "subject": "page/SignUp/identity/register/UserAccount",
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/register",
+          "interaction": "page/SignUp/identity/register/UserAccount",
+          "cases": [
+            {
+              "kind": "invalid-name",
+              "dispatches": 1
+            },
+            {
+              "kind": "invalid-identifier",
+              "identifier": {
+                "identifier": "identity/UserAccount/identifier/email",
+                "handle": "input/identifier/invalid",
+                "relation": "invalid"
+              },
+              "dispatches": 1
+            },
+            {
+              "kind": "invalid-credential",
+              "credential": {
+                "credential": "identity/UserAccount/credential/password",
+                "binding": "input/credential/invalid",
+                "relation": "violates-policy"
+              },
+              "dispatches": 1
+            }
+          ],
+          "observe": [
+            "redisplayed-inputs"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "outcome": "invalid-input-redisplayed",
+          "preserveFields": [
+            "entity/User/field/email",
+            "entity/User/field/name"
+          ],
+          "excludedCredentials": [
+            "identity/UserAccount/credential/password"
+          ],
+          "cases": [
+            {
+              "kind": "invalid-name",
+              "outcome": "rejected"
+            },
+            {
+              "kind": "invalid-identifier",
+              "outcome": "rejected"
+            },
+            {
+              "kind": "invalid-credential",
+              "outcome": "rejected"
+            }
+          ]
+        }
+      },
+      "sourceNodes": [
+        "entity/User/field/email",
+        "entity/User/field/name",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/operation/register",
+        "page/SignUp/identity/register/UserAccount"
+      ]
+    },
+    {
+      "id": "fact/page/VerifyEmail/identity/verify/UserAccount/navigation",
+      "kind": "navigation",
+      "subject": "page/VerifyEmail/identity/verify/UserAccount",
+      "setup": {
+        "subjects": [
+          {
+            "handle": "subject/alice",
+            "identity": "identity/UserAccount",
+            "state": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "handle": "subject/alice/evidence/email-verification",
+            "verification": "identity/UserAccount/verification/email",
+            "subject": "subject/alice",
+            "condition": "issued"
+          }
+        ],
+        "clock": {
+          "evidence": "subject/alice/evidence/email-verification",
+          "relation": "before-expiry"
+        }
+      },
+      "input": {
+        "identity": {
+          "operation": "identity/UserAccount/operation/verify",
+          "interaction": "page/VerifyEmail/identity/verify/UserAccount",
+          "dispatches": 1,
+          "evidence": "subject/alice/evidence/email-verification",
+          "observe": [
+            "continuation",
+            "navigation"
+          ]
+        }
+      },
+      "expected": {
+        "identity": {
+          "navigation": {
+            "successKind": "page",
+            "successPage": "page/RegistrationComplete",
+            "continuationPage": "page/SignIn"
+          },
+          "surfaces": [
+            "page/RegistrationComplete",
+            "page/SignIn"
+          ]
+        }
+      },
+      "sourceNodes": [
+        "page/RegistrationComplete",
+        "page/SignIn",
+        "page/VerifyEmail/identity/verify/UserAccount",
+        "page/VerifyEmail/identity/verify/UserAccount/continuation",
+        "page/VerifyEmail/identity/verify/UserAccount/success"
+      ]
+    }
+  ]
+}

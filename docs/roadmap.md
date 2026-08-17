@@ -37,7 +37,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage B1完了** | Identity Resolved IntentとSource Mapを実装。29 Acceptance FactsのB2が次 |
+| public Identity | **P1 Stage B2完了** | Identity専用29 Factsと27 kind contractを実装。3 Review RequirementsのB3が次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -274,8 +274,14 @@ symbolic handleとsemantic setupから独立実行する方針を固定した。
 Stage B1ではForma syntaxを増やさず、test-only fixtureからIdentity、Identifier、Credential、Registration、
 Verification、Authentication、Session、Ownership、page interaction、authenticated/ownership accessを
 Resolved Intent `v0.5`へ正規化した。全semantic nodeのstable IDとSource Map `v0.3`の1対1 coverage、closedな
-参照検査を実装し、既存admin semanticsも維持した。次はB2として、このcanonical fixtureから29 Acceptance Factsを
-完全導出する。
+参照検査を実装し、既存admin semanticsも維持した。
+
+Stage B2ではcanonical fixtureからIdentity専用29 Acceptance Factsを完全導出した。Fact-localなsemantic setupは
+runtime値を持たないsubject/credential/evidence/session handleで表し、複合例外はclosed caseとして隔離する。
+canonical fixtureの27 distinct kindと`FactKindContract` registryの完全一致をfixture testで固定し、汎用validatorは
+生成されたkindがcontractを持つことを検査する。operation実行とbefore/after observation、setupが期待結果を
+先取りしないpre/post規則はcompiler invariantである。Credentialは`preserveInput`と`stored: input`から除外し、
+credential/evidence raw value用schema fieldもstructural testで禁止した。次はB3の3 Review Requirementsである。
 
 ### Exit criteria
 
