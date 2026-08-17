@@ -548,7 +548,9 @@ func validateNavigationContract(profileID string, list, detail, edit Presentatio
 				expectedTarget = detail.PageName
 			case "edit":
 				expectedTarget = edit.PageName
-				expectedSuccess = detail.PageName
+				// v0.7 moved post-write navigation onto the target form's submit
+				// intent, so the edit reference no longer carries a success page.
+				expectedSuccess = ""
 			}
 			if action.TargetPage != expectedTarget {
 				return fmt.Errorf("profile %s does not realize target page %s for action %s on %s", profileID, action.TargetPage, action.Name, presentation.PageID)

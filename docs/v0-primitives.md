@@ -334,9 +334,9 @@ v0で使用できる修飾子は次のものだけである。
 | `field` | `required` `unique` `readonly` `default` `label` |
 | `action` | `confirm` `allow` `goto` |
 | `page` | `allow` |
-| `list` | `columns` `search` `filter` `sort` `paginate` `actions` |
-| `detail` | `fields` `actions` |
-| `form` | `fields` `submit` |
+| `list` | `columns` `search` `filter` `sort` `paginate` `actions`（要素ごとに `goto`） |
+| `detail` | `fields` `actions`（要素ごとに `goto`） |
+| `form` | `fields` `submit`（`goto`） |
 
 `state`の`initial`は省略可能な修飾子ではなく、state declarationに必須の句である。
 
@@ -459,25 +459,43 @@ action参照は、viewのcontext entityに対して次の順で解決する。
 
 標準actionの解決規則:
 
-- `create`: 同じentityを引数に取るcreate form (`form Entity`) が一つだけ必要。
-- `view`: 同じentity bindingを表示するdetailが一つだけ必要。
-- `edit`: 同じentity bindingを編集するform (`form value`) が一つだけ必要。
-- `delete`: entityを削除する。
+- `create`: 同じentityを引数に取るcreate form (`form Entity`)。
+- `view`: 同じentity bindingを表示するdetail。
+- `edit`: 同じentity bindingを編集するform (`form value`)。
+- `delete`: entityを削除する。list外では同じentityのlistへ戻る。
 
-候補が0個または複数なら曖昧さを推測せずerrorにする。domain actionはsource stateでのみ提示し、
-authoritativeな境界でも同じpreconditionを検査する。
+候補が複数ある場合、参照側で`goto <Page>`を書いて宛先を確定する。
+
+```forma
+actions view goto UserDetail, edit goto UserEdit
+submit edit goto UserDetail
+```
+
+`goto`は候補が一つでも書ける。page構成の増減で無関係な参照を書き換えずに済むためである。
+`goto`が候補でないpageを指す場合はerrorにする。`goto`がなく候補が複数ならerrorにし、
+access、宣言順、名前の類似などから推測しない。候補が0個ならerrorにする（`delete`のlist上を除く）。
+
+**inline `goto`は標準action参照にだけ書ける。** domain actionのnavigationはtop-level宣言だけを
+正本とし、参照側の`goto`はerrorにする。domain actionはsource stateでのみ提示し、authoritativeな
+境界でも同じpreconditionを検査する。
 
 ### 6.1 成功後の遷移
 
-標準actionは宣言を持たず`goto`を付けられないため、成功後のnavigationを次のように規定する。
+書き込み後のnavigationは、選ばれたform pageの`SubmitIntent`だけを正本とする。
 
-- `create`: 作成したentityの一意なdetailへ遷移する。detailがなければ呼び出し元listへ戻る。
-  direct navigationされたcreate formで、どちらもなければ同じformに留まり作成済み値を示す。
-- `edit`: 同じentityの一意なdetailへ遷移する。detailがなければ呼び出し元listへ戻る。
-  direct navigationされ、どちらもなければ同じformに留まり保存済み値を示す。
-- `delete`: list上では同じlistに留まり再評価する。list外では同じentityのlistを含むpageへ
-  遷移して再評価する。このpageが0個または複数なら、そのcontextで`delete`を公開できない。
+- `create`と`edit`のaction referenceは**成功後遷移を持たない**。参照はtarget formを決めるだけで、
+  書き込み後どこへ行くかはそのformの`SubmitIntent.Success`が決める。同じ遷移をaction側にも
+  複製すると、両者が食い違い得るうえAcceptance Factが同じ事実を二重に主張する。
+- form の`SubmitIntent.Success`は、同じentityの一意なdetailへ遷移する。detailが複数なら
+  `submit <action> goto <Page>`で確定する。detailがなければ呼び出し元listへ戻り、どちらもなければ
+  同じformに留まり保存済み値を示す。
+- `delete`はformを経由しないので成功後遷移を持つ。list上では同じlistに留まり再評価する。list外では
+  同じentityのlistを含むpageへ遷移して再評価する。このpageが0個または複数なら、そのcontextで
+  `delete`を公開できない。
 - `view`はread-onlyなnavigationなので成功後遷移を持たない。
+
+Resolved Intentは、standard `create` / `edit`のaction referenceに成功後遷移を保持してはならない。
+`forma check`はこれを不変則として検証する。
 
 domain actionは`goto`があればそのpageへ遷移し、なければ現在のcontextに留まってentityを
 再評価する。parameterを持つ遷移先には、作成・編集・遷移後のcontext entityを渡す。
@@ -783,13 +801,19 @@ form_view      = "form", ( type_name | name ),
                  ( line_end | "{", line_end,
                    { blank | form_mod }, "}", [ line_end ] ) ;
 
-list_mod       = ( "columns" | "search" | "filter" | "actions" ),
-                 name_list, line_end
+list_mod       = ( "columns" | "search" | "filter" ), name_list, line_end
+               | "actions", action_ref_list, line_end
                | "sort", name, [ "asc" | "desc" ], line_end
                | "paginate", positive_int, line_end ;
-detail_mod     = ( "fields" | "actions" ), name_list, line_end ;
+detail_mod     = "fields", name_list, line_end
+               | "actions", action_ref_list, line_end ;
 form_mod       = "fields", name_list, line_end
-               | "submit", ( "create" | "edit" ), line_end ;
+               | "submit", ( "create" | "edit" ), [ "goto", type_name ], line_end ;
+
+(* `goto` names the destination when more than one view can serve a standard
+   action. It is only valid on standard action references. *)
+action_ref_list = action_ref, { ",", action_ref } ;
+action_ref      = name, [ "goto", type_name ] ;
 
 (* role *)
 role_decl      = "role", name, line_end ;

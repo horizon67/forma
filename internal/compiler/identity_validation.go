@@ -90,11 +90,39 @@ func ValidateResolvedIntent(intent *ResolvedIntent) error {
 	if _, err := resolvedIntentSemanticIDs(intent); err != nil {
 		return fmt.Errorf("validate Resolved Intent: %w", err)
 	}
+	if err := validateActionRefNavigation(intent); err != nil {
+		return err
+	}
 	return validateIdentitySemantics(intent)
 }
 
 // ValidateSourceMapCoverage requires a one-to-one entry for every semantic
 // node. Multiple nodes may still point at the same source span.
+// validateActionRefNavigation rejects an intent that carries a post-write
+// destination on a standard `create` or `edit` reference. The chosen form's
+// submit intent is the only source of truth for navigation after a write, so a
+// success page here would be a second, possibly disagreeing, record.
+func validateActionRefNavigation(intent *ResolvedIntent) error {
+	for _, page := range intent.Pages {
+		for _, view := range page.Views {
+			for _, action := range view.Actions {
+				if action.Kind != "standard" {
+					continue
+				}
+				if action.Name != "create" && action.Name != "edit" {
+					continue
+				}
+				if action.SuccessPage != "" {
+					return fmt.Errorf(
+						"validate Resolved Intent: standard action %s carries success page %q; the target form's submit intent owns post-write navigation",
+						action.ID, action.SuccessPage)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func ValidateSourceMapCoverage(intent *ResolvedIntent, sourceMap *SourceMap) error {
 	if err := ValidateResolvedIntent(intent); err != nil {
 		return err

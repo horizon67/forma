@@ -166,8 +166,8 @@ func (c *checker) checkList(info *viewInfo, mods map[string]ViewModifier) {
 	}
 	if mod, ok := mods["actions"]; ok {
 		c.checkUniqueNames(mod.Names, "actions")
-		for _, name := range mod.Names {
-			c.resolveActionRef(info, name, true)
+		for index, name := range mod.Names {
+			c.resolveActionRef(info, name, modDestination(mod, index), true)
 		}
 	}
 }
@@ -188,8 +188,8 @@ func (c *checker) checkDetail(info *viewInfo, mods map[string]ViewModifier) {
 	}
 	if mod, ok := mods["actions"]; ok {
 		c.checkUniqueNames(mod.Names, "actions")
-		for _, name := range mod.Names {
-			c.resolveActionRef(info, name, true)
+		for index, name := range mod.Names {
+			c.resolveActionRef(info, name, modDestination(mod, index), true)
 		}
 	}
 }
@@ -279,7 +279,7 @@ func (c *checker) checkUniqueNames(names []Name, context string) {
 	}
 }
 
-func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref IRActionRef) {
+func (c *checker) resolveActionRef(info *viewInfo, name Name, destination Name, report bool) (ref IRActionRef) {
 	id := semanticID(string(viewSemanticID(info)), "action", name.Text)
 	ref = IRActionRef{ID: id, Name: name.Text}
 	var domainAction *ActionDecl
@@ -296,30 +296,21 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref 
 				}
 				return ref
 			}
-			ref.TargetPage = c.uniqueDestination(name, "create form", c.createForm[info.Entity.Name.Text], report)
-			if len(c.details[info.Entity.Name.Text]) == 1 {
-				ref.SuccessPage = c.details[info.Entity.Name.Text][0].Page.Name.Text
-			} else if len(c.details[info.Entity.Name.Text]) > 1 {
-				c.destinationCountError(name, "create success detail", len(c.details[info.Entity.Name.Text]), report)
-			} else {
-				ref.SuccessPage = info.Page.Name.Text
-			}
+			// The chosen create form owns the post-write navigation through its
+			// own submit intent, so the reference does not carry a success page.
+			ref.TargetPage = c.resolveDestination(name, destination, "create form", name.Text, info, c.createForm[info.Entity.Name.Text], report)
 		case "view":
-			ref.TargetPage = c.uniqueDestination(name, "detail", c.details[info.Entity.Name.Text], report)
+			ref.TargetPage = c.resolveDestination(name, destination, "detail", name.Text, info, c.details[info.Entity.Name.Text], report)
 		case "edit":
-			ref.TargetPage = c.uniqueDestination(name, "edit form", c.editForm[info.Entity.Name.Text], report)
-			if len(c.details[info.Entity.Name.Text]) == 1 {
-				ref.SuccessPage = c.details[info.Entity.Name.Text][0].Page.Name.Text
-			} else if len(c.details[info.Entity.Name.Text]) > 1 {
-				c.destinationCountError(name, "edit success detail", len(c.details[info.Entity.Name.Text]), report)
-			} else {
-				ref.SuccessPage = info.Page.Name.Text
-			}
+			ref.TargetPage = c.resolveDestination(name, destination, "edit form", name.Text, info, c.editForm[info.Entity.Name.Text], report)
 		case "delete":
 			if info.View.Kind == ViewList {
+				if destination.Text != "" && report {
+					c.namedDestinationNotAllowed(destination, "`delete` on a list returns to that list")
+				}
 				ref.SuccessPage = info.Page.Name.Text
 			} else {
-				ref.SuccessPage = c.uniqueDestination(name, "delete return list", c.lists[info.Entity.Name.Text], report)
+				ref.SuccessPage = c.resolveDestination(name, destination, "list", name.Text, info, c.lists[info.Entity.Name.Text], report)
 			}
 		}
 		return ref
@@ -332,6 +323,13 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, report bool) (ref 
 		return ref
 	}
 	domainAction = action
+	if destination.Text != "" && report {
+		// Domain action navigation is declared once at the top level so the
+		// reference cannot introduce a second, possibly disagreeing, record.
+		c.error(destination.Span, "F2503",
+			fmt.Sprintf("domain action `%s` cannot name a destination at the reference", name.Text),
+			fmt.Sprintf("declare `goto` on `action %s.%s` instead", info.Entity.Name.Text, name.Text))
+	}
 	ref.Kind = "transition"
 	ref.SuccessPage = info.Page.Name.Text
 	for _, mod := range action.Mods {
@@ -348,13 +346,19 @@ func (c *checker) resolveSubmitIntent(info *viewInfo, report bool) IRSubmitInten
 	success := IRNavigationIntent{ID: semanticID(string(id), "success")}
 
 	details := c.details[info.Entity.Name.Text]
+	destination := submitDestination(info.View)
 	switch {
+	case destination.Text != "":
+		if page := c.resolveDestination(info.View.Subject, destination, "detail", "submit "+info.Mode, info, details, report); page != "" {
+			success.Kind = "page"
+			success.Page = page
+		}
 	case len(details) == 1:
 		success.Kind = "page"
 		success.Page = details[0].Page.Name.Text
 	case len(details) > 1:
-		name := info.View.Subject
-		c.destinationCountError(name, info.Mode+" success detail", len(details), report)
+		c.destinationCountError(info.View.Subject.Span, fmt.Sprintf("submit `%s`", info.Mode),
+			"success detail", len(details), destinationHint("submit "+info.Mode, "detail", len(details)), report)
 	case len(c.lists[info.Entity.Name.Text]) > 0:
 		success.Kind = "caller-list"
 		success.FallbackPage = info.Page.Name.Text
@@ -443,19 +447,82 @@ func accessRequirementKey(requirement IRAccessRequirement) string {
 	return fmt.Sprintf("%s|%s|%v|%s|%s|%s", requirement.Source, requirement.Kind, requirement.AnyOf, requirement.Identity, requirement.Ownership, requirement.ResourceBinding)
 }
 
-func (c *checker) uniqueDestination(name Name, kind string, candidates []*viewInfo, report bool) string {
+// resolveDestination applies the navigation destination rules. A named `goto`
+// must be one of the candidates; an unnamed reference resolves only when the
+// candidate is unique. Access is never used to choose between candidates.
+func (c *checker) resolveDestination(name Name, destination Name, kind string, reference string, info *viewInfo, candidates []*viewInfo, report bool) string {
+	if destination.Text != "" {
+		for _, candidate := range candidates {
+			if candidate.Page.Name.Text == destination.Text {
+				return destination.Text
+			}
+		}
+		if report {
+			c.error(destination.Span, "F2502",
+				fmt.Sprintf("`goto %s` is not a %s for `%s`", destination.Text, kind, info.Entity.Name.Text),
+				fmt.Sprintf("name a page that declares this %s", kind))
+		}
+		return ""
+	}
 	if len(candidates) != 1 {
-		c.destinationCountError(name, kind, len(candidates), report)
+		c.destinationCountError(name.Span, fmt.Sprintf("action `%s`", name.Text), kind, len(candidates),
+			destinationHint(reference, kind, len(candidates)), report)
 		return ""
 	}
 	return candidates[0].Page.Name.Text
 }
 
-func (c *checker) destinationCountError(name Name, kind string, count int, report bool) {
+func (c *checker) namedDestinationNotAllowed(destination Name, because string) {
+	c.error(destination.Span, "F2503",
+		fmt.Sprintf("`goto %s` cannot be named here", destination.Text), because)
+}
+
+func modDestination(mod ViewModifier, index int) Name {
+	if index < len(mod.Destinations) {
+		return mod.Destinations[index]
+	}
+	return Name{}
+}
+
+func submitDestination(view *ViewDecl) Name {
+	for _, mod := range view.Mods {
+		if mod.Kind == "submit" && len(mod.Destinations) > 0 {
+			return mod.Destinations[0]
+		}
+	}
+	return Name{}
+}
+
+// destinationCountError names the construct that failed to resolve. A form
+// submit is identified by its action, not by the view binding, so the subject
+// label is supplied by the caller.
+func (c *checker) destinationCountError(at Span, subject string, kind string, count int, hint string, report bool) {
 	if !report {
 		return
 	}
-	c.error(name.Span, "F2501", fmt.Sprintf("action `%s` resolves to %d %s destinations", name.Text, count, kind), "declare exactly one matching destination")
+	c.error(at, "F2501",
+		fmt.Sprintf("%s resolves to %d %s destinations", subject, count, kind), hint)
+}
+
+// destinationHint separates the three remedies. A missing candidate cannot be
+// fixed by naming one, and a form submit is named by its action, not by the
+// view binding used in the diagnostic.
+func destinationHint(reference string, kind string, count int) string {
+	if count == 0 {
+		switch kind {
+		case "detail":
+			return "declare a page with `detail <binding>` for this entity"
+		case "create form":
+			return "declare a page with `form Entity` for this entity"
+		case "edit form":
+			return "declare a page with `form <binding>` for this entity"
+		case "list":
+			return "declare a page with `list Entity` for this entity"
+		default:
+			return "declare the matching view for this entity"
+		}
+	}
+	return fmt.Sprintf("name the destination with `%s goto <Page>`", reference)
 }
 
 func hasFieldModifier(field *FieldDecl, kind string) bool {

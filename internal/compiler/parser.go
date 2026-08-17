@@ -739,9 +739,12 @@ func (p *parser) parseViewModifier(kind ViewKind) ViewModifier {
 	switch kind {
 	case ViewList:
 		switch mod.Kind {
-		case "columns", "search", "filter", "actions":
+		case "columns", "search", "filter":
 			valid = true
 			mod.Names = p.parseNameList()
+		case "actions":
+			valid = true
+			mod.Names, mod.Destinations = p.parseActionRefList()
 		case "sort":
 			valid = true
 			mod.Names = []Name{p.consumeName("after `sort`")}
@@ -755,9 +758,13 @@ func (p *parser) parseViewModifier(kind ViewKind) ViewModifier {
 			mod.Span = mergeSpan(mod.Span, number.Span)
 		}
 	case ViewDetail:
-		if mod.Kind == "fields" || mod.Kind == "actions" {
+		switch mod.Kind {
+		case "fields":
 			valid = true
 			mod.Names = p.parseNameList()
+		case "actions":
+			valid = true
+			mod.Names, mod.Destinations = p.parseActionRefList()
 		}
 	case ViewForm:
 		switch mod.Kind {
@@ -766,7 +773,9 @@ func (p *parser) parseViewModifier(kind ViewKind) ViewModifier {
 			mod.Names = p.parseNameList()
 		case "submit":
 			valid = true
-			mod.Names = []Name{p.consumeName("after `submit`")}
+			name, destination := p.parseActionRef("after `submit`")
+			mod.Names = []Name{name}
+			mod.Destinations = []Name{destination}
 		}
 	}
 	if !valid {
@@ -784,6 +793,30 @@ func (p *parser) parseRoleDecl() *RoleDecl {
 	name := p.consumeName("after `role`")
 	p.finishLine()
 	return &RoleDecl{Name: name, Span: mergeSpan(start, p.previous().Span)}
+}
+
+// parseActionRefList reads `name [goto Page]` elements. Destinations stays
+// index-aligned with the names so an omitted `goto` keeps a zero Name.
+func (p *parser) parseActionRefList() ([]Name, []Name) {
+	name, destination := p.parseActionRef("in the action list")
+	names := []Name{name}
+	destinations := []Name{destination}
+	for p.match(tokenComma) {
+		name, destination = p.parseActionRef("after `,`")
+		names = append(names, name)
+		destinations = append(destinations, destination)
+	}
+	return names, destinations
+}
+
+func (p *parser) parseActionRef(context string) (Name, Name) {
+	name := p.consumeName(context)
+	var destination Name
+	if p.check(tokenIdent) && p.peek().Value == "goto" {
+		p.advance()
+		destination = p.consumeTypeName("after `goto`")
+	}
+	return name, destination
 }
 
 func (p *parser) parseNameList() []Name {

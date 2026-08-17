@@ -243,6 +243,7 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 	if err := clone(request.SourceMap, &sourceMap); err != nil {
 		return result, err
 	}
+	droppedSuccess := map[compiler.SemanticID]compiler.SemanticID{}
 	for pageIndex := range intent.Pages {
 		page := &intent.Pages[pageIndex]
 		if page.Access != nil || len(page.IdentityInteractions) != 0 {
@@ -251,8 +252,24 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 		for viewIndex := range page.Views {
 			view := &page.Views[viewIndex]
 			for actionIndex := range view.Actions {
-				if err := upgradeHistoricalAccess(&view.Actions[actionIndex].Access); err != nil {
+				action := &view.Actions[actionIndex]
+				if err := upgradeHistoricalAccess(&action.Access); err != nil {
 					return result, fmt.Errorf("upgrade historical Generation Request: %w", err)
+				}
+				// v0.4 recorded post-write navigation on the create/edit
+				// reference as well as on the target form's submit intent. The
+				// current shape keeps only the submit intent, so drop the
+				// duplicate instead of leaving a field the invariant rejects.
+				if action.Kind == "standard" && (action.Name == "create" || action.Name == "edit") && action.SuccessPage != "" {
+					// sourceNodes are deduplicated, so a success page that is also
+					// the target page appears once and must survive. Only record a
+					// removal when the success page is a distinct source.
+					if action.SuccessPage != action.TargetPage {
+						droppedSuccess[action.ID] = compiler.SemanticID("page/" + action.SuccessPage)
+					} else {
+						droppedSuccess[action.ID] = ""
+					}
+					action.SuccessPage = ""
 				}
 			}
 			if view.Submit != nil {
@@ -261,6 +278,25 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 				}
 			}
 		}
+	}
+	for factIndex := range facts.Facts {
+		fact := &facts.Facts[factIndex]
+		successPage, dropped := droppedSuccess[fact.Subject]
+		if !dropped || fact.Kind != "navigation" || fact.Expected.Navigation == nil {
+			continue
+		}
+		fact.Expected.Navigation.SuccessKind = ""
+		fact.Expected.Navigation.SuccessPage = ""
+		if successPage == "" {
+			continue
+		}
+		sources := fact.SourceNodes[:0]
+		for _, source := range fact.SourceNodes {
+			if source != successPage {
+				sources = append(sources, source)
+			}
+		}
+		fact.SourceNodes = sources
 	}
 	intent.Version = compiler.ResolvedIntentVersion
 	facts.Version = compiler.AcceptanceFactsVersion

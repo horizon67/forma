@@ -44,8 +44,8 @@ func TestBuildSpecLowersAdminPresentations(t *testing.T) {
 		assertAdminAccess(t, action.Access)
 	}
 	if spec.List.Actions[0].TargetPage != spec.Detail.PageName || spec.List.Actions[0].SuccessPage != "" ||
-		spec.List.Actions[1].TargetPage != spec.Edit.PageName || spec.List.Actions[1].SuccessPage != spec.Detail.PageName ||
-		spec.Detail.Actions[0].TargetPage != spec.Edit.PageName || spec.Detail.Actions[0].SuccessPage != spec.Detail.PageName {
+		spec.List.Actions[1].TargetPage != spec.Edit.PageName || spec.List.Actions[1].SuccessPage != "" ||
+		spec.Detail.Actions[0].TargetPage != spec.Edit.PageName || spec.Detail.Actions[0].SuccessPage != "" {
 		t.Fatalf("action navigation was not preserved: list=%#v detail=%#v", spec.List.Actions, spec.Detail.Actions)
 	}
 	if spec.Edit.Submit == nil || spec.Edit.Submit.Action != "edit" ||

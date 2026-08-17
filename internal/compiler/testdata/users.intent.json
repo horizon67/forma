@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.6",
+  "version": "forma/resolved-intent/v0.7",
   "roles": [
     {
       "id": "role/admin",
@@ -205,7 +205,6 @@
               "name": "edit",
               "kind": "standard",
               "targetPage": "UserEdit",
-              "successPage": "UserDetail",
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/edit/access",
                 "allOf": [
@@ -440,7 +439,6 @@
               "name": "create",
               "kind": "standard",
               "targetPage": "UserCreate",
-              "successPage": "UserDetail",
               "access": {
                 "id": "page/Users/view/list/User/action/create/access",
                 "allOf": [
@@ -491,7 +489,6 @@
               "name": "edit",
               "kind": "standard",
               "targetPage": "UserEdit",
-              "successPage": "UserDetail",
               "access": {
                 "id": "page/Users/view/list/User/action/edit/access",
                 "allOf": [

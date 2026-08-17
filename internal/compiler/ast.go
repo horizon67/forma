@@ -245,9 +245,13 @@ type ViewDecl struct {
 }
 
 type ViewModifier struct {
-	Kind      string
-	Names     []Name
-	Direction string
-	PageSize  int
-	Span      Span
+	Kind string
+	// Names holds the modifier operands. For `actions` and `submit`, Destinations
+	// is index-aligned with Names and carries the optional `goto <Page>` target.
+	// A zero Name means the destination was not named at the reference.
+	Names        []Name
+	Destinations []Name
+	Direction    string
+	PageSize     int
+	Span         Span
 }

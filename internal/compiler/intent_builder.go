@@ -214,8 +214,8 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 			view.PageSize = mod.PageSize
 		}
 		if mod, ok := mods["actions"]; ok {
-			for _, name := range mod.Names {
-				ref := c.resolveActionRef(info, name, false)
+			for index, name := range mod.Names {
+				ref := c.resolveActionRef(info, name, modDestination(mod, index), false)
 				view.Actions = append(view.Actions, ref)
 				sourceMap.add(ref.ID, "action-reference", name.Span)
 				sourceMap.add(ref.Access.ID, "access", name.Span)
@@ -227,8 +227,8 @@ func (c *checker) buildViewIR(info *viewInfo, sourceMap *sourceMapBuilder) IRVie
 			view.Fields = namesToStrings(mod.Names)
 		}
 		if mod, ok := mods["actions"]; ok {
-			for _, name := range mod.Names {
-				ref := c.resolveActionRef(info, name, false)
+			for index, name := range mod.Names {
+				ref := c.resolveActionRef(info, name, modDestination(mod, index), false)
 				view.Actions = append(view.Actions, ref)
 				sourceMap.add(ref.ID, "action-reference", name.Span)
 				sourceMap.add(ref.Access.ID, "access", name.Span)
