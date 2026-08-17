@@ -39,6 +39,9 @@ func Compile(sources []SourceFile) Result {
 
 // MarshalIntent returns stable, indented JSON for golden tests and compiler tooling.
 func MarshalIntent(intent *ResolvedIntent) ([]byte, error) {
+	if err := ValidateResolvedIntent(intent); err != nil {
+		return nil, err
+	}
 	return json.MarshalIndent(intent, "", "  ")
 }
 

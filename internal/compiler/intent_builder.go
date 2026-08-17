@@ -136,6 +136,7 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 	sort.Slice(ir.Entities, func(i, j int) bool { return ir.Entities[i].ID < ir.Entities[j].ID })
 	sort.Slice(ir.Actions, func(i, j int) bool { return ir.Actions[i].ID < ir.Actions[j].ID })
 	sort.Slice(ir.Pages, func(i, j int) bool { return ir.Pages[i].ID < ir.Pages[j].ID })
+	CanonicalizeResolvedIntent(ir)
 	return ir, sourceMap.build()
 }
 

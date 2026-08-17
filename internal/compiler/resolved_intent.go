@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.4"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.5"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -10,12 +10,13 @@ type SemanticID string
 // ResolvedIntent is the target-neutral, fully resolved application intent that
 // a coding agent must implement. It contains no repository-specific lowering.
 type ResolvedIntent struct {
-	Version  string     `json:"version"`
-	Roles    []IRRole   `json:"roles,omitempty"`
-	Types    []IRType   `json:"types,omitempty"`
-	Entities []IREntity `json:"entities,omitempty"`
-	Actions  []IRAction `json:"actions,omitempty"`
-	Pages    []IRPage   `json:"pages,omitempty"`
+	Version    string       `json:"version"`
+	Roles      []IRRole     `json:"roles,omitempty"`
+	Types      []IRType     `json:"types,omitempty"`
+	Entities   []IREntity   `json:"entities,omitempty"`
+	Actions    []IRAction   `json:"actions,omitempty"`
+	Identities []IRIdentity `json:"identities,omitempty"`
+	Pages      []IRPage     `json:"pages,omitempty"`
 }
 
 type IRRole struct {
@@ -107,11 +108,13 @@ type IRAction struct {
 }
 
 type IRPage struct {
-	ID     SemanticID   `json:"id"`
-	Name   string       `json:"name"`
-	Param  *IRParameter `json:"param,omitempty"`
-	Allows []string     `json:"allows,omitempty"`
-	Views  []IRView     `json:"views,omitempty"`
+	ID                   SemanticID              `json:"id"`
+	Name                 string                  `json:"name"`
+	Param                *IRParameter            `json:"param,omitempty"`
+	Allows               []string                `json:"allows,omitempty"`
+	Access               *IRAccess               `json:"access,omitempty"`
+	Views                []IRView                `json:"views,omitempty"`
+	IdentityInteractions []IRIdentityInteraction `json:"identityInteractions,omitempty"`
 }
 
 type IRParameter struct {
@@ -172,15 +175,152 @@ type IRNavigationIntent struct {
 	FallbackPage string     `json:"fallbackPage,omitempty"`
 }
 
-// IRAccess is a conjunction of requirements. Each roles requirement is an
-// any-of role set from one source declaration. Keeping clauses separate avoids
-// incorrectly flattening (admin OR editor) AND owner into a single role list.
+// IRAccess is a conjunction of requirements. Keeping clauses separate avoids
+// incorrectly flattening (admin OR editor) AND authenticated AND owner.
 type IRAccess struct {
 	ID    SemanticID            `json:"id"`
 	AllOf []IRAccessRequirement `json:"allOf"`
 }
 
 type IRAccessRequirement struct {
-	Source SemanticID `json:"source"`
-	AnyOf  []string   `json:"anyOf"`
+	Source          SemanticID `json:"source"`
+	Kind            string     `json:"kind"`
+	AnyOf           []string   `json:"anyOf,omitempty"`
+	Identity        SemanticID `json:"identity,omitempty"`
+	Ownership       SemanticID `json:"ownership,omitempty"`
+	ResourceBinding SemanticID `json:"resourceBinding,omitempty"`
+}
+
+// IRIdentity binds an entity subject to identifier, credential, registration,
+// verification, authentication, session, and ownership semantics. These nodes
+// describe application meaning and intentionally contain no storage, hashing,
+// transport, or framework mechanism.
+type IRIdentity struct {
+	ID             SemanticID       `json:"id"`
+	Name           string           `json:"name"`
+	Subject        SemanticID       `json:"subject"`
+	Identifiers    []IRIdentifier   `json:"identifiers"`
+	Credentials    []IRCredential   `json:"credentials"`
+	Registration   IRRegistration   `json:"registration"`
+	Verifications  []IRVerification `json:"verifications"`
+	Authentication IRAuthentication `json:"authentication"`
+	Ownership      []IROwnership    `json:"ownership"`
+}
+
+type IRIdentifier struct {
+	ID               SemanticID               `json:"id"`
+	Name             string                   `json:"name"`
+	Field            SemanticID               `json:"field"`
+	Canonicalization []IRCanonicalizationStep `json:"canonicalization"`
+}
+
+type IRCanonicalizationStep struct {
+	Kind string `json:"kind"`
+}
+
+type IRCredential struct {
+	ID          SemanticID              `json:"id"`
+	Name        string                  `json:"name"`
+	Kind        string                  `json:"kind"`
+	InputPolicy IRCredentialInputPolicy `json:"inputPolicy"`
+}
+
+type IRCredentialInputPolicy struct {
+	PreserveWhitespace bool               `json:"preserveWhitespace"`
+	Length             IRLengthConstraint `json:"length"`
+}
+
+type IRLengthConstraint struct {
+	Min  int    `json:"min"`
+	Max  int    `json:"max"`
+	Unit string `json:"unit"`
+}
+
+type IRRegistration struct {
+	ID                        SemanticID      `json:"id"`
+	Identifier                SemanticID      `json:"identifier"`
+	Credential                SemanticID      `json:"credential"`
+	Attributes                []SemanticID    `json:"attributes"`
+	InitialState              IRStateValueRef `json:"initialState"`
+	Verification              SemanticID      `json:"verification"`
+	AtomicOutcome             []string        `json:"atomicOutcome"`
+	ExistingIdentifierOutcome string          `json:"existingIdentifierOutcome"`
+}
+
+type IRStateValueRef struct {
+	State SemanticID `json:"state"`
+	Value string     `json:"value"`
+}
+
+type IRVerification struct {
+	ID               SemanticID             `json:"id"`
+	Kind             string                 `json:"kind"`
+	Subject          SemanticID             `json:"subject"`
+	VerifyOperation  SemanticID             `json:"verifyOperation"`
+	ResendOperation  SemanticID             `json:"resendOperation"`
+	EligibleState    IRStateValueRef        `json:"eligibleState"`
+	SuccessAction    SemanticID             `json:"successAction"`
+	Evidence         IRVerificationEvidence `json:"evidence"`
+	Notice           IRVerificationNotice   `json:"notice"`
+	ResendDisclosure string                 `json:"resendDisclosure"`
+}
+
+type IRVerificationEvidence struct {
+	Kind          string     `json:"kind"`
+	Lifetime      IRDuration `json:"lifetime"`
+	ValidBoundary string     `json:"validBoundary"`
+	MaxUses       int        `json:"maxUses"`
+	Rotation      string     `json:"rotation"`
+}
+
+type IRDuration struct {
+	Amount int    `json:"amount"`
+	Unit   string `json:"unit"`
+}
+
+type IRVerificationNotice struct {
+	ID              SemanticID `json:"id"`
+	Channel         string     `json:"channel"`
+	Recipient       SemanticID `json:"recipient"`
+	Emission        string     `json:"emission"`
+	DeliveryFailure string     `json:"deliveryFailure"`
+}
+
+type IRAuthentication struct {
+	ID                SemanticID      `json:"id"`
+	SignInOperation   SemanticID      `json:"signInOperation"`
+	SignOutOperation  SemanticID      `json:"signOutOperation"`
+	Identifier        SemanticID      `json:"identifier"`
+	Credential        SemanticID      `json:"credential"`
+	EligibleState     IRStateValueRef `json:"eligibleState"`
+	FailureDisclosure string          `json:"failureDisclosure"`
+	Session           IRSession       `json:"session"`
+}
+
+type IRSession struct {
+	ID               SemanticID `json:"id"`
+	PrincipalSubject SemanticID `json:"principalSubject"`
+	SignOutScope     string     `json:"signOutScope"`
+}
+
+type IROwnership struct {
+	ID       SemanticID `json:"id"`
+	Identity SemanticID `json:"identity"`
+	Resource SemanticID `json:"resource"`
+	Relation string     `json:"relation"`
+}
+
+type IRIdentityInteraction struct {
+	ID           SemanticID           `json:"id"`
+	Operation    SemanticID           `json:"operation"`
+	Inputs       []IRIdentityInputRef `json:"inputs,omitempty"`
+	Access       IRAccess             `json:"access"`
+	Success      IRNavigationIntent   `json:"success"`
+	Continuation *IRNavigationIntent  `json:"continuation,omitempty"`
+	Feedback     []string             `json:"feedback,omitempty"`
+}
+
+type IRIdentityInputRef struct {
+	Kind string     `json:"kind"`
+	Node SemanticID `json:"node"`
 }

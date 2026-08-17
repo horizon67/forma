@@ -59,6 +59,9 @@ func TestUsersExampleGoldenIntent(t *testing.T) {
 	if !bytes.Equal(actualSourceMap, expectedSourceMap) {
 		t.Fatalf("source map differs from %s\nactual:\n%s", sourceMapGoldenPath, actualSourceMap)
 	}
+	if err := ValidateSourceMapCoverage(result.Intent, result.SourceMap); err != nil {
+		t.Fatalf("Source Map does not cover Resolved Intent one-to-one: %v", err)
+	}
 }
 
 func TestResolvedIntentExcludesProfileMechanisms(t *testing.T) {

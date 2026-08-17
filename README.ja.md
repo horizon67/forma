@@ -249,8 +249,8 @@ applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
 `forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。現在のmilestoneは
-メール認証付きsignup/signinのIdentity probeです。flow contractの固定とv0 gapの実測を終え、次に
-target-neutralなIdentity semantic modelを設計します。
+メール認証付きsignup/signinのIdentity probeです。flow contractとv0 gapを固定し、syntaxを増やさず
+target-neutralなIdentity Resolved IntentとSource Mapを実装しました。次は29 Acceptance Factsを導出します。
 
 ## 設計資料
 

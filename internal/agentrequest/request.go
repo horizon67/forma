@@ -231,6 +231,9 @@ func ValidateRequest(request Request) error {
 	if request.AcceptanceFacts.IntentVersion != request.ResolvedIntent.Version || request.SourceMap.IntentVersion != request.ResolvedIntent.Version {
 		return fmt.Errorf("validate Generation Request: compiler output versions do not match")
 	}
+	if err := compiler.ValidateSourceMapCoverage(request.ResolvedIntent, request.SourceMap); err != nil {
+		return err
+	}
 	if request.ImplementationPolicy != nil {
 		if err := implementationpolicy.ValidateCanonical(*request.ImplementationPolicy); err != nil {
 			return err

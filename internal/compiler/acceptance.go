@@ -86,6 +86,9 @@ func BuildAcceptanceFacts(intent *ResolvedIntent) (*AcceptanceFacts, error) {
 	if intent == nil {
 		return nil, fmt.Errorf("build Acceptance Facts: nil Resolved Intent")
 	}
+	if err := ValidateResolvedIntent(intent); err != nil {
+		return nil, err
+	}
 	b := acceptanceBuilder{
 		intent: intent, types: map[string]IRType{}, entities: map[string]IREntity{}, pages: map[string]IRPage{},
 	}
@@ -220,7 +223,7 @@ func (b *acceptanceBuilder) addViewFacts(page IRPage, view IRView, entity IREnti
 func (b *acceptanceBuilder) addPageAccessFacts(page IRPage, view IRView) error {
 	access := IRAccess{ID: page.ID}
 	if len(page.Allows) != 0 {
-		access.AllOf = []IRAccessRequirement{{Source: page.ID, AnyOf: append([]string(nil), page.Allows...)}}
+		access.AllOf = []IRAccessRequirement{{Source: page.ID, Kind: "roles", AnyOf: append([]string(nil), page.Allows...)}}
 	}
 	return b.addAccessFacts(view.ID, access, []SemanticID{view.ID, page.ID})
 }

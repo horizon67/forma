@@ -398,7 +398,7 @@ func (c *checker) composeAccess(id SemanticID, pageNames []string, action *Actio
 			continue
 		}
 		seen[source] = true
-		access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, AnyOf: namesToStrings(page.Allows)})
+		access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, Kind: "roles", AnyOf: namesToStrings(page.Allows)})
 	}
 	if action != nil {
 		var allows []string
@@ -411,7 +411,7 @@ func (c *checker) composeAccess(id SemanticID, pageNames []string, action *Actio
 		if len(allows) > 0 {
 			source := actionID(action.Entity.Text, action.Name.Text)
 			if !seen[source] {
-				access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, AnyOf: allows})
+				access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, Kind: "roles", AnyOf: allows})
 			}
 		}
 	}

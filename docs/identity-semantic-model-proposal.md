@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B proposal — target-neutral semantic shape; not valid Forma syntax and not yet implemented
+Status: Stage B implementation — B1 schema/canonical fixture complete; B2 Acceptance Facts next; not valid Forma syntax
 
 ## 1. 目的
 
@@ -105,6 +105,7 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
 この表の名前はproposal上の候補であり、implementationとgoldenを同時に更新した時点で規範になる。
+Resolved Intent `v0.5`とSource Map `v0.3`はB1で採用済みである。Acceptance Facts以降は後続sliceの候補である。
 
 ## 5. Resolved Intentのtop-level shape
 
@@ -956,10 +957,10 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 
 ### B1 — schemaとcanonical fixture
 
-- `IRIdentity`と関連node、Identity access requirement、interaction refをGo typeへ追加する。
-- parserを変更せず、test-onlyの`membershipIntentFixture`からcanonical JSONを生成する。
-- versionを候補値へ上げ、既存admin goldenの意味が変わらないことを確認する。
-- stable ID、sort、duplicate ID、reference integrityをtestする。
+- [x] `IRIdentity`と関連node、Identity access requirement、interaction refをGo typeへ追加した。
+- [x] parserを変更せず、test-onlyの`membershipIntentFixture`からcanonical JSONを生成した。
+- [x] Resolved Intentを`v0.5`、Source Mapを`v0.3`へ上げ、既存admin goldenの意味を維持した。
+- [x] stable ID、sort、duplicate ID、reference integrity、Source Map 1対1 coverageをtestした。
 
 ### B2 — 29 Facts
 

@@ -1,0 +1,454 @@
+{
+  "version": "forma/resolved-intent/v0.5",
+  "types": [
+    {
+      "id": "type/Email",
+      "name": "Email",
+      "kind": "scalar",
+      "base": "String",
+      "constraints": [
+        {
+          "id": "type/Email/constraint/matches",
+          "kind": "matches",
+          "value": ".+@.+"
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "id": "entity/User",
+      "name": "User",
+      "fields": [
+        {
+          "id": "entity/User/field/name",
+          "name": "name",
+          "type": "String",
+          "required": true
+        },
+        {
+          "id": "entity/User/field/nickname",
+          "name": "nickname",
+          "type": "String"
+        },
+        {
+          "id": "entity/User/field/email",
+          "name": "email",
+          "type": "Email",
+          "required": true,
+          "unique": true
+        }
+      ],
+      "state": {
+        "id": "entity/User/state/status",
+        "name": "status",
+        "initial": "Pending",
+        "values": [
+          "Pending",
+          "Active",
+          "Suspended"
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "action/User/activate",
+      "entity": "User",
+      "name": "activate",
+      "sources": [
+        "Pending"
+      ],
+      "destination": "Active"
+    }
+  ],
+  "identities": [
+    {
+      "id": "identity/UserAccount",
+      "name": "UserAccount",
+      "subject": "entity/User",
+      "identifiers": [
+        {
+          "id": "identity/UserAccount/identifier/email",
+          "name": "email",
+          "field": "entity/User/field/email",
+          "canonicalization": [
+            {
+              "kind": "trim-unicode-white-space"
+            },
+            {
+              "kind": "ascii-case-fold"
+            }
+          ]
+        }
+      ],
+      "credentials": [
+        {
+          "id": "identity/UserAccount/credential/password",
+          "name": "password",
+          "kind": "password",
+          "inputPolicy": {
+            "preserveWhitespace": true,
+            "length": {
+              "min": 12,
+              "max": 128,
+              "unit": "unicode-scalar-value"
+            }
+          }
+        }
+      ],
+      "registration": {
+        "id": "identity/UserAccount/operation/register",
+        "identifier": "identity/UserAccount/identifier/email",
+        "credential": "identity/UserAccount/credential/password",
+        "attributes": [
+          "entity/User/field/name"
+        ],
+        "initialState": {
+          "state": "entity/User/state/status",
+          "value": "Pending"
+        },
+        "verification": "identity/UserAccount/verification/email",
+        "atomicOutcome": [
+          "credential-binding",
+          "notice-emission-record",
+          "subject",
+          "verification-evidence"
+        ],
+        "existingIdentifierOutcome": "reject-and-guide-resend"
+      },
+      "verifications": [
+        {
+          "id": "identity/UserAccount/verification/email",
+          "kind": "opaque-email-link",
+          "subject": "entity/User",
+          "verifyOperation": "identity/UserAccount/operation/verify",
+          "resendOperation": "identity/UserAccount/operation/resend",
+          "eligibleState": {
+            "state": "entity/User/state/status",
+            "value": "Pending"
+          },
+          "successAction": "action/User/activate",
+          "evidence": {
+            "kind": "opaque",
+            "lifetime": {
+              "amount": 30,
+              "unit": "minute"
+            },
+            "validBoundary": "now-before-issued-plus-lifetime",
+            "maxUses": 1,
+            "rotation": "invalidate-prior-unconsumed"
+          },
+          "notice": {
+            "id": "identity/UserAccount/verification/email/notice",
+            "channel": "email",
+            "recipient": "identity/UserAccount/identifier/email",
+            "emission": "durable-record-required",
+            "deliveryFailure": "subject-remains-pending-and-retryable"
+          },
+          "resendDisclosure": "uniform-for-pending-active-and-unknown"
+        }
+      ],
+      "authentication": {
+        "id": "identity/UserAccount/authentication",
+        "signInOperation": "identity/UserAccount/operation/signin",
+        "signOutOperation": "identity/UserAccount/operation/signout",
+        "identifier": "identity/UserAccount/identifier/email",
+        "credential": "identity/UserAccount/credential/password",
+        "eligibleState": {
+          "state": "entity/User/state/status",
+          "value": "Active"
+        },
+        "failureDisclosure": "generic",
+        "session": {
+          "id": "identity/UserAccount/session/current",
+          "principalSubject": "entity/User",
+          "signOutScope": "current-session"
+        }
+      },
+      "ownership": [
+        {
+          "id": "identity/UserAccount/ownership/self",
+          "identity": "identity/UserAccount",
+          "resource": "entity/User",
+          "relation": "principal-subject-equals-resource-identity"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "id": "page/CheckEmail",
+      "name": "CheckEmail",
+      "identityInteractions": [
+        {
+          "id": "page/CheckEmail/identity/resend/UserAccount",
+          "operation": "identity/UserAccount/operation/resend",
+          "inputs": [
+            {
+              "kind": "identifier",
+              "node": "identity/UserAccount/identifier/email"
+            }
+          ],
+          "access": {
+            "id": "page/CheckEmail/identity/resend/UserAccount/access",
+            "allOf": []
+          },
+          "success": {
+            "id": "page/CheckEmail/identity/resend/UserAccount/success",
+            "kind": "same-context",
+            "page": "CheckEmail"
+          },
+          "feedback": [
+            "uniform",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/Profile",
+      "name": "Profile",
+      "param": {
+        "id": "page/Profile/parameter",
+        "name": "user",
+        "entity": "User"
+      },
+      "access": {
+        "id": "page/Profile/access",
+        "allOf": [
+          {
+            "source": "page/Profile",
+            "kind": "authenticated",
+            "identity": "identity/UserAccount"
+          },
+          {
+            "source": "page/Profile",
+            "kind": "ownership",
+            "ownership": "identity/UserAccount/ownership/self",
+            "resourceBinding": "page/Profile/parameter"
+          }
+        ]
+      },
+      "views": [
+        {
+          "id": "page/Profile/view/detail/User",
+          "kind": "detail",
+          "entity": "User",
+          "binding": "user",
+          "mode": "read",
+          "fields": [
+            "name",
+            "nickname",
+            "email",
+            "status"
+          ],
+          "interactionStates": [
+            "empty",
+            "failure"
+          ]
+        }
+      ],
+      "identityInteractions": [
+        {
+          "id": "page/Profile/identity/signout/UserAccount",
+          "operation": "identity/UserAccount/operation/signout",
+          "access": {
+            "id": "page/Profile/identity/signout/UserAccount/access",
+            "allOf": [
+              {
+                "source": "page/Profile",
+                "kind": "authenticated",
+                "identity": "identity/UserAccount"
+              }
+            ]
+          },
+          "success": {
+            "id": "page/Profile/identity/signout/UserAccount/success",
+            "kind": "page",
+            "page": "SignIn"
+          },
+          "feedback": [
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/ProfileEdit",
+      "name": "ProfileEdit",
+      "param": {
+        "id": "page/ProfileEdit/parameter",
+        "name": "user",
+        "entity": "User"
+      },
+      "access": {
+        "id": "page/ProfileEdit/access",
+        "allOf": [
+          {
+            "source": "page/ProfileEdit",
+            "kind": "authenticated",
+            "identity": "identity/UserAccount"
+          },
+          {
+            "source": "page/ProfileEdit",
+            "kind": "ownership",
+            "ownership": "identity/UserAccount/ownership/self",
+            "resourceBinding": "page/ProfileEdit/parameter"
+          }
+        ]
+      },
+      "views": [
+        {
+          "id": "page/ProfileEdit/view/form/edit/User",
+          "kind": "form",
+          "entity": "User",
+          "binding": "user",
+          "mode": "edit",
+          "fields": [
+            "name",
+            "nickname"
+          ],
+          "submit": {
+            "id": "page/ProfileEdit/view/form/edit/User/submit",
+            "action": "edit",
+            "success": {
+              "id": "page/ProfileEdit/view/form/edit/User/submit/success",
+              "kind": "page",
+              "page": "Profile"
+            },
+            "access": {
+              "id": "page/ProfileEdit/view/form/edit/User/submit/access",
+              "allOf": [
+                {
+                  "source": "page/ProfileEdit",
+                  "kind": "authenticated",
+                  "identity": "identity/UserAccount"
+                },
+                {
+                  "source": "page/ProfileEdit",
+                  "kind": "ownership",
+                  "ownership": "identity/UserAccount/ownership/self",
+                  "resourceBinding": "page/ProfileEdit/parameter"
+                }
+              ]
+            }
+          },
+          "interactionStates": [
+            "invalid",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/RegistrationComplete",
+      "name": "RegistrationComplete"
+    },
+    {
+      "id": "page/SignIn",
+      "name": "SignIn",
+      "identityInteractions": [
+        {
+          "id": "page/SignIn/identity/signin/UserAccount",
+          "operation": "identity/UserAccount/operation/signin",
+          "inputs": [
+            {
+              "kind": "identifier",
+              "node": "identity/UserAccount/identifier/email"
+            },
+            {
+              "kind": "credential",
+              "node": "identity/UserAccount/credential/password"
+            }
+          ],
+          "access": {
+            "id": "page/SignIn/identity/signin/UserAccount/access",
+            "allOf": []
+          },
+          "success": {
+            "id": "page/SignIn/identity/signin/UserAccount/success",
+            "kind": "page",
+            "page": "Profile"
+          },
+          "feedback": [
+            "generic",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/SignUp",
+      "name": "SignUp",
+      "identityInteractions": [
+        {
+          "id": "page/SignUp/identity/register/UserAccount",
+          "operation": "identity/UserAccount/operation/register",
+          "inputs": [
+            {
+              "kind": "field",
+              "node": "entity/User/field/name"
+            },
+            {
+              "kind": "identifier",
+              "node": "identity/UserAccount/identifier/email"
+            },
+            {
+              "kind": "credential",
+              "node": "identity/UserAccount/credential/password"
+            }
+          ],
+          "access": {
+            "id": "page/SignUp/identity/register/UserAccount/access",
+            "allOf": []
+          },
+          "success": {
+            "id": "page/SignUp/identity/register/UserAccount/success",
+            "kind": "page",
+            "page": "CheckEmail"
+          },
+          "feedback": [
+            "invalid",
+            "failure"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "page/VerifyEmail",
+      "name": "VerifyEmail",
+      "identityInteractions": [
+        {
+          "id": "page/VerifyEmail/identity/verify/UserAccount",
+          "operation": "identity/UserAccount/operation/verify",
+          "inputs": [
+            {
+              "kind": "evidence",
+              "node": "identity/UserAccount/verification/email"
+            }
+          ],
+          "access": {
+            "id": "page/VerifyEmail/identity/verify/UserAccount/access",
+            "allOf": []
+          },
+          "success": {
+            "id": "page/VerifyEmail/identity/verify/UserAccount/success",
+            "kind": "page",
+            "page": "RegistrationComplete"
+          },
+          "continuation": {
+            "id": "page/VerifyEmail/identity/verify/UserAccount/continuation",
+            "kind": "page",
+            "page": "SignIn"
+          },
+          "feedback": [
+            "invalid",
+            "expired",
+            "failure"
+          ]
+        }
+      ]
+    }
+  ]
+}

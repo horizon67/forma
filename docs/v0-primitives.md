@@ -886,8 +886,8 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 
 | boundary | 固定する内容 | 現在の状態 |
 | --- | --- | --- |
-| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.4`として部分実装 |
-| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.2`として実装済み |
+| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.5`として部分実装。syntax非依存のIdentity B1 fixtureを含む |
+| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.3`として実装済み |
 | Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha1`のadmin-flow sliceを実装 |
 | Generation Request | intent、facts、source map、implementation policy、requested change、verification policy | historical `v0alpha1` full requestと`v0alpha2` incremental requestを実装 |
 | Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、43 facts・3 policiesのincremental runを実装。自動repair loopは未実装 |
@@ -913,7 +913,7 @@ reference front-endはこの規範v0に加え、[Minimal Expression Layer Propos
 - state transitionなどadmin CRUD外のAcceptance Fact kind
 - rename、削除、migrationを扱うincremental change modelと、自動repairを行うGeneration Feedback loop
 
-したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.4 Resolved Intent schemaの
+したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.5 Resolved Intent schemaの
 完成形ではない。
 
 ### 14.3 Language/front-end v0

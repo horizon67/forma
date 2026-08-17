@@ -37,7 +37,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage A完了** | メール認証flow、29 Facts、security invariant/review境界を固定。Stage Bが次 |
+| public Identity | **P1 Stage B1完了** | Identity Resolved IntentとSource Mapを実装。29 Acceptance FactsのB2が次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -269,8 +269,13 @@ Stage Aでは現行v0 subsetを[`../examples/public-membership.forma`](../exampl
 Credential、Verification、Effect、resend、self authorizationは表現できず、password fieldをsecretとして
 区別できないことも確認した。現行Fact規則ではpasswordの再表示と平文相当の保存まで要求してしまうため、
 credential-awareな導出が必要である。また、signinやownershipのFactをsignup Factの成功結果へ依存させず、
-symbolic handleとsemantic setupから独立実行する方針を固定した。次はStage Bのtarget-neutral semantic modelを
-設計する。
+symbolic handleとsemantic setupから独立実行する方針を固定した。
+
+Stage B1ではForma syntaxを増やさず、test-only fixtureからIdentity、Identifier、Credential、Registration、
+Verification、Authentication、Session、Ownership、page interaction、authenticated/ownership accessを
+Resolved Intent `v0.5`へ正規化した。全semantic nodeのstable IDとSource Map `v0.3`の1対1 coverage、closedな
+参照検査を実装し、既存admin semanticsも維持した。次はB2として、このcanonical fixtureから29 Acceptance Factsを
+完全導出する。
 
 ### Exit criteria
 

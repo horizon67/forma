@@ -1,6 +1,6 @@
 # Email-verified Membership Flow Probe
 
-Status: active P1 probe — flow and acceptance boundary fixed, syntax and semantic schema not yet decided
+Status: active P1 probe — Stage B1 semantic schema/canonical fixture complete; B2 Acceptance Facts next; syntax undecided
 
 Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
@@ -319,13 +319,13 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - 現行v0の受理・拒否境界を実測する。
 - syntaxを決めない。
 
-### Stage B — target-neutral semantic model
+### Stage B — target-neutral semantic model（B1 complete、B2 next）
 
 具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
 
-- Identity / Credential / Verification / Authentication / Ownershipの最小Resolved Intent shapeを作る。
-- 各nodeへstable semantic IDとSource Map entryを与える。
+- [x] Identity / Credential / Verification / Authentication / Ownershipの最小Resolved Intent shapeを作る。
+- [x] 各nodeへstable semantic IDとSource Map entryを与える。
 - 上の29 factsを正常系・拒否系として機械的に導出する。
 - credential、verification、sessionを必要とするFactへ、値を含まないsymbolic handleとsemantic setupを導出する。
 - 各Factを新しいscenarioから独立実行可能にし、Fact間の`dependsOn` graphは導入しない。

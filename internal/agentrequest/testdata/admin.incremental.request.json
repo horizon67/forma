@@ -1,7 +1,7 @@
 {
   "schema": "forma/generation-request/v0alpha2",
   "resolvedIntent": {
-    "version": "forma/resolved-intent/v0.4",
+    "version": "forma/resolved-intent/v0.5",
     "roles": [
       {
         "id": "role/admin",
@@ -141,12 +141,14 @@
                   "allOf": [
                     {
                       "source": "page/UserDetail",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
                     },
                     {
                       "source": "page/UserEdit",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
@@ -200,12 +202,14 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/UserEdit",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -266,12 +270,14 @@
                   "allOf": [
                     {
                       "source": "page/UserDetail",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
                     },
                     {
                       "source": "page/Users",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
@@ -290,12 +296,14 @@
                   "allOf": [
                     {
                       "source": "page/UserEdit",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
                     },
                     {
                       "source": "page/Users",
+                      "kind": "roles",
                       "anyOf": [
                         "admin"
                       ]
@@ -315,7 +323,7 @@
   },
   "acceptanceFacts": {
     "version": "forma/acceptance-facts/v0alpha1",
-    "intentVersion": "forma/resolved-intent/v0.4",
+    "intentVersion": "forma/resolved-intent/v0.5",
     "facts": [
       {
         "id": "fact/entity/User/field/team/relation/resolved",
@@ -1149,8 +1157,8 @@
     ]
   },
   "sourceMap": {
-    "version": "forma/source-map/v0.2",
-    "intentVersion": "forma/resolved-intent/v0.4",
+    "version": "forma/source-map/v0.3",
+    "intentVersion": "forma/resolved-intent/v0.5",
     "entries": [
       {
         "nodeId": "entity/Team",
@@ -1727,9 +1735,9 @@
   "requestedChange": {
     "kind": "incremental",
     "baseline": {
-      "requestSha256": "1b5e08f1f640d8248c9296f39721dbe8d2fef67f13f3d22ee5eccc74d48b3443",
+      "requestSha256": "4b18d9ee13c52e8528bc49dddcfeb5540d1c4c817646974f69509a4f612e3497",
       "requestSchema": "forma/generation-request/v0alpha1",
-      "resolvedIntentVersion": "forma/resolved-intent/v0.4",
+      "resolvedIntentVersion": "forma/resolved-intent/v0.5",
       "acceptanceFactsVersion": "forma/acceptance-facts/v0alpha1"
     },
     "intentNodes": [

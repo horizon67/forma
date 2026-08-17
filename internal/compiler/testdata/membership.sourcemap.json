@@ -1,0 +1,907 @@
+{
+  "version": "forma/source-map/v0.3",
+  "intentVersion": "forma/resolved-intent/v0.5",
+  "entries": [
+    {
+      "nodeId": "action/User/activate",
+      "kind": "action",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 1,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 1,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User",
+      "kind": "entity",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 2,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/email",
+      "kind": "field",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 3,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 3,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/name",
+      "kind": "field",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 4,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 4,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/field/nickname",
+      "kind": "field",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 5,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 5,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "entity/User/state/status",
+      "kind": "state",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 6,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 6,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount",
+      "kind": "identity",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 7,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 7,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/authentication",
+      "kind": "identity-authentication",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 8,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 8,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/credential/password",
+      "kind": "identity-credential",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 9,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 9,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/identifier/email",
+      "kind": "identity-identifier",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 10,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 10,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/operation/register",
+      "kind": "identity-registration",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 11,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 11,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/operation/resend",
+      "kind": "identity-operation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 12,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 12,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/operation/signin",
+      "kind": "identity-operation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 13,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 13,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/operation/signout",
+      "kind": "identity-operation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 14,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 14,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/operation/verify",
+      "kind": "identity-operation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 15,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 15,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/ownership/self",
+      "kind": "identity-ownership",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 16,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 16,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/session/current",
+      "kind": "identity-session",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 17,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 17,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/verification/email",
+      "kind": "identity-verification",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 18,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 18,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/verification/email/notice",
+      "kind": "identity-verification-notice",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 19,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 19,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/CheckEmail",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 20,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 20,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/CheckEmail/identity/resend/UserAccount",
+      "kind": "identity-interaction",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 21,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 21,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/CheckEmail/identity/resend/UserAccount/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 22,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 22,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/CheckEmail/identity/resend/UserAccount/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 23,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 23,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 24,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 24,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 25,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 25,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/identity/signout/UserAccount",
+      "kind": "identity-interaction",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 26,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 26,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/identity/signout/UserAccount/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 27,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 27,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/identity/signout/UserAccount/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 28,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 28,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/parameter",
+      "kind": "parameter",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 29,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 29,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/Profile/view/detail/User",
+      "kind": "detail",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 30,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 30,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 31,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 31,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 32,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 32,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/parameter",
+      "kind": "parameter",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 33,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 33,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/view/form/edit/User",
+      "kind": "form",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 34,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 34,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/view/form/edit/User/submit",
+      "kind": "submit",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 35,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 35,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/view/form/edit/User/submit/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 36,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 36,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/ProfileEdit/view/form/edit/User/submit/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 37,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 37,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/RegistrationComplete",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 38,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 38,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignIn",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 39,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 39,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignIn/identity/signin/UserAccount",
+      "kind": "identity-interaction",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 40,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 40,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignIn/identity/signin/UserAccount/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 41,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 41,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignIn/identity/signin/UserAccount/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 42,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 42,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignUp",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 43,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 43,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignUp/identity/register/UserAccount",
+      "kind": "identity-interaction",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 44,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 44,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignUp/identity/register/UserAccount/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 45,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 45,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/SignUp/identity/register/UserAccount/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 46,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 46,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/VerifyEmail",
+      "kind": "page",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 47,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 47,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/VerifyEmail/identity/verify/UserAccount",
+      "kind": "identity-interaction",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 48,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 48,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/VerifyEmail/identity/verify/UserAccount/access",
+      "kind": "access",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 49,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 49,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/VerifyEmail/identity/verify/UserAccount/continuation",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 50,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 50,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "page/VerifyEmail/identity/verify/UserAccount/success",
+      "kind": "navigation",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 51,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 51,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "type/Email",
+      "kind": "type",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 52,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 52,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "type/Email/constraint/matches",
+      "kind": "constraint",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 53,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 53,
+          "column": 2
+        }
+      }
+    }
+  ]
+}

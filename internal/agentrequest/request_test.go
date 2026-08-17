@@ -39,6 +39,18 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		legacy.ResolvedIntent = current.ResolvedIntent
+		legacy.AcceptanceFacts = current.AcceptanceFacts
+		legacy.SourceMap = current.SourceMap
+		updated, err := Marshal(legacy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(goldenPath, append(updated, '\n'), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := ValidateRequest(legacy); err != nil {
 		t.Fatal(err)
 	}
@@ -133,6 +145,19 @@ func TestBuildFullRequestHasExactFactCoveragePolicy(t *testing.T) {
 		}
 	}
 	assertTargetNeutralRequest(t, request)
+}
+
+func TestValidateRequestRejectsMissingSourceMapEntry(t *testing.T) {
+	request, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	missing := request.SourceMap.Entries[0].NodeID
+	request.SourceMap.Entries = append([]compiler.SourceMapEntry(nil), request.SourceMap.Entries[1:]...)
+	err = ValidateRequest(request)
+	if err == nil || !strings.Contains(err.Error(), "node "+string(missing)+" has no source entry") {
+		t.Fatalf("validation error = %v", err)
+	}
 }
 
 func TestBuildIncrementalRequestDerivesStableSemanticDiff(t *testing.T) {

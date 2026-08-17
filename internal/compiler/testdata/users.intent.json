@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.4",
+  "version": "forma/resolved-intent/v0.5",
   "roles": [
     {
       "id": "role/admin",
@@ -153,12 +153,14 @@
               "allOf": [
                 {
                   "source": "page/UserCreate",
+                  "kind": "roles",
                   "anyOf": [
                     "admin"
                   ]
                 },
                 {
                   "source": "page/UserDetail",
+                  "kind": "roles",
                   "anyOf": [
                     "admin"
                   ]
@@ -209,12 +211,14 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/UserEdit",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -232,12 +236,14 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -255,6 +261,7 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -272,6 +279,7 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -289,12 +297,14 @@
                 "allOf": [
                   {
                     "source": "action/User/suspend",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -312,12 +322,14 @@
                 "allOf": [
                   {
                     "source": "action/User/reinstate",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -369,12 +381,14 @@
               "allOf": [
                 {
                   "source": "page/UserDetail",
+                  "kind": "roles",
                   "anyOf": [
                     "admin"
                   ]
                 },
                 {
                   "source": "page/UserEdit",
+                  "kind": "roles",
                   "anyOf": [
                     "admin"
                   ]
@@ -432,12 +446,14 @@
                 "allOf": [
                   {
                     "source": "page/UserCreate",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -455,12 +471,14 @@
                 "allOf": [
                   {
                     "source": "page/UserDetail",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -479,12 +497,14 @@
                 "allOf": [
                   {
                     "source": "page/UserEdit",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -502,6 +522,7 @@
                 "allOf": [
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
@@ -519,12 +540,14 @@
                 "allOf": [
                   {
                     "source": "action/User/suspend",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
                   },
                   {
                     "source": "page/Users",
+                    "kind": "roles",
                     "anyOf": [
                       "admin"
                     ]
