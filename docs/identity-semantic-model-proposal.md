@@ -101,7 +101,7 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 | Source Map | `forma/source-map/v0.2` | `v0.3` | Identity node kindと`v0.5` intentへ対応 |
 | Acceptance Facts | `forma/acceptance-facts/v0alpha1` | `v0alpha2` | semantic setupとIdentity fact payloadを追加 |
 | Review Requirements | なし | `forma/review-requirements/v0alpha1` | 人間review対象を独立交換形式にする |
-| Generation Request | historical `v0alpha1` / `v0alpha2`、previous `v0alpha3` | `v0alpha4` | Review Requirement diffとbaseline version metadataを追加 |
+| Generation Request | historical `v0alpha1` / `v0alpha2` | `v0alpha4` | Review Requirement diffとbaseline version metadataを追加。中間の`v0alpha3`は受理しない |
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
 Stage CではAuthentication Proof axisを明示するため、Resolved Intentを`v0.6`、Source Mapを`v0.4`へ上げた。

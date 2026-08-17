@@ -17,7 +17,6 @@ import (
 
 const (
 	RequestSchema                      = "forma/generation-request/v0alpha4"
-	PreviousRequestSchema              = "forma/generation-request/v0alpha3"
 	HistoricalIncrementalRequestSchema = "forma/generation-request/v0alpha2"
 	FeedbackSchema                     = "forma/generation-feedback/v0alpha2"
 	LegacyRequestSchema                = "forma/generation-request/v0alpha1"
@@ -231,7 +230,11 @@ func ValidateRequest(request Request) error {
 	if request.Schema == LegacyRequestSchema || request.Schema == HistoricalIncrementalRequestSchema {
 		return validateHistoricalRequest(request)
 	}
-	if request.Schema != RequestSchema && request.Schema != PreviousRequestSchema {
+	// Only the current schema and the two pinned historical schemas are read.
+	// An intermediate schema would carry Acceptance Facts this binary can no
+	// longer reproduce, so claiming support for it would be a promise the
+	// version-dispatched validator cannot keep.
+	if request.Schema != RequestSchema {
 		return fmt.Errorf("validate Generation Request: unsupported schema %q", request.Schema)
 	}
 	if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.SourceMap == nil {
@@ -277,7 +280,7 @@ func ValidateRequest(request Request) error {
 	if err != nil {
 		return err
 	}
-	if request.Schema == RequestSchema || request.Schema == PreviousRequestSchema {
+	if request.Schema == RequestSchema {
 		if err := compiler.ValidateReviewRequirements(request.ResolvedIntent, request.ReviewRequirements); err != nil {
 			return err
 		}

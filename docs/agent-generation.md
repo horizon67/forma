@@ -116,7 +116,7 @@ Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromp
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
 各factは少なくとも次を持つ。管理画面list/detail/edit向けの最小kindは
-`forma/acceptance-facts/v0alpha2`として実装し、admin flowに加えてIdentity専用29 Factsを持つ。追加domainのkindは
+`forma/acceptance-facts/v0alpha4`として実装し、admin flowに加えてIdentity専用29 Factsを持つ。追加domainのkindは
 引き続き実例から拡張する。
 
 ```text
@@ -252,7 +252,7 @@ Source Mapも各versionへ対応する。現在のverifierがrequestのversion�
 versionに対応するbuilderへdispatchする。
 
 現在は`generation-request/v0alpha1`とReview Requirements導入前のincremental `v0alpha2`をhistorical artifactとして
-読み取り可能に保ち、Review Requirementsを持つ`v0alpha3`もprevious schemaとして受理する。current交換形式
+読み取り可能に保つ。中間の`v0alpha3`は受理しない。version-dispatchedなbuilderを持たない以上、そのschemaが運ぶAcceptance Factsを現在のbinaryは再導出できず、supportを宣言しても果たせないためである。current交換形式
 `v0alpha4`はReview Requirementのincremental diffと、baselineのSource Map / Review Requirements versionを持つ。
 historical schemaはIdentityを含まずcanonical Review Requirementsが空の場合だけ受理し、同じschema名のまま
 unknown fieldを追加しない。

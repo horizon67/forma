@@ -1,0 +1,654 @@
+{
+  "schema": "forma/generation-feedback/v0alpha2",
+  "stage": "test",
+  "status": "succeeded",
+  "relatedIntentNodes": [
+    "action/User/activate",
+    "identity/UserAccount",
+    "identity/UserAccount/authentication",
+    "identity/UserAccount/credential/password",
+    "identity/UserAccount/identifier/email",
+    "identity/UserAccount/operation/register",
+    "identity/UserAccount/ownership/self",
+    "identity/UserAccount/proof/password",
+    "identity/UserAccount/session/current",
+    "identity/UserAccount/verification/email",
+    "identity/UserAccount/verification/email/notice",
+    "page/CheckEmail",
+    "page/CheckEmail/identity/resend/UserAccount",
+    "page/CheckEmail/identity/resend/UserAccount/access",
+    "page/CheckEmail/identity/resend/UserAccount/success",
+    "page/Profile",
+    "page/Profile/access",
+    "page/Profile/identity/signout/UserAccount",
+    "page/Profile/identity/signout/UserAccount/access",
+    "page/Profile/identity/signout/UserAccount/success",
+    "page/Profile/parameter",
+    "page/Profile/view/detail/User",
+    "page/ProfileEdit",
+    "page/ProfileEdit/access",
+    "page/ProfileEdit/parameter",
+    "page/ProfileEdit/view/form/edit/User",
+    "page/ProfileEdit/view/form/edit/User/submit",
+    "page/ProfileEdit/view/form/edit/User/submit/access",
+    "page/ProfileEdit/view/form/edit/User/submit/success",
+    "page/RegistrationComplete",
+    "page/SignIn",
+    "page/SignIn/identity/signin/UserAccount",
+    "page/SignIn/identity/signin/UserAccount/access",
+    "page/SignIn/identity/signin/UserAccount/success",
+    "page/SignUp",
+    "page/SignUp/identity/register/UserAccount",
+    "page/SignUp/identity/register/UserAccount/access",
+    "page/SignUp/identity/register/UserAccount/success",
+    "page/VerifyEmail",
+    "page/VerifyEmail/identity/verify/UserAccount",
+    "page/VerifyEmail/identity/verify/UserAccount/access",
+    "page/VerifyEmail/identity/verify/UserAccount/continuation",
+    "page/VerifyEmail/identity/verify/UserAccount/success"
+  ],
+  "factCoverage": [
+    {
+      "factId": "fact/entity/User/field/team/relation/resolved",
+      "testReferences": [
+        "internal/web/server_test.go#TestRelationUsesTeamLabel"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/credential/password/non-projectable",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpValidationKeepsInputAndNeverEchoesTheCredential",
+        "internal/web/membership_e2e_test.go#TestSignInFailuresShareOneMessage"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/at-most-once",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestRepeatedSignUpDispatchAppliesOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/credential/bound",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice",
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/identifier/duplicate",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestDuplicateIdentifierCoversExactAndCanonicalForms"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/notice/emitted",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/subject/created",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/validation/rejected",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestRegistrationRejectsEveryDeclaredInvalidCase"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/register/verification/issued",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/resend/accepted",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/resend/at-most-once",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/resend/evidence/rotated",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/signin/accepted",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/signin/rejected/generic",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignInFailuresShareOneMessage"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/signin/state/ineligible",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestPendingMemberCannotSignIn"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/signout/session/terminated",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignOutClosesBothProtectedSurfaces"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/verify/accepted",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestVerificationAppliesOnceAndDoesNotSignIn"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/verify/evidence/consumed",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSuccessfulVerificationLeavesTheEvidenceConsumed",
+        "internal/web/membership_e2e_test.go#TestVerificationRejectionCoversEveryDeclaredCase"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/verify/evidence/rejected",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestVerificationRejectionCoversEveryDeclaredCase"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/operation/verify/expiry/boundary",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestExpiryBoundaryIsCheckedOnBothSides",
+        "internal/identity/identity_test.go#TestEvidenceExpiryIsAClockRelation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/ownership/self/access/allowed/self",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/ownership/self/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer",
+        "internal/web/membership_e2e_test.go#TestSignOutClosesBothProtectedSurfaces"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/ownership/self/access/denied/other-subject",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/identity/UserAccount/verification/email/notice/delivery/failure",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestDeliveryFailureKeepsTheAccountRecoverable"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestResendDisclosureIsUniformForEveryAccountState"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Profile/view/detail/User/feedback",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileReportsEmptyWhenTheRecordIsGone",
+        "internal/web/membership_e2e_test.go#TestProfileReportsFailureWhenTheRecordCannotBeRead"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Profile/view/detail/User/fields",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileShowsExactlyTheDeclaredFields"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Profile/view/detail/User/records/visible",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/feedback",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditValidationKeepsInputAndIssuesAFreshToken",
+        "internal/web/membership_e2e_test.go#TestProfileEditReportsFailureWhenTheSaveCannotCommit"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/fields",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditOffersExactlyTheDeclaredFields"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch",
+        "internal/web/submission_test.go#TestGuardReplaysTheCompletedOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/navigation",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestProfileEditValidationKeepsInputAndIssuesAFreshToken"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestMembershipRoutesAreReachableThroughTheShippedHandler",
+        "cmd/server/main_test.go#TestExecutableServesBothSurfaces"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/SignUp/identity/register/UserAccount/inputs",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpFormOffersExactlyTheDeclaredInputs"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/SignUp/identity/register/UserAccount/navigation",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestRepeatedSignUpDispatchAppliesOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestSignUpValidationKeepsInputAndNeverEchoesTheCredential"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail",
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestDetailEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserDetail/view/detail/User/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditIsAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/email",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/name",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email",
+      "testReferences": [
+        "internal/web/server_test.go#TestEditValidationAndFailure",
+        "internal/store/store_test.go#TestUpdateUserEnforcesUniqueEmail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied",
+        "cmd/server/main_test.go#TestExecutableServesBothSurfaces"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList",
+        "internal/web/server_test.go#TestEditUser"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestAccessDenied"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/action/view/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList",
+        "internal/web/server_test.go#TestUserDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestListEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/plan",
+      "testReferences": [
+        "internal/web/server_test.go#TestListQueryCapabilities"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/status",
+      "testReferences": [
+        "internal/web/server_test.go#TestListQueryCapabilities"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/filter/team",
+      "testReferences": [
+        "internal/web/server_test.go#TestListQueryCapabilities"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/page-boundary",
+      "testReferences": [
+        "internal/web/server_test.go#TestListPagination"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestAdminList"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/search",
+      "testReferences": [
+        "internal/web/server_test.go#TestListQueryCapabilities"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Users/view/list/User/sort",
+      "testReferences": [
+        "internal/web/server_test.go#TestListQueryCapabilities"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/VerifyEmail/identity/verify/UserAccount/navigation",
+      "testReferences": [
+        "internal/web/membership_e2e_test.go#TestVerificationAppliesOnceAndDoesNotSignIn"
+      ],
+      "result": "passed"
+    }
+  ],
+  "command": "cd experiments/membership-agent-e2e/target \u0026\u0026 go test ./...",
+  "policyCoverage": [
+    {
+      "policyId": "implementation/persistence",
+      "status": "deviated",
+      "reason": "This experiment keeps the in-memory store it inherited so the membership flow can be measured without introducing a database."
+    },
+    {
+      "policyId": "implementation/router",
+      "status": "satisfied"
+    },
+    {
+      "policyId": "implementation/server-rendering",
+      "status": "satisfied",
+      "evidence": [
+        "internal/web/server.go",
+        "internal/web/templates.go"
+      ]
+    }
+  ],
+  "summary": "Email-verified membership added to the admin application; every Acceptance Fact is observed by a repository test."
+}

@@ -1,0 +1,163 @@
+// Membership agent E2E input: admin semantics preserved, Identity added.
+
+role admin
+
+type Email = String matches /.+@.+/
+type Plan = Free | Pro | Enterprise
+
+entity Team {
+    name String required label
+}
+
+entity User {
+    name     String required label
+    nickname String
+    email    Email required unique
+    team     Team
+    plan     Plan required
+
+    state status Pending | Confirmed | Active | Suspended initial Pending
+}
+
+page Users {
+    allow admin
+
+    list User {
+        columns name, nickname, email, team, plan, status
+        search name, nickname, email
+        filter team, plan, status
+        sort name asc
+        paginate 10
+        actions view goto UserDetail, edit goto UserEdit
+    }
+}
+
+page UserDetail(user User) {
+    allow admin
+
+    detail user {
+        fields name, nickname, email, team, plan, status
+        actions edit goto UserEdit
+    }
+}
+
+page UserEdit(user User) {
+    allow admin
+
+    form user {
+        fields name, nickname, email, team, plan
+        submit edit goto UserDetail
+    }
+}
+
+action User.activate: Pending -> Active
+
+identity UserAccount for User {
+    identifier email from email {
+        canonicalize trimUnicodeWhitespace, asciiCaseFold
+    }
+
+    proof password localPassword {
+        minLength 12
+        maxLength 128
+        lengthUnit unicodeScalarValue
+        preserveWhitespace
+    }
+
+    registration register {
+        identifier email
+        proof password
+        attributes name
+        initial status Pending
+        verification email
+        existingIdentifier rejectAndGuideResend
+    }
+
+    verification email emailLink {
+        verify verify
+        resend resend
+        eligible status Pending
+        success User.activate
+        lifetime 30 minute
+        maxUses 1
+        rotation invalidatePriorUnconsumed
+        notice email durable
+        deliveryFailure pendingAndRetryable
+        resendDisclosure uniform
+    }
+
+    authentication {
+        identifier email
+        proof password
+        signin signin
+        signout signout
+        eligible status Active
+        failure generic
+    }
+
+    ownership self
+}
+
+page SignUp {
+    interact UserAccount.register {
+        fields name
+        identifier email
+        proof password
+        success CheckEmail
+        feedback invalid, failure
+    }
+}
+
+page CheckEmail {
+    interact UserAccount.resend {
+        identifier email
+        stay
+        feedback uniform, failure
+    }
+}
+
+page VerifyEmail {
+    interact UserAccount.verify {
+        evidence email
+        success RegistrationComplete
+        continue SignIn
+        feedback invalid, expired, failure
+    }
+}
+
+page RegistrationComplete {
+}
+
+page SignIn {
+    interact UserAccount.signin {
+        identifier email
+        proof password
+        success Profile
+        feedback generic, failure
+    }
+}
+
+page Profile(user User) {
+    require authenticated UserAccount
+    require owner UserAccount.self for user
+
+    detail user {
+        fields name, nickname, email, status
+    }
+
+    interact UserAccount.signout {
+        require authenticated UserAccount
+        success SignIn
+        feedback failure
+    }
+}
+
+page ProfileEdit(user User) {
+    require authenticated UserAccount
+    require owner UserAccount.self for user
+
+    form user {
+        fields name, nickname
+        submit edit goto Profile
+    }
+}

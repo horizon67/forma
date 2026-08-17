@@ -1,5 +1,5 @@
 {
-  "version": "forma/acceptance-facts/v0alpha3",
+  "version": "forma/acceptance-facts/v0alpha4",
   "intentVersion": "forma/resolved-intent/v0.7",
   "facts": [
     {
@@ -116,6 +116,14 @@
                       }
                     ]
                   }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/existing/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/existing",
+                    "condition": "issued"
+                  }
                 ]
               },
               "identifier": {
@@ -143,6 +151,14 @@
                         "condition": "satisfies-policy"
                       }
                     ]
+                  }
+                ],
+                "evidence": [
+                  {
+                    "handle": "subject/existing/evidence/email-verification",
+                    "verification": "identity/UserAccount/verification/email",
+                    "subject": "subject/existing",
+                    "condition": "issued"
                   }
                 ]
               },
@@ -176,11 +192,14 @@
           },
           "evidence": {
             "verification": "identity/UserAccount/verification/email",
-            "count": 0
+            "count": 1,
+            "added": 0,
+            "condition": "issued"
           },
           "notice": {
             "notice": "identity/UserAccount/verification/email/notice",
-            "count": 0
+            "count": 1,
+            "added": 0
           },
           "disclosure": "guide-resend",
           "cases": [
@@ -1011,7 +1030,7 @@
                     "identity": "identity/UserAccount",
                     "state": {
                       "state": "entity/User/state/status",
-                      "value": "Pending"
+                      "value": "Active"
                     }
                   }
                 ],
@@ -1063,7 +1082,7 @@
               "outcome": "rejected",
               "subjectState": {
                 "state": "entity/User/state/status",
-                "value": "Pending"
+                "value": "Active"
               }
             }
           ]

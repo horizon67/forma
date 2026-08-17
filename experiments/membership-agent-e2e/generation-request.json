@@ -1,0 +1,5437 @@
+{
+  "schema": "forma/generation-request/v0alpha4",
+  "resolvedIntent": {
+    "version": "forma/resolved-intent/v0.7",
+    "roles": [
+      {
+        "id": "role/admin",
+        "name": "admin"
+      }
+    ],
+    "types": [
+      {
+        "id": "type/Email",
+        "name": "Email",
+        "kind": "scalar",
+        "base": "String",
+        "constraints": [
+          {
+            "id": "type/Email/constraint/matches",
+            "kind": "matches",
+            "value": ".+@.+"
+          }
+        ]
+      },
+      {
+        "id": "type/Plan",
+        "name": "Plan",
+        "kind": "union",
+        "variants": [
+          "Free",
+          "Pro",
+          "Enterprise"
+        ]
+      }
+    ],
+    "entities": [
+      {
+        "id": "entity/Team",
+        "name": "Team",
+        "fields": [
+          {
+            "id": "entity/Team/field/name",
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "label": true
+          }
+        ],
+        "label": "name"
+      },
+      {
+        "id": "entity/User",
+        "name": "User",
+        "fields": [
+          {
+            "id": "entity/User/field/name",
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "label": true
+          },
+          {
+            "id": "entity/User/field/nickname",
+            "name": "nickname",
+            "type": "String"
+          },
+          {
+            "id": "entity/User/field/email",
+            "name": "email",
+            "type": "Email",
+            "required": true,
+            "unique": true
+          },
+          {
+            "id": "entity/User/field/team",
+            "name": "team",
+            "type": "Team",
+            "relation": {
+              "id": "entity/User/field/team/relation",
+              "entity": "Team",
+              "label": "name"
+            }
+          },
+          {
+            "id": "entity/User/field/plan",
+            "name": "plan",
+            "type": "Plan",
+            "required": true
+          }
+        ],
+        "state": {
+          "id": "entity/User/state/status",
+          "name": "status",
+          "initial": "Pending",
+          "values": [
+            "Pending",
+            "Confirmed",
+            "Active",
+            "Suspended"
+          ]
+        },
+        "label": "name"
+      }
+    ],
+    "actions": [
+      {
+        "id": "action/User/activate",
+        "entity": "User",
+        "name": "activate",
+        "sources": [
+          "Pending"
+        ],
+        "destination": "Active"
+      }
+    ],
+    "identities": [
+      {
+        "id": "identity/UserAccount",
+        "name": "UserAccount",
+        "subject": "entity/User",
+        "identifiers": [
+          {
+            "id": "identity/UserAccount/identifier/email",
+            "name": "email",
+            "field": "entity/User/field/email",
+            "canonicalization": [
+              {
+                "kind": "trim-unicode-white-space"
+              },
+              {
+                "kind": "ascii-case-fold"
+              }
+            ]
+          }
+        ],
+        "proofs": [
+          {
+            "id": "identity/UserAccount/proof/password",
+            "name": "password",
+            "kind": "local-password",
+            "credential": "identity/UserAccount/credential/password"
+          }
+        ],
+        "credentials": [
+          {
+            "id": "identity/UserAccount/credential/password",
+            "name": "password",
+            "kind": "password",
+            "inputPolicy": {
+              "preserveWhitespace": true,
+              "length": {
+                "min": 12,
+                "max": 128,
+                "unit": "unicode-scalar-value"
+              }
+            }
+          }
+        ],
+        "registration": {
+          "id": "identity/UserAccount/operation/register",
+          "identifier": "identity/UserAccount/identifier/email",
+          "proof": "identity/UserAccount/proof/password",
+          "credential": "identity/UserAccount/credential/password",
+          "attributes": [
+            "entity/User/field/name"
+          ],
+          "initialState": {
+            "state": "entity/User/state/status",
+            "value": "Pending"
+          },
+          "verification": "identity/UserAccount/verification/email",
+          "atomicOutcome": [
+            "credential-binding",
+            "notice-emission-record",
+            "subject",
+            "verification-evidence"
+          ],
+          "existingIdentifierOutcome": "reject-and-guide-resend"
+        },
+        "verifications": [
+          {
+            "id": "identity/UserAccount/verification/email",
+            "kind": "opaque-email-link",
+            "subject": "entity/User",
+            "verifyOperation": "identity/UserAccount/operation/verify",
+            "resendOperation": "identity/UserAccount/operation/resend",
+            "eligibleState": {
+              "state": "entity/User/state/status",
+              "value": "Pending"
+            },
+            "successAction": "action/User/activate",
+            "evidence": {
+              "kind": "opaque",
+              "lifetime": {
+                "amount": 30,
+                "unit": "minute"
+              },
+              "validBoundary": "now-before-issued-plus-lifetime",
+              "maxUses": 1,
+              "rotation": "invalidate-prior-unconsumed"
+            },
+            "notice": {
+              "id": "identity/UserAccount/verification/email/notice",
+              "channel": "email",
+              "recipient": "identity/UserAccount/identifier/email",
+              "emission": "durable-record-required",
+              "deliveryFailure": "subject-remains-pending-and-retryable"
+            },
+            "resendDisclosure": "uniform-for-pending-active-and-unknown"
+          }
+        ],
+        "authentication": {
+          "id": "identity/UserAccount/authentication",
+          "signInOperation": "identity/UserAccount/operation/signin",
+          "signOutOperation": "identity/UserAccount/operation/signout",
+          "identifier": "identity/UserAccount/identifier/email",
+          "proof": "identity/UserAccount/proof/password",
+          "credential": "identity/UserAccount/credential/password",
+          "eligibleState": {
+            "state": "entity/User/state/status",
+            "value": "Active"
+          },
+          "failureDisclosure": "generic",
+          "session": {
+            "id": "identity/UserAccount/session/current",
+            "principalSubject": "entity/User",
+            "signOutScope": "current-session"
+          }
+        },
+        "ownership": [
+          {
+            "id": "identity/UserAccount/ownership/self",
+            "identity": "identity/UserAccount",
+            "resource": "entity/User",
+            "relation": "principal-subject-equals-resource-identity"
+          }
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "id": "page/CheckEmail",
+        "name": "CheckEmail",
+        "identityInteractions": [
+          {
+            "id": "page/CheckEmail/identity/resend/UserAccount",
+            "operation": "identity/UserAccount/operation/resend",
+            "inputs": [
+              {
+                "kind": "identifier",
+                "node": "identity/UserAccount/identifier/email"
+              }
+            ],
+            "access": {
+              "id": "page/CheckEmail/identity/resend/UserAccount/access",
+              "allOf": []
+            },
+            "success": {
+              "id": "page/CheckEmail/identity/resend/UserAccount/success",
+              "kind": "same-context",
+              "page": "CheckEmail"
+            },
+            "feedback": [
+              "uniform",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/Profile",
+        "name": "Profile",
+        "param": {
+          "id": "page/Profile/parameter",
+          "name": "user",
+          "entity": "User"
+        },
+        "access": {
+          "id": "page/Profile/access",
+          "allOf": [
+            {
+              "source": "page/Profile",
+              "kind": "authenticated",
+              "identity": "identity/UserAccount"
+            },
+            {
+              "source": "page/Profile",
+              "kind": "ownership",
+              "ownership": "identity/UserAccount/ownership/self",
+              "resourceBinding": "page/Profile/parameter"
+            }
+          ]
+        },
+        "views": [
+          {
+            "id": "page/Profile/view/detail/User",
+            "kind": "detail",
+            "entity": "User",
+            "binding": "user",
+            "mode": "read",
+            "fields": [
+              "name",
+              "nickname",
+              "email",
+              "status"
+            ],
+            "interactionStates": [
+              "empty",
+              "failure"
+            ]
+          }
+        ],
+        "identityInteractions": [
+          {
+            "id": "page/Profile/identity/signout/UserAccount",
+            "operation": "identity/UserAccount/operation/signout",
+            "access": {
+              "id": "page/Profile/identity/signout/UserAccount/access",
+              "allOf": [
+                {
+                  "source": "page/Profile",
+                  "kind": "authenticated",
+                  "identity": "identity/UserAccount"
+                }
+              ]
+            },
+            "success": {
+              "id": "page/Profile/identity/signout/UserAccount/success",
+              "kind": "page",
+              "page": "SignIn"
+            },
+            "feedback": [
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/ProfileEdit",
+        "name": "ProfileEdit",
+        "param": {
+          "id": "page/ProfileEdit/parameter",
+          "name": "user",
+          "entity": "User"
+        },
+        "access": {
+          "id": "page/ProfileEdit/access",
+          "allOf": [
+            {
+              "source": "page/ProfileEdit",
+              "kind": "authenticated",
+              "identity": "identity/UserAccount"
+            },
+            {
+              "source": "page/ProfileEdit",
+              "kind": "ownership",
+              "ownership": "identity/UserAccount/ownership/self",
+              "resourceBinding": "page/ProfileEdit/parameter"
+            }
+          ]
+        },
+        "views": [
+          {
+            "id": "page/ProfileEdit/view/form/edit/User",
+            "kind": "form",
+            "entity": "User",
+            "binding": "user",
+            "mode": "edit",
+            "fields": [
+              "name",
+              "nickname"
+            ],
+            "submit": {
+              "id": "page/ProfileEdit/view/form/edit/User/submit",
+              "action": "edit",
+              "success": {
+                "id": "page/ProfileEdit/view/form/edit/User/submit/success",
+                "kind": "page",
+                "page": "Profile"
+              },
+              "access": {
+                "id": "page/ProfileEdit/view/form/edit/User/submit/access",
+                "allOf": [
+                  {
+                    "source": "page/ProfileEdit",
+                    "kind": "authenticated",
+                    "identity": "identity/UserAccount"
+                  },
+                  {
+                    "source": "page/ProfileEdit",
+                    "kind": "ownership",
+                    "ownership": "identity/UserAccount/ownership/self",
+                    "resourceBinding": "page/ProfileEdit/parameter"
+                  }
+                ]
+              }
+            },
+            "interactionStates": [
+              "invalid",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/RegistrationComplete",
+        "name": "RegistrationComplete"
+      },
+      {
+        "id": "page/SignIn",
+        "name": "SignIn",
+        "identityInteractions": [
+          {
+            "id": "page/SignIn/identity/signin/UserAccount",
+            "operation": "identity/UserAccount/operation/signin",
+            "inputs": [
+              {
+                "kind": "identifier",
+                "node": "identity/UserAccount/identifier/email"
+              },
+              {
+                "kind": "credential",
+                "node": "identity/UserAccount/credential/password"
+              }
+            ],
+            "access": {
+              "id": "page/SignIn/identity/signin/UserAccount/access",
+              "allOf": []
+            },
+            "success": {
+              "id": "page/SignIn/identity/signin/UserAccount/success",
+              "kind": "page",
+              "page": "Profile"
+            },
+            "feedback": [
+              "generic",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/SignUp",
+        "name": "SignUp",
+        "identityInteractions": [
+          {
+            "id": "page/SignUp/identity/register/UserAccount",
+            "operation": "identity/UserAccount/operation/register",
+            "inputs": [
+              {
+                "kind": "field",
+                "node": "entity/User/field/name"
+              },
+              {
+                "kind": "identifier",
+                "node": "identity/UserAccount/identifier/email"
+              },
+              {
+                "kind": "credential",
+                "node": "identity/UserAccount/credential/password"
+              }
+            ],
+            "access": {
+              "id": "page/SignUp/identity/register/UserAccount/access",
+              "allOf": []
+            },
+            "success": {
+              "id": "page/SignUp/identity/register/UserAccount/success",
+              "kind": "page",
+              "page": "CheckEmail"
+            },
+            "feedback": [
+              "invalid",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/UserDetail",
+        "name": "UserDetail",
+        "param": {
+          "id": "page/UserDetail/parameter",
+          "name": "user",
+          "entity": "User"
+        },
+        "allows": [
+          "admin"
+        ],
+        "views": [
+          {
+            "id": "page/UserDetail/view/detail/User",
+            "kind": "detail",
+            "entity": "User",
+            "binding": "user",
+            "mode": "read",
+            "fields": [
+              "name",
+              "nickname",
+              "email",
+              "team",
+              "plan",
+              "status"
+            ],
+            "actions": [
+              {
+                "id": "page/UserDetail/view/detail/User/action/edit",
+                "name": "edit",
+                "kind": "standard",
+                "targetPage": "UserEdit",
+                "access": {
+                  "id": "page/UserDetail/view/detail/User/action/edit/access",
+                  "allOf": [
+                    {
+                      "source": "page/UserDetail",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    },
+                    {
+                      "source": "page/UserEdit",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "interactionStates": [
+              "empty",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/UserEdit",
+        "name": "UserEdit",
+        "param": {
+          "id": "page/UserEdit/parameter",
+          "name": "user",
+          "entity": "User"
+        },
+        "allows": [
+          "admin"
+        ],
+        "views": [
+          {
+            "id": "page/UserEdit/view/form/edit/User",
+            "kind": "form",
+            "entity": "User",
+            "binding": "user",
+            "mode": "edit",
+            "fields": [
+              "name",
+              "nickname",
+              "email",
+              "team",
+              "plan"
+            ],
+            "submit": {
+              "id": "page/UserEdit/view/form/edit/User/submit",
+              "action": "edit",
+              "success": {
+                "id": "page/UserEdit/view/form/edit/User/submit/success",
+                "kind": "page",
+                "page": "UserDetail"
+              },
+              "access": {
+                "id": "page/UserEdit/view/form/edit/User/submit/access",
+                "allOf": [
+                  {
+                    "source": "page/UserDetail",
+                    "kind": "roles",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  },
+                  {
+                    "source": "page/UserEdit",
+                    "kind": "roles",
+                    "anyOf": [
+                      "admin"
+                    ]
+                  }
+                ]
+              }
+            },
+            "interactionStates": [
+              "invalid",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/Users",
+        "name": "Users",
+        "allows": [
+          "admin"
+        ],
+        "views": [
+          {
+            "id": "page/Users/view/list/User",
+            "kind": "list",
+            "entity": "User",
+            "fields": [
+              "name",
+              "nickname",
+              "email",
+              "team",
+              "plan",
+              "status"
+            ],
+            "search": [
+              "name",
+              "nickname",
+              "email"
+            ],
+            "filters": [
+              "team",
+              "plan",
+              "status"
+            ],
+            "sort": {
+              "id": "page/Users/view/list/User/sort",
+              "field": "name",
+              "direction": "asc"
+            },
+            "pageSize": 10,
+            "actions": [
+              {
+                "id": "page/Users/view/list/User/action/view",
+                "name": "view",
+                "kind": "standard",
+                "targetPage": "UserDetail",
+                "access": {
+                  "id": "page/Users/view/list/User/action/view/access",
+                  "allOf": [
+                    {
+                      "source": "page/UserDetail",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    },
+                    {
+                      "source": "page/Users",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "page/Users/view/list/User/action/edit",
+                "name": "edit",
+                "kind": "standard",
+                "targetPage": "UserEdit",
+                "access": {
+                  "id": "page/Users/view/list/User/action/edit/access",
+                  "allOf": [
+                    {
+                      "source": "page/UserEdit",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    },
+                    {
+                      "source": "page/Users",
+                      "kind": "roles",
+                      "anyOf": [
+                        "admin"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "interactionStates": [
+              "empty",
+              "failure"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "page/VerifyEmail",
+        "name": "VerifyEmail",
+        "identityInteractions": [
+          {
+            "id": "page/VerifyEmail/identity/verify/UserAccount",
+            "operation": "identity/UserAccount/operation/verify",
+            "inputs": [
+              {
+                "kind": "evidence",
+                "node": "identity/UserAccount/verification/email"
+              }
+            ],
+            "access": {
+              "id": "page/VerifyEmail/identity/verify/UserAccount/access",
+              "allOf": []
+            },
+            "success": {
+              "id": "page/VerifyEmail/identity/verify/UserAccount/success",
+              "kind": "page",
+              "page": "RegistrationComplete"
+            },
+            "continuation": {
+              "id": "page/VerifyEmail/identity/verify/UserAccount/continuation",
+              "kind": "page",
+              "page": "SignIn"
+            },
+            "feedback": [
+              "invalid",
+              "expired",
+              "failure"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "acceptanceFacts": {
+    "version": "forma/acceptance-facts/v0alpha4",
+    "intentVersion": "forma/resolved-intent/v0.7",
+    "facts": [
+      {
+        "id": "fact/entity/User/field/team/relation/resolved",
+        "kind": "relation-resolved",
+        "subject": "entity/User/field/team",
+        "expected": {
+          "relation": {
+            "entity": "entity/Team",
+            "label": "entity/Team/field/name"
+          }
+        },
+        "sourceNodes": [
+          "entity/Team",
+          "entity/Team/field/name",
+          "entity/User/field/team",
+          "entity/User/field/team/relation"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/credential/password/non-projectable",
+        "kind": "credential-non-projectable",
+        "subject": "identity/UserAccount/credential/password",
+        "input": {
+          "identity": {
+            "observe": [
+              "artifact-projections",
+              "resolved-intent-projections"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "absent-from-domain-projections",
+            "excludedCredentials": [
+              "identity/UserAccount/credential/password"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount",
+          "identity/UserAccount/credential/password"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/at-most-once",
+        "kind": "operation-at-most-once",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 2,
+            "observe": [
+              "notice-emission-count",
+              "subject-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "applied-once",
+            "subject": {
+              "count": 1
+            },
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "count": 1
+            },
+            "appliedOperations": 1
+          }
+        },
+        "sourceNodes": [
+          "entity/User",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/credential/bound",
+        "kind": "credential-bound",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 1,
+            "observe": [
+              "authentication-result"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "credential": {
+              "credential": "identity/UserAccount/credential/password",
+              "subject": "subject/created",
+              "condition": "satisfies-policy",
+              "observableVia": "identity/UserAccount/operation/signin"
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/operation/signin"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/identifier/duplicate",
+        "kind": "duplicate-identifier-rejected",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "cases": [
+              {
+                "kind": "exact",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/existing",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      },
+                      "credentials": [
+                        {
+                          "handle": "subject/existing/credential/primary",
+                          "credential": "identity/UserAccount/credential/password",
+                          "condition": "satisfies-policy"
+                        }
+                      ]
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/existing/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/existing",
+                      "condition": "issued"
+                    }
+                  ]
+                },
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "subject/existing/identifier/primary",
+                  "relation": "exact"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "canonical-equivalent",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/existing",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      },
+                      "credentials": [
+                        {
+                          "handle": "subject/existing/credential/primary",
+                          "credential": "identity/UserAccount/credential/password",
+                          "condition": "satisfies-policy"
+                        }
+                      ]
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/existing/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/existing",
+                      "condition": "issued"
+                    }
+                  ]
+                },
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "input/identifier/canonical-equivalent",
+                  "relation": "canonical-equivalent"
+                },
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "credential-binding-count",
+              "evidence-count",
+              "notice-emission-count",
+              "subject-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "rejected",
+            "subject": {
+              "count": 1,
+              "unchanged": true
+            },
+            "credential": {
+              "credential": "identity/UserAccount/credential/password",
+              "subject": "subject/existing",
+              "condition": "unchanged"
+            },
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 1,
+              "added": 0,
+              "condition": "issued"
+            },
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "count": 1,
+              "added": 0
+            },
+            "disclosure": "guide-resend",
+            "cases": [
+              {
+                "kind": "exact",
+                "outcome": "rejected",
+                "disclosure": "guide-resend"
+              },
+              {
+                "kind": "canonical-equivalent",
+                "outcome": "rejected",
+                "disclosure": "guide-resend"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/identifier/email",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/verification/email",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/notice/emitted",
+        "kind": "notice-emitted",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 1,
+            "observe": [
+              "notice-emission-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "count": 1,
+              "emission": "durable-record-required"
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/subject/created",
+        "kind": "registration-created",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 1,
+            "observe": [
+              "subject-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "created",
+            "subject": {
+              "count": 1,
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          }
+        },
+        "sourceNodes": [
+          "entity/User",
+          "entity/User/state/status",
+          "identity/UserAccount/operation/register"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/validation/rejected",
+        "kind": "registration-validation-rejected",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "cases": [
+              {
+                "kind": "invalid-name",
+                "dispatches": 1
+              },
+              {
+                "kind": "invalid-identifier",
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "input/identifier/invalid",
+                  "relation": "invalid"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "invalid-credential",
+                "credential": {
+                  "credential": "identity/UserAccount/credential/password",
+                  "binding": "input/credential/invalid",
+                  "relation": "violates-policy"
+                },
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "credential-binding-count",
+              "evidence-count",
+              "notice-emission-count",
+              "subject-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "rejected",
+            "subject": {
+              "count": 0
+            },
+            "credential": {
+              "credential": "identity/UserAccount/credential/password",
+              "subject": "subject/created",
+              "condition": "absent"
+            },
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 0
+            },
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "count": 0
+            },
+            "cases": [
+              {
+                "kind": "invalid-name",
+                "outcome": "rejected"
+              },
+              {
+                "kind": "invalid-identifier",
+                "outcome": "rejected"
+              },
+              {
+                "kind": "invalid-credential",
+                "outcome": "rejected"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/identifier/email",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/verification/email",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/register/verification/issued",
+        "kind": "verification-issued",
+        "subject": "identity/UserAccount/operation/register",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 1,
+            "observe": [
+              "evidence-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 1,
+              "condition": "issued",
+              "maxUses": 1,
+              "lifetime": {
+                "amount": 30,
+                "unit": "minute"
+              }
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/resend/accepted",
+        "kind": "verification-resent",
+        "subject": "identity/UserAccount/operation/resend",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/resend",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "observe": [
+              "evidence-count",
+              "notice-emission-count",
+              "subject-state"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "accepted",
+            "subject": {
+              "count": 1,
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              },
+              "unchanged": true
+            },
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 2,
+              "added": 1,
+              "condition": "issued"
+            },
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "added": 1
+            }
+          }
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/verification/email",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/resend/at-most-once",
+        "kind": "operation-at-most-once",
+        "subject": "identity/UserAccount/operation/resend",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/resend",
+            "dispatches": 2,
+            "subject": "subject/alice",
+            "observe": [
+              "notice-emission-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "applied-once",
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "added": 1
+            },
+            "appliedOperations": 1
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/resend/evidence/rotated",
+        "kind": "verification-rotated",
+        "subject": "identity/UserAccount/operation/resend",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ],
+          "clock": {
+            "evidence": "subject/alice/evidence/email-verification",
+            "relation": "before-expiry"
+          }
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/resend",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "evidence": "subject/alice/evidence/email-verification",
+            "observe": [
+              "evidence-condition",
+              "evidence-count"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 2,
+              "condition": "superseded",
+              "rotation": "invalidate-prior-unconsumed"
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/signin/accepted",
+        "kind": "authentication-accepted",
+        "subject": "identity/UserAccount/operation/signin",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/alice/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/signin",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "identifier": {
+              "identifier": "identity/UserAccount/identifier/email",
+              "handle": "subject/alice/identifier/primary",
+              "relation": "matching"
+            },
+            "credential": {
+              "credential": "identity/UserAccount/credential/password",
+              "binding": "subject/alice/credential/primary",
+              "relation": "matching"
+            },
+            "observe": [
+              "session-count",
+              "user-visible-outcome"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "accepted",
+            "session": {
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "active"
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/authentication",
+          "identity/UserAccount/operation/signin",
+          "identity/UserAccount/session/current"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/signin/rejected/generic",
+        "kind": "authentication-rejected",
+        "subject": "identity/UserAccount/operation/signin",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/signin",
+            "cases": [
+              {
+                "kind": "unknown-identifier",
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "input/identifier/unknown",
+                  "relation": "unknown"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "non-matching-credential",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Active"
+                      },
+                      "credentials": [
+                        {
+                          "handle": "subject/alice/credential/primary",
+                          "credential": "identity/UserAccount/credential/password",
+                          "condition": "satisfies-policy"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "subject/alice/identifier/primary",
+                  "relation": "matching"
+                },
+                "credential": {
+                  "credential": "identity/UserAccount/credential/password",
+                  "binding": "subject/alice/credential/primary",
+                  "relation": "non-matching"
+                },
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "session-count",
+              "user-visible-outcome"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "rejected",
+            "disclosure": "generic",
+            "cases": [
+              {
+                "kind": "unknown-identifier",
+                "outcome": "rejected",
+                "sessionCondition": "absent",
+                "disclosure": "generic"
+              },
+              {
+                "kind": "non-matching-credential",
+                "outcome": "rejected",
+                "sessionCondition": "absent",
+                "disclosure": "generic"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/authentication",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/identifier/email",
+          "identity/UserAccount/operation/signin"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/signin/state/ineligible",
+        "kind": "authentication-ineligible-state",
+        "subject": "identity/UserAccount/operation/signin",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/alice/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/signin",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "identifier": {
+              "identifier": "identity/UserAccount/identifier/email",
+              "handle": "subject/alice/identifier/primary",
+              "relation": "matching"
+            },
+            "credential": {
+              "credential": "identity/UserAccount/credential/password",
+              "binding": "subject/alice/credential/primary",
+              "relation": "matching"
+            },
+            "observe": [
+              "session-count",
+              "user-visible-outcome"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "rejected",
+            "subject": {
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              },
+              "unchanged": true
+            },
+            "session": {
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "absent"
+            }
+          }
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "identity/UserAccount/authentication",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/operation/signin",
+          "identity/UserAccount/session/current"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/signout/session/terminated",
+        "kind": "session-terminated",
+        "subject": "identity/UserAccount/operation/signout",
+        "principal": {
+          "kind": "authenticated",
+          "identity": "identity/UserAccount",
+          "subject": "subject/alice",
+          "session": "subject/alice/session/current"
+        },
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/alice/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            }
+          ],
+          "sessions": [
+            {
+              "handle": "subject/alice/session/current",
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "active"
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/signout",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "session": "subject/alice/session/current",
+            "observe": [
+              "protected-access",
+              "session-condition"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "terminated-and-access-denied",
+            "session": {
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "terminated"
+            },
+            "surfaces": [
+              "page/Profile",
+              "page/Profile/view/detail/User",
+              "page/ProfileEdit",
+              "page/ProfileEdit/view/form/edit/User"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/signout",
+          "identity/UserAccount/session/current",
+          "page/Profile",
+          "page/Profile/identity/signout/UserAccount",
+          "page/Profile/view/detail/User",
+          "page/ProfileEdit",
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/verify/accepted",
+        "kind": "verification-accepted",
+        "subject": "identity/UserAccount/operation/verify",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ],
+          "clock": {
+            "evidence": "subject/alice/evidence/email-verification",
+            "relation": "before-expiry"
+          }
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/verify",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "evidence": "subject/alice/evidence/email-verification",
+            "observe": [
+              "subject-state"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "accepted",
+            "subject": {
+              "count": 1,
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              }
+            }
+          }
+        },
+        "sourceNodes": [
+          "action/User/activate",
+          "entity/User/state/status",
+          "identity/UserAccount/operation/verify",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/verify/evidence/consumed",
+        "kind": "verification-consumed",
+        "subject": "identity/UserAccount/operation/verify",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ],
+          "clock": {
+            "evidence": "subject/alice/evidence/email-verification",
+            "relation": "before-expiry"
+          }
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/verify",
+            "dispatches": 1,
+            "subject": "subject/alice",
+            "evidence": "subject/alice/evidence/email-verification",
+            "observe": [
+              "evidence-condition"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 1,
+              "condition": "consumed"
+            }
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/operation/verify",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/verify/evidence/rejected",
+        "kind": "verification-rejected",
+        "subject": "identity/UserAccount/operation/verify",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/verify",
+            "cases": [
+              {
+                "kind": "invalid",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ]
+                },
+                "evidence": "input/evidence/invalid",
+                "dispatches": 1
+              },
+              {
+                "kind": "expired",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/alice/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/alice",
+                      "condition": "issued"
+                    }
+                  ],
+                  "clock": {
+                    "evidence": "subject/alice/evidence/email-verification",
+                    "relation": "after-expiry"
+                  }
+                },
+                "evidence": "subject/alice/evidence/email-verification",
+                "clock": "after-expiry",
+                "dispatches": 1
+              },
+              {
+                "kind": "consumed",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Active"
+                      }
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/alice/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/alice",
+                      "condition": "consumed"
+                    }
+                  ],
+                  "clock": {
+                    "evidence": "subject/alice/evidence/email-verification",
+                    "relation": "before-expiry"
+                  }
+                },
+                "evidence": "subject/alice/evidence/email-verification",
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "evidence-condition",
+              "subject-state"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "rejected",
+            "cases": [
+              {
+                "kind": "invalid",
+                "outcome": "rejected",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Pending"
+                }
+              },
+              {
+                "kind": "expired",
+                "outcome": "rejected",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Pending"
+                }
+              },
+              {
+                "kind": "consumed",
+                "outcome": "rejected",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Active"
+                }
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "identity/UserAccount/operation/verify",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/operation/verify/expiry/boundary",
+        "kind": "verification-expiry-boundary",
+        "subject": "identity/UserAccount/operation/verify",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/verify",
+            "cases": [
+              {
+                "kind": "before-expiry",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/alice/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/alice",
+                      "condition": "issued"
+                    }
+                  ],
+                  "clock": {
+                    "evidence": "subject/alice/evidence/email-verification",
+                    "relation": "before-expiry"
+                  }
+                },
+                "evidence": "subject/alice/evidence/email-verification",
+                "clock": "before-expiry",
+                "dispatches": 1
+              },
+              {
+                "kind": "at-expiry",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/alice/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/alice",
+                      "condition": "issued"
+                    }
+                  ],
+                  "clock": {
+                    "evidence": "subject/alice/evidence/email-verification",
+                    "relation": "at-expiry"
+                  }
+                },
+                "evidence": "subject/alice/evidence/email-verification",
+                "clock": "at-expiry",
+                "dispatches": 1
+              },
+              {
+                "kind": "after-expiry",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ],
+                  "evidence": [
+                    {
+                      "handle": "subject/alice/evidence/email-verification",
+                      "verification": "identity/UserAccount/verification/email",
+                      "subject": "subject/alice",
+                      "condition": "issued"
+                    }
+                  ],
+                  "clock": {
+                    "evidence": "subject/alice/evidence/email-verification",
+                    "relation": "after-expiry"
+                  }
+                },
+                "evidence": "subject/alice/evidence/email-verification",
+                "clock": "after-expiry",
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "evidence-condition",
+              "subject-state"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "cases": [
+              {
+                "kind": "before-expiry",
+                "outcome": "accepted",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Active"
+                },
+                "evidenceCondition": "consumed"
+              },
+              {
+                "kind": "at-expiry",
+                "outcome": "rejected",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Pending"
+                },
+                "evidenceCondition": "issued"
+              },
+              {
+                "kind": "after-expiry",
+                "outcome": "rejected",
+                "subjectState": {
+                  "state": "entity/User/state/status",
+                  "value": "Pending"
+                },
+                "evidenceCondition": "issued"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "identity/UserAccount/operation/verify",
+          "identity/UserAccount/verification/email"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/ownership/self/access/allowed/self",
+        "kind": "ownership-allowed",
+        "subject": "identity/UserAccount/ownership/self",
+        "principal": {
+          "kind": "authenticated",
+          "identity": "identity/UserAccount",
+          "subject": "subject/alice",
+          "session": "subject/alice/session/current"
+        },
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/alice/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            }
+          ],
+          "sessions": [
+            {
+              "handle": "subject/alice/session/current",
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "active"
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "resource": "subject/alice",
+            "observe": [
+              "edit-access",
+              "view-access"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "allowed",
+            "surfaces": [
+              "page/Profile",
+              "page/Profile/view/detail/User",
+              "page/ProfileEdit",
+              "page/ProfileEdit/view/form/edit/User"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/ownership/self",
+          "identity/UserAccount/session/current",
+          "page/Profile",
+          "page/Profile/view/detail/User",
+          "page/ProfileEdit",
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/ownership/self/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "identity/UserAccount/ownership/self",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              }
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "resource": "subject/alice",
+            "observe": [
+              "protected-access"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "denied",
+            "surfaces": [
+              "page/Profile",
+              "page/Profile/view/detail/User",
+              "page/ProfileEdit",
+              "page/ProfileEdit/view/form/edit/User"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/ownership/self",
+          "identity/UserAccount/session/current",
+          "page/Profile",
+          "page/Profile/view/detail/User",
+          "page/ProfileEdit",
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/ownership/self/access/denied/other-subject",
+        "kind": "ownership-denied",
+        "subject": "identity/UserAccount/ownership/self",
+        "principal": {
+          "kind": "authenticated",
+          "identity": "identity/UserAccount",
+          "subject": "subject/alice",
+          "session": "subject/alice/session/current"
+        },
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/alice/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            },
+            {
+              "handle": "subject/bob",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "credentials": [
+                {
+                  "handle": "subject/bob/credential/primary",
+                  "credential": "identity/UserAccount/credential/password",
+                  "condition": "satisfies-policy"
+                }
+              ]
+            }
+          ],
+          "sessions": [
+            {
+              "handle": "subject/alice/session/current",
+              "session": "identity/UserAccount/session/current",
+              "subject": "subject/alice",
+              "condition": "active"
+            }
+          ]
+        },
+        "input": {
+          "identity": {
+            "resource": "subject/bob",
+            "observe": [
+              "edit-access",
+              "view-access"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "denied",
+            "surfaces": [
+              "page/Profile",
+              "page/Profile/view/detail/User",
+              "page/ProfileEdit",
+              "page/ProfileEdit/view/form/edit/User"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/ownership/self",
+          "identity/UserAccount/session/current",
+          "page/Profile",
+          "page/Profile/view/detail/User",
+          "page/ProfileEdit",
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/identity/UserAccount/verification/email/notice/delivery/failure",
+        "kind": "delivery-failure-separated",
+        "subject": "identity/UserAccount/verification/email/notice",
+        "setup": {
+          "delivery": {
+            "notice": "identity/UserAccount/verification/email/notice",
+            "condition": "fails"
+          }
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "dispatches": 1,
+            "delivery": "fails",
+            "observe": [
+              "delivery-result",
+              "notice-emission-count",
+              "resend-availability",
+              "subject-state"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "retryable",
+            "subject": {
+              "count": 1,
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            },
+            "evidence": {
+              "verification": "identity/UserAccount/verification/email",
+              "count": 1,
+              "condition": "issued"
+            },
+            "notice": {
+              "notice": "identity/UserAccount/verification/email/notice",
+              "count": 1,
+              "emission": "durable-record-required",
+              "delivery": "failed"
+            }
+          }
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/verification/email",
+          "identity/UserAccount/verification/email/notice"
+        ]
+      },
+      {
+        "id": "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
+        "kind": "enumeration-safe-outcome",
+        "subject": "page/CheckEmail/identity/resend/UserAccount",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/resend",
+            "interaction": "page/CheckEmail/identity/resend/UserAccount",
+            "cases": [
+              {
+                "kind": "unknown",
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "input/identifier/unknown",
+                  "relation": "unknown"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "active",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Active"
+                      }
+                    }
+                  ]
+                },
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "subject/alice/identifier/primary",
+                  "relation": "matching"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "pending",
+                "setup": {
+                  "subjects": [
+                    {
+                      "handle": "subject/alice",
+                      "identity": "identity/UserAccount",
+                      "state": {
+                        "state": "entity/User/state/status",
+                        "value": "Pending"
+                      }
+                    }
+                  ]
+                },
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "subject/alice/identifier/primary",
+                  "relation": "matching"
+                },
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "user-visible-outcome"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "disclosure": "uniform-for-pending-active-and-unknown",
+            "cases": [
+              {
+                "kind": "unknown",
+                "outcome": "accepted",
+                "disclosure": "uniform-for-pending-active-and-unknown"
+              },
+              {
+                "kind": "active",
+                "outcome": "accepted",
+                "disclosure": "uniform-for-pending-active-and-unknown"
+              },
+              {
+                "kind": "pending",
+                "outcome": "accepted",
+                "disclosure": "uniform-for-pending-active-and-unknown"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "identity/UserAccount/identifier/email",
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/verification/email",
+          "page/CheckEmail/identity/resend/UserAccount"
+        ]
+      },
+      {
+        "id": "fact/page/Profile/view/detail/User/feedback",
+        "kind": "observable-feedback",
+        "subject": "page/Profile/view/detail/User",
+        "expected": {
+          "feedback": [
+            "empty",
+            "failure"
+          ]
+        },
+        "sourceNodes": [
+          "page/Profile/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/Profile/view/detail/User/fields",
+        "kind": "view-fields",
+        "subject": "page/Profile/view/detail/User",
+        "expected": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/state/status"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/state/status",
+          "page/Profile/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/Profile/view/detail/User/records/visible",
+        "kind": "records-visible",
+        "subject": "page/Profile/view/detail/User",
+        "input": {
+          "existingRecords": 1
+        },
+        "expected": {
+          "outcome": "record-visible",
+          "recordCount": 1
+        },
+        "sourceNodes": [
+          "page/Profile/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/feedback",
+        "kind": "observable-feedback",
+        "subject": "page/ProfileEdit/view/form/edit/User",
+        "expected": {
+          "feedback": [
+            "invalid",
+            "failure"
+          ]
+        },
+        "sourceNodes": [
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/fields",
+        "kind": "view-fields",
+        "subject": "page/ProfileEdit/view/form/edit/User",
+        "expected": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "page/ProfileEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted",
+        "kind": "mutation-accepted",
+        "subject": "page/ProfileEdit/view/form/edit/User/submit",
+        "input": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname"
+          ]
+        },
+        "expected": {
+          "outcome": "accepted",
+          "stored": "input"
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "page/ProfileEdit/view/form/edit/User",
+          "page/ProfileEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once",
+        "kind": "mutation-at-most-once",
+        "subject": "page/ProfileEdit/view/form/edit/User/submit",
+        "input": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname"
+          ],
+          "dispatches": 2
+        },
+        "expected": {
+          "outcome": "accepted-once",
+          "appliedMutations": 1
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "page/ProfileEdit/view/form/edit/User",
+          "page/ProfileEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/submit/navigation",
+        "kind": "navigation",
+        "subject": "page/ProfileEdit/view/form/edit/User/submit",
+        "expected": {
+          "navigation": {
+            "successKind": "page",
+            "successPage": "page/Profile"
+          }
+        },
+        "sourceNodes": [
+          "page/Profile",
+          "page/ProfileEdit/view/form/edit/User/submit",
+          "page/ProfileEdit/view/form/edit/User/submit/success"
+        ]
+      },
+      {
+        "id": "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name",
+        "kind": "validation-rejected",
+        "subject": "page/ProfileEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "required",
+            "field": "entity/User/field/name"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/nickname"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "page/ProfileEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
+        "kind": "access-allowed",
+        "subject": "page/SignUp/identity/register/UserAccount",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "input": {
+          "identity": {
+            "interaction": "page/SignUp/identity/register/UserAccount",
+            "observe": [
+              "access"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "allowed",
+            "surfaces": [
+              "page/SignUp",
+              "page/SignUp/identity/register/UserAccount"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "page/SignUp",
+          "page/SignUp/identity/register/UserAccount"
+        ]
+      },
+      {
+        "id": "fact/page/SignUp/identity/register/UserAccount/inputs",
+        "kind": "identity-inputs",
+        "subject": "page/SignUp/identity/register/UserAccount",
+        "input": {
+          "identity": {
+            "interaction": "page/SignUp/identity/register/UserAccount",
+            "observe": [
+              "resolved-inputs"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "inputs": [
+              {
+                "kind": "field",
+                "node": "entity/User/field/name"
+              },
+              {
+                "kind": "identifier",
+                "node": "identity/UserAccount/identifier/email"
+              },
+              {
+                "kind": "credential",
+                "node": "identity/UserAccount/credential/password"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/identifier/email",
+          "page/SignUp/identity/register/UserAccount"
+        ]
+      },
+      {
+        "id": "fact/page/SignUp/identity/register/UserAccount/navigation",
+        "kind": "navigation",
+        "subject": "page/SignUp/identity/register/UserAccount",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "interaction": "page/SignUp/identity/register/UserAccount",
+            "dispatches": 1,
+            "observe": [
+              "navigation"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "navigation": {
+              "successKind": "page",
+              "successPage": "page/CheckEmail"
+            }
+          }
+        },
+        "sourceNodes": [
+          "page/CheckEmail",
+          "page/SignUp/identity/register/UserAccount",
+          "page/SignUp/identity/register/UserAccount/success"
+        ]
+      },
+      {
+        "id": "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
+        "kind": "secret-input-not-preserved",
+        "subject": "page/SignUp/identity/register/UserAccount",
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/register",
+            "interaction": "page/SignUp/identity/register/UserAccount",
+            "cases": [
+              {
+                "kind": "invalid-name",
+                "dispatches": 1
+              },
+              {
+                "kind": "invalid-identifier",
+                "identifier": {
+                  "identifier": "identity/UserAccount/identifier/email",
+                  "handle": "input/identifier/invalid",
+                  "relation": "invalid"
+                },
+                "dispatches": 1
+              },
+              {
+                "kind": "invalid-credential",
+                "credential": {
+                  "credential": "identity/UserAccount/credential/password",
+                  "binding": "input/credential/invalid",
+                  "relation": "violates-policy"
+                },
+                "dispatches": 1
+              }
+            ],
+            "observe": [
+              "redisplayed-inputs"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "outcome": "invalid-input-redisplayed",
+            "preserveFields": [
+              "entity/User/field/email",
+              "entity/User/field/name"
+            ],
+            "excludedCredentials": [
+              "identity/UserAccount/credential/password"
+            ],
+            "cases": [
+              {
+                "kind": "invalid-name",
+                "outcome": "rejected"
+              },
+              {
+                "kind": "invalid-identifier",
+                "outcome": "rejected"
+              },
+              {
+                "kind": "invalid-credential",
+                "outcome": "rejected"
+              }
+            ]
+          }
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/operation/register",
+          "page/SignUp/identity/register/UserAccount"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/UserDetail/view/detail/User",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserDetail/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/UserDetail/view/detail/User",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserDetail/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/UserDetail/view/detail/User/action/edit",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserDetail/view/detail/User/action/edit",
+          "page/UserDetail/view/detail/User/action/edit/access",
+          "page/UserEdit"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/UserDetail/view/detail/User/action/edit",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserDetail/view/detail/User/action/edit",
+          "page/UserDetail/view/detail/User/action/edit/access",
+          "page/UserEdit"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/action/edit/navigation",
+        "kind": "navigation",
+        "subject": "page/UserDetail/view/detail/User/action/edit",
+        "expected": {
+          "navigation": {
+            "targetPage": "page/UserEdit"
+          }
+        },
+        "sourceNodes": [
+          "page/UserDetail/view/detail/User/action/edit",
+          "page/UserEdit"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/actions",
+        "kind": "view-actions",
+        "subject": "page/UserDetail/view/detail/User",
+        "expected": {
+          "actions": [
+            "page/UserDetail/view/detail/User/action/edit"
+          ]
+        },
+        "sourceNodes": [
+          "page/UserDetail/view/detail/User",
+          "page/UserDetail/view/detail/User/action/edit"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/feedback",
+        "kind": "observable-feedback",
+        "subject": "page/UserDetail/view/detail/User",
+        "expected": {
+          "feedback": [
+            "empty",
+            "failure"
+          ]
+        },
+        "sourceNodes": [
+          "page/UserDetail/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/fields",
+        "kind": "view-fields",
+        "subject": "page/UserDetail/view/detail/User",
+        "expected": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan",
+            "entity/User/state/status"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/plan",
+          "entity/User/field/team",
+          "entity/User/state/status",
+          "page/UserDetail/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserDetail/view/detail/User/records/visible",
+        "kind": "records-visible",
+        "subject": "page/UserDetail/view/detail/User",
+        "input": {
+          "existingRecords": 1
+        },
+        "expected": {
+          "outcome": "record-visible",
+          "recordCount": 1
+        },
+        "sourceNodes": [
+          "page/UserDetail/view/detail/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/UserEdit/view/form/edit/User",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserEdit",
+          "page/UserEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/UserEdit/view/form/edit/User",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserEdit",
+          "page/UserEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/feedback",
+        "kind": "observable-feedback",
+        "subject": "page/UserEdit/view/form/edit/User",
+        "expected": {
+          "feedback": [
+            "invalid",
+            "failure"
+          ]
+        },
+        "sourceNodes": [
+          "page/UserEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/fields",
+        "kind": "view-fields",
+        "subject": "page/UserEdit/view/form/edit/User",
+        "expected": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/plan",
+          "entity/User/field/team",
+          "page/UserEdit/view/form/edit/User"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserEdit",
+          "page/UserEdit/view/form/edit/User",
+          "page/UserEdit/view/form/edit/User/submit",
+          "page/UserEdit/view/form/edit/User/submit/access"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserEdit",
+          "page/UserEdit/view/form/edit/User",
+          "page/UserEdit/view/form/edit/User/submit",
+          "page/UserEdit/view/form/edit/User/submit/access"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted",
+        "kind": "mutation-accepted",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "expected": {
+          "outcome": "accepted",
+          "stored": "input"
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/plan",
+          "entity/User/field/team",
+          "page/UserEdit/view/form/edit/User",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once",
+        "kind": "mutation-at-most-once",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ],
+          "dispatches": 2
+        },
+        "expected": {
+          "outcome": "accepted-once",
+          "appliedMutations": 1
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/plan",
+          "entity/User/field/team",
+          "page/UserEdit/view/form/edit/User",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/navigation",
+        "kind": "navigation",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "expected": {
+          "navigation": {
+            "successKind": "page",
+            "successPage": "page/UserDetail"
+          }
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/UserEdit/view/form/edit/User/submit",
+          "page/UserEdit/view/form/edit/User/submit/success"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "closed-set",
+            "field": "entity/User/field/plan"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/plan",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "matches",
+            "field": "entity/User/field/email",
+            "constraint": "type/Email/constraint/matches"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "page/UserEdit/view/form/edit/User/submit",
+          "type/Email/constraint/matches"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/email",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "required",
+            "field": "entity/User/field/email"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/name",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "required",
+            "field": "entity/User/field/name"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "violation": {
+            "kind": "required",
+            "field": "entity/User/field/plan"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/plan",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email",
+        "kind": "validation-rejected",
+        "subject": "page/UserEdit/view/form/edit/User/submit",
+        "input": {
+          "existingRecords": 1,
+          "violation": {
+            "kind": "unique",
+            "field": "entity/User/field/email"
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "stored": "unchanged",
+          "preserveInput": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "page/UserEdit/view/form/edit/User/submit"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/Users/view/list/User",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/Users",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/Users/view/list/User",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/Users",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/edit/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/Users/view/list/User/action/edit",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserEdit",
+          "page/Users",
+          "page/Users/view/list/User/action/edit",
+          "page/Users/view/list/User/action/edit/access"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/edit/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/Users/view/list/User/action/edit",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserEdit",
+          "page/Users",
+          "page/Users/view/list/User/action/edit",
+          "page/Users/view/list/User/action/edit/access"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/edit/navigation",
+        "kind": "navigation",
+        "subject": "page/Users/view/list/User/action/edit",
+        "expected": {
+          "navigation": {
+            "targetPage": "page/UserEdit"
+          }
+        },
+        "sourceNodes": [
+          "page/UserEdit",
+          "page/Users/view/list/User/action/edit"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/view/access/allowed/admin",
+        "kind": "access-allowed",
+        "subject": "page/Users/view/list/User/action/view",
+        "principal": {
+          "kind": "roles",
+          "roles": [
+            "admin"
+          ]
+        },
+        "expected": {
+          "outcome": "allowed",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/Users",
+          "page/Users/view/list/User/action/view",
+          "page/Users/view/list/User/action/view/access"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/view/access/denied/anonymous",
+        "kind": "access-denied",
+        "subject": "page/Users/view/list/User/action/view",
+        "principal": {
+          "kind": "anonymous"
+        },
+        "expected": {
+          "outcome": "denied",
+          "enforcement": "authoritative"
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/Users",
+          "page/Users/view/list/User/action/view",
+          "page/Users/view/list/User/action/view/access"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/action/view/navigation",
+        "kind": "navigation",
+        "subject": "page/Users/view/list/User/action/view",
+        "expected": {
+          "navigation": {
+            "targetPage": "page/UserDetail"
+          }
+        },
+        "sourceNodes": [
+          "page/UserDetail",
+          "page/Users/view/list/User/action/view"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/actions",
+        "kind": "view-actions",
+        "subject": "page/Users/view/list/User",
+        "expected": {
+          "actions": [
+            "page/Users/view/list/User/action/view",
+            "page/Users/view/list/User/action/edit"
+          ]
+        },
+        "sourceNodes": [
+          "page/Users/view/list/User",
+          "page/Users/view/list/User/action/edit",
+          "page/Users/view/list/User/action/view"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/feedback",
+        "kind": "observable-feedback",
+        "subject": "page/Users/view/list/User",
+        "expected": {
+          "feedback": [
+            "empty",
+            "failure"
+          ]
+        },
+        "sourceNodes": [
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/fields",
+        "kind": "view-fields",
+        "subject": "page/Users/view/list/User",
+        "expected": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email",
+            "entity/User/field/team",
+            "entity/User/field/plan",
+            "entity/User/state/status"
+          ]
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "entity/User/field/plan",
+          "entity/User/field/team",
+          "entity/User/state/status",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/filter/plan",
+        "kind": "list-filter",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "fields": [
+            "entity/User/field/plan"
+          ]
+        },
+        "expected": {
+          "outcome": "matching-records-only"
+        },
+        "sourceNodes": [
+          "entity/User/field/plan",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/filter/status",
+        "kind": "list-filter",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "fields": [
+            "entity/User/state/status"
+          ]
+        },
+        "expected": {
+          "outcome": "matching-records-only"
+        },
+        "sourceNodes": [
+          "entity/User/state/status",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/filter/team",
+        "kind": "list-filter",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "fields": [
+            "entity/User/field/team"
+          ]
+        },
+        "expected": {
+          "outcome": "matching-records-only"
+        },
+        "sourceNodes": [
+          "entity/User/field/team",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/page-boundary",
+        "kind": "list-page-boundary",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "existingRecords": 11
+        },
+        "expected": {
+          "outcome": "window-bounded-and-remainder-reachable",
+          "pageSize": 10
+        },
+        "sourceNodes": [
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/records/visible",
+        "kind": "records-visible",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "existingRecords": 2
+        },
+        "expected": {
+          "outcome": "all-matching-records-visible",
+          "recordCount": 2
+        },
+        "sourceNodes": [
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/search",
+        "kind": "list-search",
+        "subject": "page/Users/view/list/User",
+        "input": {
+          "fields": [
+            "entity/User/field/name",
+            "entity/User/field/nickname",
+            "entity/User/field/email"
+          ]
+        },
+        "expected": {
+          "outcome": "matching-records-only"
+        },
+        "sourceNodes": [
+          "entity/User/field/email",
+          "entity/User/field/name",
+          "entity/User/field/nickname",
+          "page/Users/view/list/User"
+        ]
+      },
+      {
+        "id": "fact/page/Users/view/list/User/sort",
+        "kind": "list-sort",
+        "subject": "page/Users/view/list/User",
+        "expected": {
+          "sort": {
+            "field": "entity/User/field/name",
+            "direction": "asc",
+            "stable": true
+          }
+        },
+        "sourceNodes": [
+          "entity/User/field/name",
+          "page/Users/view/list/User",
+          "page/Users/view/list/User/sort"
+        ]
+      },
+      {
+        "id": "fact/page/VerifyEmail/identity/verify/UserAccount/navigation",
+        "kind": "navigation",
+        "subject": "page/VerifyEmail/identity/verify/UserAccount",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/alice",
+              "identity": "identity/UserAccount",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ],
+          "evidence": [
+            {
+              "handle": "subject/alice/evidence/email-verification",
+              "verification": "identity/UserAccount/verification/email",
+              "subject": "subject/alice",
+              "condition": "issued"
+            }
+          ],
+          "clock": {
+            "evidence": "subject/alice/evidence/email-verification",
+            "relation": "before-expiry"
+          }
+        },
+        "input": {
+          "identity": {
+            "operation": "identity/UserAccount/operation/verify",
+            "interaction": "page/VerifyEmail/identity/verify/UserAccount",
+            "dispatches": 1,
+            "evidence": "subject/alice/evidence/email-verification",
+            "observe": [
+              "continuation",
+              "navigation"
+            ]
+          }
+        },
+        "expected": {
+          "identity": {
+            "navigation": {
+              "successKind": "page",
+              "successPage": "page/RegistrationComplete",
+              "continuationPage": "page/SignIn"
+            },
+            "surfaces": [
+              "page/RegistrationComplete",
+              "page/SignIn"
+            ]
+          }
+        },
+        "sourceNodes": [
+          "page/RegistrationComplete",
+          "page/SignIn",
+          "page/VerifyEmail/identity/verify/UserAccount",
+          "page/VerifyEmail/identity/verify/UserAccount/continuation",
+          "page/VerifyEmail/identity/verify/UserAccount/success"
+        ]
+      }
+    ]
+  },
+  "reviewRequirements": {
+    "version": "forma/review-requirements/v0alpha1",
+    "intentVersion": "forma/resolved-intent/v0.7",
+    "requirements": [
+      {
+        "id": "review/identity/UserAccount/fixture-fidelity",
+        "kind": "fixture-fidelity",
+        "subject": "identity/UserAccount",
+        "sourceNodes": [
+          "identity/UserAccount",
+          "identity/UserAccount/operation/register",
+          "identity/UserAccount/operation/resend",
+          "identity/UserAccount/operation/signin",
+          "identity/UserAccount/operation/signout",
+          "identity/UserAccount/operation/verify",
+          "identity/UserAccount/ownership/self"
+        ],
+        "instruction": "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests."
+      },
+      {
+        "id": "review/identity/UserAccount/secret-redaction",
+        "kind": "secret-redaction",
+        "subject": "identity/UserAccount",
+        "sourceNodes": [
+          "identity/UserAccount",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/proof/password",
+          "identity/UserAccount/verification/email"
+        ],
+        "instruction": "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed."
+      },
+      {
+        "id": "review/identity/UserAccount/secret-storage",
+        "kind": "secret-storage",
+        "subject": "identity/UserAccount",
+        "sourceNodes": [
+          "identity/UserAccount",
+          "identity/UserAccount/credential/password",
+          "identity/UserAccount/proof/password",
+          "identity/UserAccount/verification/email"
+        ],
+        "instruction": "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism."
+      }
+    ]
+  },
+  "sourceMap": {
+    "version": "forma/source-map/v0.4",
+    "intentVersion": "forma/resolved-intent/v0.7",
+    "entries": [
+      {
+        "nodeId": "action/User/activate",
+        "kind": "action",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1037,
+            "line": 53,
+            "column": 1
+          },
+          "end": {
+            "offset": 1077,
+            "line": 53,
+            "column": 41
+          }
+        }
+      },
+      {
+        "nodeId": "entity/Team",
+        "kind": "entity",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 160,
+            "line": 8,
+            "column": 1
+          },
+          "end": {
+            "offset": 206,
+            "line": 10,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "entity/Team/field/name",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 178,
+            "line": 9,
+            "column": 5
+          },
+          "end": {
+            "offset": 205,
+            "line": 9,
+            "column": 32
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User",
+        "kind": "entity",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 208,
+            "line": 12,
+            "column": 1
+          },
+          "end": {
+            "offset": 433,
+            "line": 20,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/email",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 281,
+            "line": 15,
+            "column": 5
+          },
+          "end": {
+            "offset": 312,
+            "line": 15,
+            "column": 36
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/name",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 226,
+            "line": 13,
+            "column": 5
+          },
+          "end": {
+            "offset": 257,
+            "line": 13,
+            "column": 36
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/nickname",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 261,
+            "line": 14,
+            "column": 5
+          },
+          "end": {
+            "offset": 277,
+            "line": 14,
+            "column": 21
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/plan",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 334,
+            "line": 17,
+            "column": 5
+          },
+          "end": {
+            "offset": 357,
+            "line": 17,
+            "column": 28
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/team",
+        "kind": "field",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 316,
+            "line": 16,
+            "column": 5
+          },
+          "end": {
+            "offset": 330,
+            "line": 16,
+            "column": 19
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/team/relation",
+        "kind": "relation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 325,
+            "line": 16,
+            "column": 14
+          },
+          "end": {
+            "offset": 329,
+            "line": 16,
+            "column": 18
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/state/status",
+        "kind": "state",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 362,
+            "line": 19,
+            "column": 5
+          },
+          "end": {
+            "offset": 432,
+            "line": 19,
+            "column": 75
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount",
+        "kind": "identity",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1078,
+            "line": 55,
+            "column": 1
+          },
+          "end": {
+            "offset": 2111,
+            "line": 99,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/authentication",
+        "kind": "identity-authentication",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1918,
+            "line": 89,
+            "column": 5
+          },
+          "end": {
+            "offset": 2089,
+            "line": 96,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/credential/password",
+        "kind": "identity-credential",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1213,
+            "line": 60,
+            "column": 5
+          },
+          "end": {
+            "offset": 1357,
+            "line": 65,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/identifier/email",
+        "kind": "identity-identifier",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1114,
+            "line": 56,
+            "column": 5
+          },
+          "end": {
+            "offset": 1207,
+            "line": 58,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/operation/register",
+        "kind": "identity-registration",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1363,
+            "line": 67,
+            "column": 5
+          },
+          "end": {
+            "offset": 1570,
+            "line": 74,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/operation/resend",
+        "kind": "identity-operation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1576,
+            "line": 76,
+            "column": 5
+          },
+          "end": {
+            "offset": 1912,
+            "line": 87,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/operation/signin",
+        "kind": "identity-operation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1918,
+            "line": 89,
+            "column": 5
+          },
+          "end": {
+            "offset": 2089,
+            "line": 96,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/operation/signout",
+        "kind": "identity-operation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1918,
+            "line": 89,
+            "column": 5
+          },
+          "end": {
+            "offset": 2089,
+            "line": 96,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/operation/verify",
+        "kind": "identity-operation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1576,
+            "line": 76,
+            "column": 5
+          },
+          "end": {
+            "offset": 1912,
+            "line": 87,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/ownership/self",
+        "kind": "identity-ownership",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2095,
+            "line": 98,
+            "column": 5
+          },
+          "end": {
+            "offset": 2110,
+            "line": 98,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/proof/password",
+        "kind": "identity-proof",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1213,
+            "line": 60,
+            "column": 5
+          },
+          "end": {
+            "offset": 1357,
+            "line": 65,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/session/current",
+        "kind": "identity-session",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1918,
+            "line": 89,
+            "column": 5
+          },
+          "end": {
+            "offset": 2089,
+            "line": 96,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/verification/email",
+        "kind": "identity-verification",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1576,
+            "line": 76,
+            "column": 5
+          },
+          "end": {
+            "offset": 1912,
+            "line": 87,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "identity/UserAccount/verification/email/notice",
+        "kind": "identity-verification-notice",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1576,
+            "line": 76,
+            "column": 5
+          },
+          "end": {
+            "offset": 1912,
+            "line": 87,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/CheckEmail",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2301,
+            "line": 111,
+            "column": 1
+          },
+          "end": {
+            "offset": 2432,
+            "line": 117,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount",
+        "kind": "identity-interaction",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2323,
+            "line": 112,
+            "column": 5
+          },
+          "end": {
+            "offset": 2430,
+            "line": 116,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2323,
+            "line": 112,
+            "column": 5
+          },
+          "end": {
+            "offset": 2430,
+            "line": 116,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2323,
+            "line": 112,
+            "column": 5
+          },
+          "end": {
+            "offset": 2430,
+            "line": 116,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2817,
+            "line": 140,
+            "column": 1
+          },
+          "end": {
+            "offset": 3128,
+            "line": 153,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2847,
+            "line": 141,
+            "column": 5
+          },
+          "end": {
+            "offset": 2881,
+            "line": 141,
+            "column": 39
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/identity/signout/UserAccount",
+        "kind": "identity-interaction",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3000,
+            "line": 148,
+            "column": 5
+          },
+          "end": {
+            "offset": 3126,
+            "line": 152,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/identity/signout/UserAccount/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3039,
+            "line": 149,
+            "column": 9
+          },
+          "end": {
+            "offset": 3073,
+            "line": 149,
+            "column": 43
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/identity/signout/UserAccount/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3000,
+            "line": 148,
+            "column": 5
+          },
+          "end": {
+            "offset": 3126,
+            "line": 152,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/parameter",
+        "kind": "parameter",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2830,
+            "line": 140,
+            "column": 14
+          },
+          "end": {
+            "offset": 2840,
+            "line": 140,
+            "column": 24
+          }
+        }
+      },
+      {
+        "nodeId": "page/Profile/view/detail/User",
+        "kind": "detail",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2930,
+            "line": 144,
+            "column": 5
+          },
+          "end": {
+            "offset": 2994,
+            "line": 146,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3130,
+            "line": 155,
+            "column": 1
+          },
+          "end": {
+            "offset": 3329,
+            "line": 163,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3164,
+            "line": 156,
+            "column": 5
+          },
+          "end": {
+            "offset": 3198,
+            "line": 156,
+            "column": 39
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/parameter",
+        "kind": "parameter",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3147,
+            "line": 155,
+            "column": 18
+          },
+          "end": {
+            "offset": 3157,
+            "line": 155,
+            "column": 28
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/view/form/edit/User",
+        "kind": "form",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3247,
+            "line": 159,
+            "column": 5
+          },
+          "end": {
+            "offset": 3327,
+            "line": 162,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit",
+        "kind": "submit",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3297,
+            "line": 161,
+            "column": 9
+          },
+          "end": {
+            "offset": 3308,
+            "line": 161,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3297,
+            "line": 161,
+            "column": 9
+          },
+          "end": {
+            "offset": 3308,
+            "line": 161,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 3297,
+            "line": 161,
+            "column": 9
+          },
+          "end": {
+            "offset": 3308,
+            "line": 161,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/RegistrationComplete",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2623,
+            "line": 128,
+            "column": 1
+          },
+          "end": {
+            "offset": 2652,
+            "line": 129,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignIn",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2654,
+            "line": 131,
+            "column": 1
+          },
+          "end": {
+            "offset": 2815,
+            "line": 138,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignIn/identity/signin/UserAccount",
+        "kind": "identity-interaction",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2672,
+            "line": 132,
+            "column": 5
+          },
+          "end": {
+            "offset": 2813,
+            "line": 137,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignIn/identity/signin/UserAccount/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2672,
+            "line": 132,
+            "column": 5
+          },
+          "end": {
+            "offset": 2813,
+            "line": 137,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignIn/identity/signin/UserAccount/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2672,
+            "line": 132,
+            "column": 5
+          },
+          "end": {
+            "offset": 2813,
+            "line": 137,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignUp",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2113,
+            "line": 101,
+            "column": 1
+          },
+          "end": {
+            "offset": 2299,
+            "line": 109,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignUp/identity/register/UserAccount",
+        "kind": "identity-interaction",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2131,
+            "line": 102,
+            "column": 5
+          },
+          "end": {
+            "offset": 2297,
+            "line": 108,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignUp/identity/register/UserAccount/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2131,
+            "line": 102,
+            "column": 5
+          },
+          "end": {
+            "offset": 2297,
+            "line": 108,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/SignUp/identity/register/UserAccount/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2131,
+            "line": 102,
+            "column": 5
+          },
+          "end": {
+            "offset": 2297,
+            "line": 108,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserDetail",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 718,
+            "line": 35,
+            "column": 1
+          },
+          "end": {
+            "offset": 881,
+            "line": 42,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserDetail/parameter",
+        "kind": "parameter",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 734,
+            "line": 35,
+            "column": 17
+          },
+          "end": {
+            "offset": 744,
+            "line": 35,
+            "column": 27
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserDetail/view/detail/User",
+        "kind": "detail",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 768,
+            "line": 38,
+            "column": 5
+          },
+          "end": {
+            "offset": 879,
+            "line": 41,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserDetail/view/detail/User/action/edit",
+        "kind": "action-reference",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 855,
+            "line": 40,
+            "column": 17
+          },
+          "end": {
+            "offset": 859,
+            "line": 40,
+            "column": 21
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserDetail/view/detail/User/action/edit/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 855,
+            "line": 40,
+            "column": 17
+          },
+          "end": {
+            "offset": 859,
+            "line": 40,
+            "column": 21
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 883,
+            "line": 44,
+            "column": 1
+          },
+          "end": {
+            "offset": 1035,
+            "line": 51,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit/parameter",
+        "kind": "parameter",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 897,
+            "line": 44,
+            "column": 15
+          },
+          "end": {
+            "offset": 907,
+            "line": 44,
+            "column": 25
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit/view/form/edit/User",
+        "kind": "form",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 931,
+            "line": 47,
+            "column": 5
+          },
+          "end": {
+            "offset": 1033,
+            "line": 50,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit/view/form/edit/User/submit",
+        "kind": "submit",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1000,
+            "line": 49,
+            "column": 9
+          },
+          "end": {
+            "offset": 1011,
+            "line": 49,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit/view/form/edit/User/submit/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1000,
+            "line": 49,
+            "column": 9
+          },
+          "end": {
+            "offset": 1011,
+            "line": 49,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/UserEdit/view/form/edit/User/submit/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 1000,
+            "line": 49,
+            "column": 9
+          },
+          "end": {
+            "offset": 1011,
+            "line": 49,
+            "column": 20
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 435,
+            "line": 22,
+            "column": 1
+          },
+          "end": {
+            "offset": 716,
+            "line": 33,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User",
+        "kind": "list",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 469,
+            "line": 25,
+            "column": 5
+          },
+          "end": {
+            "offset": 714,
+            "line": 32,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User/action/edit",
+        "kind": "action-reference",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 690,
+            "line": 31,
+            "column": 39
+          },
+          "end": {
+            "offset": 694,
+            "line": 31,
+            "column": 43
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User/action/edit/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 690,
+            "line": 31,
+            "column": 39
+          },
+          "end": {
+            "offset": 694,
+            "line": 31,
+            "column": 43
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User/action/view",
+        "kind": "action-reference",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 668,
+            "line": 31,
+            "column": 17
+          },
+          "end": {
+            "offset": 672,
+            "line": 31,
+            "column": 21
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User/action/view/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 668,
+            "line": 31,
+            "column": 17
+          },
+          "end": {
+            "offset": 672,
+            "line": 31,
+            "column": 21
+          }
+        }
+      },
+      {
+        "nodeId": "page/Users/view/list/User/sort",
+        "kind": "sort",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 618,
+            "line": 29,
+            "column": 9
+          },
+          "end": {
+            "offset": 627,
+            "line": 29,
+            "column": 18
+          }
+        }
+      },
+      {
+        "nodeId": "page/VerifyEmail",
+        "kind": "page",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2434,
+            "line": 119,
+            "column": 1
+          },
+          "end": {
+            "offset": 2621,
+            "line": 126,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount",
+        "kind": "identity-interaction",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2457,
+            "line": 120,
+            "column": 5
+          },
+          "end": {
+            "offset": 2619,
+            "line": 125,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/access",
+        "kind": "access",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2457,
+            "line": 120,
+            "column": 5
+          },
+          "end": {
+            "offset": 2619,
+            "line": 125,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/continuation",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2564,
+            "line": 123,
+            "column": 18
+          },
+          "end": {
+            "offset": 2570,
+            "line": 123,
+            "column": 24
+          }
+        }
+      },
+      {
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/success",
+        "kind": "navigation",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 2457,
+            "line": 120,
+            "column": 5
+          },
+          "end": {
+            "offset": 2619,
+            "line": 125,
+            "column": 6
+          }
+        }
+      },
+      {
+        "nodeId": "role/admin",
+        "kind": "role",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 75,
+            "line": 3,
+            "column": 1
+          },
+          "end": {
+            "offset": 86,
+            "line": 3,
+            "column": 12
+          }
+        }
+      },
+      {
+        "nodeId": "type/Email",
+        "kind": "type",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 87,
+            "line": 5,
+            "column": 1
+          },
+          "end": {
+            "offset": 123,
+            "line": 5,
+            "column": 37
+          }
+        }
+      },
+      {
+        "nodeId": "type/Email/constraint/matches",
+        "kind": "constraint",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 107,
+            "line": 5,
+            "column": 21
+          },
+          "end": {
+            "offset": 122,
+            "line": 5,
+            "column": 36
+          }
+        }
+      },
+      {
+        "nodeId": "type/Plan",
+        "kind": "type",
+        "span": {
+          "file": "experiments/membership-agent-e2e/app.forma",
+          "start": {
+            "offset": 123,
+            "line": 6,
+            "column": 1
+          },
+          "end": {
+            "offset": 159,
+            "line": 6,
+            "column": 37
+          }
+        }
+      }
+    ]
+  },
+  "implementationPolicy": {
+    "schema": "forma/implementation-policy/v0alpha1",
+    "policies": [
+      {
+        "id": "implementation/persistence",
+        "policy": "preferred",
+        "value": "database/sql",
+        "instruction": "永続化にはdatabase/sqlを優先する"
+      },
+      {
+        "id": "implementation/router",
+        "policy": "forbidden",
+        "value": "github.com/gorilla/mux",
+        "instruction": "標準net/http routerを維持する"
+      },
+      {
+        "id": "implementation/server-rendering",
+        "policy": "required",
+        "value": "html/template",
+        "instruction": "Server-rendered UIはhtml/templateで維持する"
+      }
+    ],
+    "conventions": [
+      "cmd/serverとinternal package境界を維持する"
+    ]
+  },
+  "requestedChange": {
+    "kind": "incremental",
+    "baseline": {
+      "requestSha256": "dd7d1304a874a9e7ca8d95e8e3c321fb501517a8cf5ad352cd3be6f119c5654f",
+      "requestSchema": "forma/generation-request/v0alpha2",
+      "resolvedIntentVersion": "forma/resolved-intent/v0.4",
+      "acceptanceFactsVersion": "forma/acceptance-facts/v0alpha1",
+      "sourceMapVersion": "forma/source-map/v0.2",
+      "reviewRequirementsVersion": "none"
+    },
+    "intentNodes": [
+      "action/User/activate",
+      "identity/UserAccount",
+      "identity/UserAccount/authentication",
+      "identity/UserAccount/credential/password",
+      "identity/UserAccount/identifier/email",
+      "identity/UserAccount/operation/register",
+      "identity/UserAccount/ownership/self",
+      "identity/UserAccount/proof/password",
+      "identity/UserAccount/session/current",
+      "identity/UserAccount/verification/email",
+      "identity/UserAccount/verification/email/notice",
+      "page/CheckEmail",
+      "page/CheckEmail/identity/resend/UserAccount",
+      "page/CheckEmail/identity/resend/UserAccount/access",
+      "page/CheckEmail/identity/resend/UserAccount/success",
+      "page/Profile",
+      "page/Profile/access",
+      "page/Profile/identity/signout/UserAccount",
+      "page/Profile/identity/signout/UserAccount/access",
+      "page/Profile/identity/signout/UserAccount/success",
+      "page/Profile/parameter",
+      "page/Profile/view/detail/User",
+      "page/ProfileEdit",
+      "page/ProfileEdit/access",
+      "page/ProfileEdit/parameter",
+      "page/ProfileEdit/view/form/edit/User",
+      "page/ProfileEdit/view/form/edit/User/submit",
+      "page/ProfileEdit/view/form/edit/User/submit/access",
+      "page/ProfileEdit/view/form/edit/User/submit/success",
+      "page/RegistrationComplete",
+      "page/SignIn",
+      "page/SignIn/identity/signin/UserAccount",
+      "page/SignIn/identity/signin/UserAccount/access",
+      "page/SignIn/identity/signin/UserAccount/success",
+      "page/SignUp",
+      "page/SignUp/identity/register/UserAccount",
+      "page/SignUp/identity/register/UserAccount/access",
+      "page/SignUp/identity/register/UserAccount/success",
+      "page/VerifyEmail",
+      "page/VerifyEmail/identity/verify/UserAccount",
+      "page/VerifyEmail/identity/verify/UserAccount/access",
+      "page/VerifyEmail/identity/verify/UserAccount/continuation",
+      "page/VerifyEmail/identity/verify/UserAccount/success"
+    ],
+    "intentChanges": [
+      {
+        "kind": "added",
+        "nodeId": "action/User/activate"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/authentication"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/credential/password"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/identifier/email"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/operation/register"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/ownership/self"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/proof/password"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/session/current"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/verification/email"
+      },
+      {
+        "kind": "added",
+        "nodeId": "identity/UserAccount/verification/email/notice"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/CheckEmail"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/CheckEmail/identity/resend/UserAccount/success"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/identity/signout/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/identity/signout/UserAccount/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/identity/signout/UserAccount/success"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/parameter"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/Profile/view/detail/User"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/parameter"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/view/form/edit/User"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/ProfileEdit/view/form/edit/User/submit/success"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/RegistrationComplete"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignIn"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignIn/identity/signin/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignIn/identity/signin/UserAccount/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignIn/identity/signin/UserAccount/success"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignUp"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignUp/identity/register/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignUp/identity/register/UserAccount/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/SignUp/identity/register/UserAccount/success"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/VerifyEmail"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/access"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/continuation"
+      },
+      {
+        "kind": "added",
+        "nodeId": "page/VerifyEmail/identity/verify/UserAccount/success"
+      }
+    ],
+    "factChanges": [
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/credential/password/non-projectable"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/at-most-once"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/credential/bound"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/identifier/duplicate"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/notice/emitted"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/subject/created"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/validation/rejected"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/register/verification/issued"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/resend/accepted"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/resend/at-most-once"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/resend/evidence/rotated"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/signin/accepted"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/signin/rejected/generic"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/signin/state/ineligible"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/signout/session/terminated"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/verify/accepted"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/verify/evidence/consumed"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/verify/evidence/rejected"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/operation/verify/expiry/boundary"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/ownership/self/access/allowed/self"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/ownership/self/access/denied/anonymous"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/ownership/self/access/denied/other-subject"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/identity/UserAccount/verification/email/notice/delivery/failure"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/Profile/view/detail/User/feedback"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/Profile/view/detail/User/fields"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/Profile/view/detail/User/records/visible"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/feedback"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/fields"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/submit/navigation"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/SignUp/identity/register/UserAccount/inputs"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/SignUp/identity/register/UserAccount/navigation"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/page/VerifyEmail/identity/verify/UserAccount/navigation"
+      }
+    ],
+    "reviewRequirementChanges": [
+      {
+        "kind": "added",
+        "nodeId": "review/identity/UserAccount/fixture-fidelity"
+      },
+      {
+        "kind": "added",
+        "nodeId": "review/identity/UserAccount/secret-redaction"
+      },
+      {
+        "kind": "added",
+        "nodeId": "review/identity/UserAccount/secret-storage"
+      }
+    ],
+    "unchangedIntentNodes": 32,
+    "unchangedFacts": 43
+  },
+  "verification": {
+    "feedbackSchema": "forma/generation-feedback/v0alpha2",
+    "requiredFactIds": [
+      "fact/entity/User/field/team/relation/resolved",
+      "fact/identity/UserAccount/credential/password/non-projectable",
+      "fact/identity/UserAccount/operation/register/at-most-once",
+      "fact/identity/UserAccount/operation/register/credential/bound",
+      "fact/identity/UserAccount/operation/register/identifier/duplicate",
+      "fact/identity/UserAccount/operation/register/notice/emitted",
+      "fact/identity/UserAccount/operation/register/subject/created",
+      "fact/identity/UserAccount/operation/register/validation/rejected",
+      "fact/identity/UserAccount/operation/register/verification/issued",
+      "fact/identity/UserAccount/operation/resend/accepted",
+      "fact/identity/UserAccount/operation/resend/at-most-once",
+      "fact/identity/UserAccount/operation/resend/evidence/rotated",
+      "fact/identity/UserAccount/operation/signin/accepted",
+      "fact/identity/UserAccount/operation/signin/rejected/generic",
+      "fact/identity/UserAccount/operation/signin/state/ineligible",
+      "fact/identity/UserAccount/operation/signout/session/terminated",
+      "fact/identity/UserAccount/operation/verify/accepted",
+      "fact/identity/UserAccount/operation/verify/evidence/consumed",
+      "fact/identity/UserAccount/operation/verify/evidence/rejected",
+      "fact/identity/UserAccount/operation/verify/expiry/boundary",
+      "fact/identity/UserAccount/ownership/self/access/allowed/self",
+      "fact/identity/UserAccount/ownership/self/access/denied/anonymous",
+      "fact/identity/UserAccount/ownership/self/access/denied/other-subject",
+      "fact/identity/UserAccount/verification/email/notice/delivery/failure",
+      "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
+      "fact/page/Profile/view/detail/User/feedback",
+      "fact/page/Profile/view/detail/User/fields",
+      "fact/page/Profile/view/detail/User/records/visible",
+      "fact/page/ProfileEdit/view/form/edit/User/feedback",
+      "fact/page/ProfileEdit/view/form/edit/User/fields",
+      "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted",
+      "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "fact/page/ProfileEdit/view/form/edit/User/submit/navigation",
+      "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name",
+      "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
+      "fact/page/SignUp/identity/register/UserAccount/inputs",
+      "fact/page/SignUp/identity/register/UserAccount/navigation",
+      "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
+      "fact/page/UserDetail/view/detail/User/access/allowed/admin",
+      "fact/page/UserDetail/view/detail/User/access/denied/anonymous",
+      "fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin",
+      "fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous",
+      "fact/page/UserDetail/view/detail/User/action/edit/navigation",
+      "fact/page/UserDetail/view/detail/User/actions",
+      "fact/page/UserDetail/view/detail/User/feedback",
+      "fact/page/UserDetail/view/detail/User/fields",
+      "fact/page/UserDetail/view/detail/User/records/visible",
+      "fact/page/UserEdit/view/form/edit/User/access/allowed/admin",
+      "fact/page/UserEdit/view/form/edit/User/access/denied/anonymous",
+      "fact/page/UserEdit/view/form/edit/User/feedback",
+      "fact/page/UserEdit/view/form/edit/User/fields",
+      "fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin",
+      "fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous",
+      "fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted",
+      "fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once",
+      "fact/page/UserEdit/view/form/edit/User/submit/navigation",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/required/email",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/required/name",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan",
+      "fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email",
+      "fact/page/Users/view/list/User/access/allowed/admin",
+      "fact/page/Users/view/list/User/access/denied/anonymous",
+      "fact/page/Users/view/list/User/action/edit/access/allowed/admin",
+      "fact/page/Users/view/list/User/action/edit/access/denied/anonymous",
+      "fact/page/Users/view/list/User/action/edit/navigation",
+      "fact/page/Users/view/list/User/action/view/access/allowed/admin",
+      "fact/page/Users/view/list/User/action/view/access/denied/anonymous",
+      "fact/page/Users/view/list/User/action/view/navigation",
+      "fact/page/Users/view/list/User/actions",
+      "fact/page/Users/view/list/User/feedback",
+      "fact/page/Users/view/list/User/fields",
+      "fact/page/Users/view/list/User/filter/plan",
+      "fact/page/Users/view/list/User/filter/status",
+      "fact/page/Users/view/list/User/filter/team",
+      "fact/page/Users/view/list/User/page-boundary",
+      "fact/page/Users/view/list/User/records/visible",
+      "fact/page/Users/view/list/User/search",
+      "fact/page/Users/view/list/User/sort",
+      "fact/page/VerifyEmail/identity/verify/UserAccount/navigation"
+    ],
+    "displayReviewRequirementIds": [
+      "review/identity/UserAccount/fixture-fidelity",
+      "review/identity/UserAccount/secret-redaction",
+      "review/identity/UserAccount/secret-storage"
+    ],
+    "requireTestReference": true,
+    "rejectUnknownFacts": true
+  }
+}

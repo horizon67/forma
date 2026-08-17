@@ -90,7 +90,7 @@ func marshalRequestForSchema(request Request) ([]byte, error) {
 			return nil, err
 		}
 		return removeHistoricalEmptyAccessKinds(content), nil
-	case PreviousRequestSchema, RequestSchema:
+	case RequestSchema:
 		return json.MarshalIndent(request, "", "  ")
 	default:
 		return nil, fmt.Errorf("marshal Generation Request: unsupported schema %q", request.Schema)
@@ -326,7 +326,7 @@ func compilerOutputsForDiff(request Request) (compilerOutputSet, error) {
 	switch request.Schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
 		return upgradeHistoricalCompilerOutputs(request)
-	case PreviousRequestSchema, RequestSchema:
+	case RequestSchema:
 		if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.ReviewRequirements == nil || request.SourceMap == nil {
 			return compilerOutputSet{}, fmt.Errorf("index Generation Request: compiler output is incomplete")
 		}
@@ -349,7 +349,7 @@ func compilerVersionsForRequestSchema(schema string) (intent, facts, sourceMap, 
 	switch schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
 		return historicalResolvedIntentVersion, historicalAcceptanceFactsVersion, historicalSourceMapVersion, noReviewRequirementsVersion, true
-	case PreviousRequestSchema, RequestSchema:
+	case RequestSchema:
 		return compiler.ResolvedIntentVersion, compiler.AcceptanceFactsVersion, compiler.SourceMapVersion, compiler.ReviewRequirementsVersion, true
 	default:
 		return "", "", "", "", false

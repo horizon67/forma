@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -291,4 +292,178 @@ func identityFactByKind(t *testing.T, facts []AcceptanceFact, kind string) Accep
 	}
 	t.Fatalf("Identity fact kind %s is missing", kind)
 	return AcceptanceFact{}
+}
+
+func TestConsumedRejectionCaseMustStartFromAReachableState(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The canonical facts start the consumed case after the successful
+	// verification, so they validate.
+	if err := ValidateAcceptanceFacts(intent, facts); err != nil {
+		t.Fatalf("canonical consumed case must validate: %v", err)
+	}
+	rejectedIndex := -1
+	for index := range facts.Facts {
+		if facts.Facts[index].Kind == "verification-rejected" {
+			rejectedIndex = index
+		}
+	}
+	if rejectedIndex < 0 {
+		t.Fatal("the membership fixture must produce a verification-rejected fact")
+	}
+
+	stateID := intent.Entities[0].State.ID
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		// Returning to the pre-verification state describes evidence that could
+		// not have been consumed.
+		{name: "pre-verification state", value: "Pending", want: "but a successful verification reaches"},
+		// A different unreachable state must be refused too: only the state the
+		// accepted fact reaches is valid.
+		{name: "unrelated state", value: "Suspended", want: "but a successful verification reaches"},
+	}
+	for _, test := range tests {
+		t.Run("setup in the "+test.name, func(t *testing.T) {
+			broken := cloneFactsForTest(t, facts)
+			for index := range broken.Facts[rejectedIndex].Input.Identity.Cases {
+				item := &broken.Facts[rejectedIndex].Input.Identity.Cases[index]
+				if item.Kind != "consumed" {
+					continue
+				}
+				for subject := range item.Setup.Subjects {
+					item.Setup.Subjects[subject].State = &IRStateValueRef{State: stateID, Value: test.value}
+				}
+			}
+			for index := range broken.Facts[rejectedIndex].Expected.Identity.Cases {
+				expectation := &broken.Facts[rejectedIndex].Expected.Identity.Cases[index]
+				if expectation.Kind == "consumed" {
+					expectation.SubjectState = &IRStateValueRef{State: stateID, Value: test.value}
+				}
+			}
+			if err := ValidateAcceptanceFacts(intent, broken); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("validation = %v, want the unreachable state to be rejected", err)
+			}
+		})
+	}
+
+	t.Run("expectation disagrees with the reached state", func(t *testing.T) {
+		broken := cloneFactsForTest(t, facts)
+		for index := range broken.Facts[rejectedIndex].Expected.Identity.Cases {
+			expectation := &broken.Facts[rejectedIndex].Expected.Identity.Cases[index]
+			if expectation.Kind == "consumed" {
+				expectation.SubjectState = &IRStateValueRef{State: stateID, Value: "Pending"}
+			}
+		}
+		if err := ValidateAcceptanceFacts(intent, broken); err == nil ||
+			!strings.Contains(err.Error(), "a rejection must leave the subject in") {
+			t.Fatalf("validation = %v, want the disagreeing expectation to be rejected", err)
+		}
+	})
+}
+
+func TestDuplicateIdentifierCaseMustStartFromACommittedRegistration(t *testing.T) {
+	intent, _ := membershipIntentFixture(t)
+	facts, err := BuildAcceptanceFacts(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateAcceptanceFacts(intent, facts); err != nil {
+		t.Fatalf("canonical duplicate case must validate: %v", err)
+	}
+	duplicateIndex := -1
+	for index := range facts.Facts {
+		if facts.Facts[index].Kind == "duplicate-identifier-rejected" {
+			duplicateIndex = index
+		}
+	}
+	if duplicateIndex < 0 {
+		t.Fatal("the membership fixture must produce a duplicate-identifier-rejected fact")
+	}
+
+	tests := []struct {
+		name   string
+		break_ func(fact *AcceptanceFact)
+		want   string
+	}{
+		// A prior registration without its evidence is the state this fact used
+		// to describe. Registration commits the evidence with the subject, so
+		// no run can present the identifier that is being duplicated here.
+		{
+			name: "existing subject with no evidence",
+			break_: func(fact *AcceptanceFact) {
+				for index := range fact.Input.Identity.Cases {
+					fact.Input.Identity.Cases[index].Setup.Evidence = nil
+				}
+			},
+			want: "omits the evidence the prior registration issued",
+		},
+		// Evidence already consumed would mean the subject verified, which is a
+		// different starting point with a different duplicate response.
+		{
+			name: "evidence already consumed",
+			break_: func(fact *AcceptanceFact) {
+				for index := range fact.Input.Identity.Cases {
+					fact.Input.Identity.Cases[index].Setup.Evidence[0].Condition = "consumed"
+				}
+			},
+			want: "omits the evidence the prior registration issued",
+		},
+		// Dropping the credential describes a subject that registration could
+		// not have produced either.
+		{
+			name: "existing subject with no credential",
+			break_: func(fact *AcceptanceFact) {
+				for index := range fact.Input.Identity.Cases {
+					fact.Input.Identity.Cases[index].Setup.Subjects[0].Credentials = nil
+				}
+			},
+			want: "not a single credentialed subject",
+		},
+		// With evidence in the setup, an absolute count of one would also hold
+		// if the duplicate attempt had replaced it. Only growth of zero states
+		// that the attempt changed nothing.
+		{
+			name:   "evidence expectation without growth",
+			break_: func(fact *AcceptanceFact) { fact.Expected.Identity.Evidence.Added = nil },
+			want:   "no evidence added to the existing registration",
+		},
+		{
+			name:   "notice expectation without growth",
+			break_: func(fact *AcceptanceFact) { fact.Expected.Identity.Notice.Added = nil },
+			want:   "no notice added to the existing registration",
+		},
+		{
+			name:   "notice growth permitted",
+			break_: func(fact *AcceptanceFact) { fact.Expected.Identity.Notice.Added = exactCount(1) },
+			want:   "no notice added to the existing registration",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneFactsForTest(t, facts)
+			test.break_(&broken.Facts[duplicateIndex])
+			if err := ValidateAcceptanceFacts(intent, broken); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("validation = %v, want the unreachable duplicate setup to be rejected", err)
+			}
+		})
+	}
+}
+
+func cloneFactsForTest(t *testing.T, facts *AcceptanceFacts) *AcceptanceFacts {
+	t.Helper()
+	content, err := json.Marshal(facts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var clone AcceptanceFacts
+	if err := json.Unmarshal(content, &clone); err != nil {
+		t.Fatal(err)
+	}
+	return &clone
 }

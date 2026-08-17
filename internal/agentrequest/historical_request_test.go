@@ -52,7 +52,9 @@ page UserPage(user User) {
 	// Rebuild the pre-v0.7 shape: the reference carried the success page and the
 	// navigation fact repeated it.
 	historical := Request{
-		Schema: PreviousRequestSchema, ResolvedIntent: result.Intent,
+		// The fixture stands in for a real v0alpha2 artifact, so it carries that
+		// schema rather than the current one.
+		Schema: HistoricalIncrementalRequestSchema, ResolvedIntent: result.Intent,
 		AcceptanceFacts: facts, SourceMap: result.SourceMap,
 	}
 	clearKind := func(access *compiler.IRAccess) {

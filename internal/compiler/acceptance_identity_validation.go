@@ -91,7 +91,80 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 			}
 		}
 	}
+	return validateVerificationRejectionReachability(facts.Facts)
+}
+
+// validateVerificationRejectionReachability pins the consumed rejection case to
+// the state the successful verification actually reaches. Consumed evidence
+// exists only because that transition already ran, so the case must start and
+// end in the accepted fact's destination state; merely differing from the
+// pre-verification state would still allow an unreachable one.
+func validateVerificationRejectionReachability(facts []AcceptanceFact) error {
+	success := map[SemanticID]*IRStateValueRef{}
+	for _, fact := range facts {
+		if fact.Kind != "verification-accepted" || fact.Expected.Identity == nil || fact.Expected.Identity.Subject == nil {
+			continue
+		}
+		success[fact.Subject] = fact.Expected.Identity.Subject.State
+	}
+	for _, fact := range facts {
+		if fact.Kind != "verification-rejected" || fact.Input == nil ||
+			fact.Input.Identity == nil || fact.Expected.Identity == nil {
+			continue
+		}
+		reached, ok := success[fact.Subject]
+		if !ok || reached == nil {
+			return fmt.Errorf(
+				"validate Acceptance Facts: fact %s has no accepted verification declaring the state a consumed case starts from", fact.ID)
+		}
+		for _, item := range fact.Input.Identity.Cases {
+			if item.Kind != "consumed" {
+				continue
+			}
+			if !stateRefEquals(setupSubjectStateRef(item.Setup), reached) {
+				return fmt.Errorf(
+					"validate Acceptance Facts: fact %s consumed case starts in %s, but a successful verification reaches %s",
+					fact.ID, describeState(setupSubjectStateRef(item.Setup)), describeState(reached))
+			}
+		}
+		for _, expectation := range fact.Expected.Identity.Cases {
+			if expectation.Kind != "consumed" {
+				continue
+			}
+			if !stateRefEquals(expectation.SubjectState, reached) {
+				return fmt.Errorf(
+					"validate Acceptance Facts: fact %s consumed case expects %s, but a rejection must leave the subject in %s",
+					fact.ID, describeState(expectation.SubjectState), describeState(reached))
+			}
+		}
+	}
 	return nil
+}
+
+func setupSubjectStateRef(setup *FactSetup) *IRStateValueRef {
+	if setup == nil {
+		return nil
+	}
+	for _, subject := range setup.Subjects {
+		if subject.State != nil {
+			return subject.State
+		}
+	}
+	return nil
+}
+
+func stateRefEquals(left, right *IRStateValueRef) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	return left.State == right.State && left.Value == right.Value
+}
+
+func describeState(ref *IRStateValueRef) string {
+	if ref == nil {
+		return "no state"
+	}
+	return string(ref.State) + "=" + ref.Value
 }
 
 func isIdentityFact(fact AcceptanceFact) bool {
@@ -465,10 +538,26 @@ func validateFactNonSelfFulfillment(fact AcceptanceFact) error {
 			return fmt.Errorf("validate Identity Fact %s: setup pre-installs a fresh registration result", fact.ID)
 		}
 	case "duplicate-identifier-rejected":
+		// The prior registration has to be the state a registration actually
+		// leaves behind: one subject holding one credential and one issued
+		// evidence. Demanding a subject with no evidence would describe a state
+		// no run can reach, and demanding two subjects would pre-install the
+		// outcome. Self-fulfillment is instead ruled out below by requiring the
+		// expectation to be stated as growth from that starting point.
 		for _, setup := range setups[1:] {
-			if setup == nil || len(setup.Subjects) != 1 || len(setup.Evidence) != 0 || len(setup.Sessions) != 0 || setup.Delivery != nil {
-				return fmt.Errorf("validate Identity Fact %s: duplicate case setup is not an existing subject only", fact.ID)
+			if setup == nil || len(setup.Subjects) != 1 || len(setup.Subjects[0].Credentials) != 1 || len(setup.Sessions) != 0 || setup.Delivery != nil {
+				return fmt.Errorf("validate Identity Fact %s: duplicate case setup is not a single credentialed subject", fact.ID)
 			}
+			if len(setup.Evidence) != 1 || setup.Evidence[0].Subject != setup.Subjects[0].Handle || setup.Evidence[0].Condition != "issued" {
+				return fmt.Errorf("validate Identity Fact %s: duplicate case setup omits the evidence the prior registration issued", fact.ID)
+			}
+		}
+		expected := fact.Expected.Identity
+		if expected.Evidence == nil || expected.Evidence.Added == nil || *expected.Evidence.Added != 0 {
+			return fmt.Errorf("validate Identity Fact %s: duplicate rejection must expect no evidence added to the existing registration", fact.ID)
+		}
+		if expected.Notice == nil || expected.Notice.Added == nil || *expected.Notice.Added != 0 {
+			return fmt.Errorf("validate Identity Fact %s: duplicate rejection must expect no notice added to the existing registration", fact.ID)
 		}
 	case "operation-at-most-once":
 		if fact.Input.Identity.Dispatches < 2 || fact.Expected.Identity.AppliedOperations != 1 {

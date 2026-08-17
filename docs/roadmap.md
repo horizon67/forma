@@ -271,6 +271,35 @@ Credential、Verification、Effect、resend、self authorizationは表現でき�
 credential-awareな導出が必要である。また、signinやownershipのFactをsignup Factの成功結果へ依存させず、
 symbolic handleとsemantic setupから独立実行する方針を固定した。
 
+Stage Dでは、適用済みadmin request（Git blob `5751ecf8`、`v0alpha2`）をbaselineに、実際の`.forma`
+sourceからincremental Generation Requestを構築し、[`../experiments/membership-agent-e2e`](../experiments/membership-agent-e2e/README.md)
+のtarget repositoryへメール認証付きsignup/signinを実装した。81 Acceptance Facts（admin 43件はunchanged、
+38件がすべてadded）と3 Implementation Policies、3 Review Requirementsを`forma verify --baseline`で検証した。
+Forma coreはGo/HTTP/HTML用のgeneratorやadapterを持たない。
+
+この実測で4つの穴が出た。既存applicationへIdentityを足すと標準actionの宛先が曖昧になり、明示`goto`
+（[`navigation-destination-proposal.md`](navigation-destination-proposal.md)）で解決した。Factが2件、
+到達不能な状態をsetupしていた。`verification-rejected`のconsumed caseは`Pending + consumed`を、
+`duplicate-identifier-rejected`は「evidenceを持たない既存registration」を要求していたが、どちらの状態も
+atomicなoperationからは生まれない。前者を成功verificationの到達先である`Active`へ、後者をregistrationが
+commitする4 recordを揃えた状態へ直し、期待値を絶対数からgrowthへ変え、双方をcompiler invariantで固定した
+（Acceptance Facts `v0alpha4`）。targetがemail検証へFormaにない規則を足していたため、宣言された`matches`を
+そのまま適用する形へ統一した。
+
+fact→test mapの限界も測れた。`forma verify`はreferenceが解決できるかしか見ないため、名前が対応していても
+期待値を観測していないtestを通してしまう。review時に9件が該当し、protocol上の81/81と意味上の81/81が
+別物であることが確認された。埋めるにはhuman reviewが要る。
+
+fixtureがFactを観測できているかの確認手段はmutation testであることも分かった。`fixture-fidelity`は
+2度差し戻され、2度目は「countが変わらない」という観測がsubmit値と既存値が同じなら上書き実装も通す、
+という理由だった。testがpassすることではなく、実装を壊したときに落ちることでしか確かめられない。
+feedback artifactの信頼性も同様で、生成失敗時に旧artifactが残ると`forma verify`が古い測定で成功して
+しまうため、撤回してから検証し成功時のみatomicに公開する形にした。3件のReview Requirementsは
+すべて承認され、Stage Dは完了である。
+
+独立agentでの再現性、自動repair loop、実在する大規模repositoryへの適用、rename/削除を含むincremental
+updateは未検証である。
+
 Stage B1ではForma syntaxを増やさず、test-only fixtureからIdentity、Identifier、Credential、Registration、
 Verification、Authentication、Session、Ownership、page interaction、authenticated/ownership accessを
 Resolved Intent `v0.5`へ正規化した。全semantic nodeのstable IDとSource Map `v0.3`の1対1 coverage、closedな

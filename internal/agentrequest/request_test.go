@@ -275,13 +275,14 @@ func TestValidateRequestRederivesReviewRequirements(t *testing.T) {
 			want: "display review requirement IDs differ",
 		},
 		{
-			name: "previous schema cannot hide review",
+			name: "unsupported intermediate schema",
 			mutate: func(request *Request) {
-				request.Schema = PreviousRequestSchema
-				request.ReviewRequirements = nil
-				request.Verification.DisplayReviewRequirementIDs = nil
+				// v0alpha3 carried Review Requirements but its Acceptance Facts
+				// can no longer be reproduced, so it is refused outright rather
+				// than silently read with current-version expectations.
+				request.Schema = "forma/generation-request/v0alpha3"
 			},
-			want: "artifact is required",
+			want: "unsupported schema",
 		},
 	}
 	for _, test := range tests {

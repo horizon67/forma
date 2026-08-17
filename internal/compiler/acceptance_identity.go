@@ -42,6 +42,7 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 	bobCredential := bob + "/credential/primary"
 	existingCredential := existing + "/credential/primary"
 	aliceEvidence := alice + "/evidence/email-verification"
+	existingEvidence := existing + "/evidence/email-verification"
 	aliceSession := alice + "/session/current"
 
 	// 1. Anonymous registration access.
@@ -103,13 +104,26 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 	})
 
 	// 6. Exact and canonical-equivalent duplicate identifiers share one result.
+	//
+	// A registered subject only exists because registration committed the
+	// credential, the verification evidence, and the notice together, so the
+	// setup carries all of them. Expecting no evidence at all would describe a
+	// state the application cannot reach; the duplicate attempt must instead add
+	// nothing to what is already there.
+	existingRegistration := func() *FactSetup {
+		setup := identitySetup(subjectSetup(existing, c.identity.ID, &pending, credentialSetup(existingCredential, c.credential.ID)))
+		setup.Evidence = []FactEvidenceSetup{{
+			Handle: existingEvidence, Verification: c.verification.ID, Subject: existing, Condition: "issued",
+		}}
+		return setup
+	}
 	duplicateCases := []IdentityFactCase{
 		{
-			Kind: "exact", Setup: identitySetup(subjectSetup(existing, c.identity.ID, &pending, credentialSetup(existingCredential, c.credential.ID))),
+			Kind: "exact", Setup: existingRegistration(),
 			Identifier: &FactIdentifierInput{Identifier: c.identifier.ID, Handle: existing + "/identifier/primary", Relation: "exact"}, Dispatches: 1,
 		},
 		{
-			Kind: "canonical-equivalent", Setup: identitySetup(subjectSetup(existing, c.identity.ID, &pending, credentialSetup(existingCredential, c.credential.ID))),
+			Kind: "canonical-equivalent", Setup: existingRegistration(),
 			Identifier: &FactIdentifierInput{Identifier: c.identifier.ID, Handle: "input/identifier/canonical-equivalent", Relation: "canonical-equivalent"}, Dispatches: 1,
 		},
 	}
@@ -119,8 +133,8 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 		Expected: FactExpectation{Identity: &IdentityFactExpectation{
 			Outcome: "rejected", Subject: &FactSubjectExpectation{Count: exactCount(1), Unchanged: true}, Disclosure: "guide-resend",
 			Credential: &FactCredentialExpectation{Credential: c.credential.ID, Subject: existing, Condition: "unchanged"},
-			Evidence:   &FactEvidenceExpectation{Verification: c.verification.ID, Count: exactCount(0)},
-			Notice:     &FactNoticeExpectation{Notice: c.verification.Notice.ID, Count: exactCount(0)},
+			Evidence:   &FactEvidenceExpectation{Verification: c.verification.ID, Count: exactCount(1), Added: exactCount(0), Condition: "issued"},
+			Notice:     &FactNoticeExpectation{Notice: c.verification.Notice.ID, Count: exactCount(1), Added: exactCount(0)},
 			Cases:      []IdentityFactCaseExpectation{{Kind: "exact", Outcome: "rejected", Disclosure: "guide-resend"}, {Kind: "canonical-equivalent", Outcome: "rejected", Disclosure: "guide-resend"}},
 		}},
 		SourceNodes: []SemanticID{register, c.identifier.ID, c.credential.ID, c.verification.ID, c.verification.Notice.ID},
@@ -190,7 +204,10 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 	rejectedCases := []IdentityFactCase{
 		{Kind: "invalid", Setup: identitySetup(subjectSetup(alice, c.identity.ID, &pending)), Evidence: "input/evidence/invalid", Dispatches: 1},
 		{Kind: "expired", Setup: setupWithEvidence(c, alice, aliceEvidence, pending, "issued", "after-expiry"), Evidence: aliceEvidence, Clock: "after-expiry", Dispatches: 1},
-		{Kind: "consumed", Setup: setupWithEvidence(c, alice, aliceEvidence, pending, "consumed", "before-expiry"), Evidence: aliceEvidence, Dispatches: 1},
+		// Consumed evidence can only exist because the atomic successful
+		// verification already moved the subject out of Pending, so the setup
+		// must start from that reachable state.
+		{Kind: "consumed", Setup: setupWithEvidence(c, alice, aliceEvidence, active, "consumed", "before-expiry"), Evidence: aliceEvidence, Dispatches: 1},
 	}
 	b.add(AcceptanceFact{
 		ID: factID(verify, "evidence", "rejected"), Kind: "verification-rejected", Subject: verify,
@@ -199,7 +216,7 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 			Outcome: "rejected", Cases: []IdentityFactCaseExpectation{
 				{Kind: "invalid", Outcome: "rejected", SubjectState: &pending},
 				{Kind: "expired", Outcome: "rejected", SubjectState: &pending},
-				{Kind: "consumed", Outcome: "rejected", SubjectState: &pending},
+				{Kind: "consumed", Outcome: "rejected", SubjectState: &active},
 			},
 		}},
 		SourceNodes: []SemanticID{c.verification.ID, verify, c.state.ID},
