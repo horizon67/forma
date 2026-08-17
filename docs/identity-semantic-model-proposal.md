@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B implementation — B1–B4 complete; B5 comparison gate next; not valid Forma syntax
+Status: Stage B complete — B1–B5 implemented; minimal Stage C syntax next; not valid Forma syntax
 
 ## 1. 目的
 
@@ -1003,9 +1003,12 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 
 ### B5 — proposal gate
 
-- passwordless、external provider、email変更の3つをGo fixtureだけで試す。
-- schemaを壊さず表現できない部分を記録し、未対応組合せはdiagnostic対象にする。
-- このgateを通るまでsurface syntaxを追加しない。
+- [x] passwordless、external provider、email変更の3つをGo fixtureだけで試した。
+- [x] passwordlessではgeneric Fact validatorがcredential非依存の26/38 Factsを受理し、B2の部分集合対応を実測した。
+- [x] 現行schemaで表現できないproof、external authority、identifier binding lifecycleを
+  [`identity-variant-probe.md`](identity-variant-probe.md)へ記録した。
+- [x] 未対応組合せを通常field/actionへ縮退させず、Resolved Intent validatorとFact contract registryが拒否することを
+  testした。
 
 ## 22. Stage B exit criteria
 
@@ -1022,13 +1025,49 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 - target/framework vocabularyを含まない。
 - unsupportedなIdentity組合せをagentへ渡さず拒否できる。
 
-## 23. Stage Cへ残す問い
+## 23. Stage Cの設計制約と残す問い
 
-- `identity` declarationとnested clauseの最小syntax。
+B5で分かった問題はIdentifiers/Credentialsの**cardinality**ではなく、Authentication Proof、External Authority、
+Identifier Binding Lifecycleという独立axisの不在である。個数制限を外しても3 fixtureは表現できない。
+
+Stage Cのsurface syntaxは次の制約を守る。
+
+1. `password`または`credential`を`identity` declarationの構造上の必須節にしない。current first sliceは意味検査で
+   local password proofをちょうど1個要求してよいが、grammar上のslotは将来別proof kindをadditiveに追加できる
+   authentication proofの位置として設計する。
+2. local passwordはproofの1 variantであり、Identityそのものの同義語にしない。password policyを表すsyntaxも
+   local-password proof nodeの内側に閉じる。
+3. external providerをCredential kindへfallbackさせない。将来のExternal Authorityとsubject mappingは、既存の
+   local-password syntaxを壊さず兄弟nodeとして追加できなければならない。
+4. email変更のcandidateを2個目のcurrent Identifierや通常field editとして表さない。将来のcandidate bindingと
+   verified replacement lifecycleを、既存identifier declarationへ破壊的変更せず追加できなければならない。
+5. IR typeがsliceであることだけを理由に複数identifier/credentialをsurfaceで有効化しない。cardinalityは各language
+   versionのsemantic capabilityとして閉じ、未対応形はGeneration Requestより前にdiagnosticで拒否する。
+6. unsupportedなproof kind、authority、identifier lifecycleをagentへ散文で補完させない。Checkerが対応するResolved
+   Intent nodeとFactsを完全導出できる方式だけを受理する。
+
+Stage Cのextension testは「現在のpassword syntaxが短いか」だけでなく、将来次を**additive**に置けるかで評価する。
+
+```text
+Authentication Proof
+  ├── Local Password        // current first slice
+  ├── Verification Evidence // future
+  └── External Assertion    // future
+
+Identity
+  ├── Identifier Current Binding
+  ├── Authentication Proof
+  ├── External Authority    // future sibling
+  └── Identifier Change     // future sibling
+```
+
+この制約の下で、次をStage Cのopen decisionとする。
+
+- `identity` declarationとauthentication proof clauseの最小syntax。
 - register/verify/resend/signin/signout interactionをpageへどう記述するか。
-- Credential policyをinlineにするかnamed policyにするか。
+- local password policyをinlineにするかnamed policyにするか。
 - anonymous、authenticated、selfを`allow`へどう統合するか。
 - verification noticeをIdentity syntaxへ置くか、採用後のEffect syntaxを参照するか。
-- passwordless/external provider比較からIdentifiers/Credentialsの複数性をどこまで有効化するか。
 
-これらはStage BのResolved Intentを一意に生成できるかで評価し、syntaxの短さだけで決めない。
+各案はStage BのResolved Intentを一意に生成できること、未対応axisを黙って縮退させないこと、将来axisが既存syntaxへ
+破壊的変更なしで追加できることを必須条件とする。syntaxの短さはその後に評価する。

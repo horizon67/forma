@@ -1,6 +1,6 @@
 # Email-verified Membership Flow Probe
 
-Status: active P1 probe — Stage B1–B4 complete; B5 comparison gate next; syntax undecided
+Status: active P1 probe — Stage B1–B5 complete; minimal Stage C syntax next
 
 Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
@@ -319,7 +319,7 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - 現行v0の受理・拒否境界を実測する。
 - syntaxを決めない。
 
-### Stage B — target-neutral semantic model（B1–B4 complete、B5 next）
+### Stage B — target-neutral semantic model（B1–B5 complete）
 
 具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
@@ -342,12 +342,16 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - [x] Review Requirement diffと全compiler artifact versionを持つGeneration Request `v0alpha4`を実装した。
 - [x] 実際に適用したadmin `v0alpha2` requestのbyte identityを保ち、43既存FactsをunchangedとしてIdentity追加requestへの
   pairwise lineageを検証した。
+- [x] passwordless、external provider、email変更をtest-only fixtureで比較し、共通化に必要なproof、external authority、
+  identifier binding lifecycleを[`identity-variant-probe.md`](identity-variant-probe.md)へ記録した。
 
 ### Stage C — experimental Forma syntax
 
 - Stage Bの意味を一意に作れる最小surface syntaxをParserとCheckerへ追加する。
-- passwordless / external provider / email変更の比較例へ同じmodelを当て、過度にpassword signupへ固定していないか
-  確認する。
+- [x] passwordless / external provider / email変更の比較fixtureへ同じmodelを当て、現行`v0.5`の対応範囲と不足axisを確認した。
+- passwordをIdentityの構造上の必須節にせず、current sliceではlocal-password proofだけを意味検査で受理する。
+- 将来のverification-evidence proof、external authority、identifier changeを既存syntaxへadditiveに追加できることを
+  [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md) §23の設計制約として守る。
 - unsupportedな組合せはagentへ渡さずcompile errorにする。
 
 ### Stage D — agent E2E

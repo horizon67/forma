@@ -37,7 +37,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage B4完了** | Identity専用29 Facts、3 Review Requirements、適用済みadmin requestからのpairwise lineageを実装。B5 comparison gateが次 |
+| public Identity | **P1 Stage B5完了** | passwordless/provider/email変更の比較で対応範囲を固定。local password + email verificationの最小syntaxが次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -292,7 +292,13 @@ Stage B4ではGeneration Requestを`v0alpha4`へ上げ、Review Requirement diff
 Requirements versionを追加した。historical `v0alpha1` / `v0alpha2`は専用codecで元のcanonical bytesを保ち、
 compiler outputだけをlosslessにupgradeしてdiffする。適用済みadmin `v0alpha2` blobからadmin semanticsを保った
 Identity追加requestへ、43既存Factsをunchanged、38 Factsと3 Review Requirementsをaddedとしてpairwise lineageを
-検証した。次はB5でpasswordless、external provider、email変更をsyntaxなしのfixtureとして比較する。
+検証した。
+
+Stage B5ではpasswordless、external provider、email変更をsyntaxなしのGo fixtureとして比較した。generic Fact validatorは
+passwordlessのcredential非依存26/38 Factsを受理し、Fact kindの部分集合対応を実証した。一方、end-to-end builderは
+3件を明示的に拒否し、authentication proof、external authority、identifier binding lifecycleが独立した不足axisだと
+分かった。詳細は[`identity-variant-probe.md`](identity-variant-probe.md)に記録する。次は対応済みfirst sliceだけを
+一意に表す最小surface syntaxであり、未対応方式を通常field/actionへfallbackさせない。
 
 ### Exit criteria
 

@@ -292,9 +292,11 @@ Acceptance Facts are implemented. Three requirements for secret redaction,
 storage, and fixture fidelity are now kept outside fact coverage and always
 shown by `forma verify` for human review. Pairwise lineage from the actually
 applied historical admin request to an Identity-adding request is now verified
-without regenerating or rewriting the baseline. The next step compares
-passwordless, external-provider, and email-change variants before syntax is
-chosen.
+without regenerating or rewriting the baseline. Passwordless,
+external-provider, and email-change fixtures now delimit the current model:
+authentication proof, external authority, and identifier-binding lifecycle are
+separate future axes. The next step is minimal syntax for the supported local
+password plus email-verification slice.
 
 ## Design documents
 
@@ -302,6 +304,7 @@ chosen.
 - [Agent generation model](docs/agent-generation.md)
 - [Implementation Policy Manifest proposal](docs/implementation-policy-manifest-proposal.md)
 - [Development roadmap](docs/roadmap.md)
+- [Identity variant probe](docs/identity-variant-probe.md)
 - [Language design principles](docs/language-design-principles.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)

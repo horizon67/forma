@@ -253,7 +253,9 @@ applicationなので、上記のように個別に検査します。
 target-neutralなIdentity Resolved Intent、Source Map、29 Acceptance Factsを実装しました。機械検査できない
 secret redaction、storage、fixture fidelityも3つのReview RequirementsとしてFact coverageから分離し、
 `forma verify`が必ず人間へ表示します。さらに、実際に適用した過去のadmin requestを書き換えず、Identity追加request
-へのpairwise lineageも検証しました。次はsyntaxを決める前にpasswordless、external provider、email変更を比較します。
+へのpairwise lineageも検証しました。passwordless、external provider、email変更の比較から、authentication proof、
+external authority、identifier binding lifecycleを将来の独立axisとして切り出しました。次は対応済みのlocal password +
+email verificationだけを一意に表す最小syntaxです。
 
 ## 設計資料
 
@@ -261,6 +263,7 @@ secret redaction、storage、fixture fidelityも3つのReview Requirementsとし
 - [Agent generation model](docs/agent-generation.md)
 - [Implementation Policy Manifest案](docs/implementation-policy-manifest-proposal.md)
 - [開発ロードマップ](docs/roadmap.md)
+- [Identity variant probe](docs/identity-variant-probe.md)
 - [言語設計原則](docs/language-design-principles.md)
 - [ユーザー管理の完全例](examples/users.forma)
 - [注文承認・在庫probe](examples/orders.forma)
