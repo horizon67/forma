@@ -33,6 +33,7 @@ func CanonicalizeResolvedIntent(intent *ResolvedIntent) {
 	for identityIndex := range intent.Identities {
 		identity := &intent.Identities[identityIndex]
 		sort.Slice(identity.Identifiers, func(i, j int) bool { return identity.Identifiers[i].ID < identity.Identifiers[j].ID })
+		sort.Slice(identity.Proofs, func(i, j int) bool { return identity.Proofs[i].ID < identity.Proofs[j].ID })
 		sort.Slice(identity.Credentials, func(i, j int) bool { return identity.Credentials[i].ID < identity.Credentials[j].ID })
 		sort.Slice(identity.Verifications, func(i, j int) bool { return identity.Verifications[i].ID < identity.Verifications[j].ID })
 		sort.Slice(identity.Ownership, func(i, j int) bool { return identity.Ownership[i].ID < identity.Ownership[j].ID })
@@ -256,8 +257,8 @@ func validateIdentitySemantics(intent *ResolvedIntent) error {
 	if !ok {
 		return fmt.Errorf("validate Resolved Intent: identity %s references missing subject %s", identity.ID, identity.Subject)
 	}
-	if len(identity.Identifiers) != 1 || len(identity.Credentials) != 1 || len(identity.Verifications) != 1 || len(identity.Ownership) != 1 {
-		return fmt.Errorf("validate Resolved Intent: first Identity slice requires one identifier, credential, verification, and ownership")
+	if len(identity.Identifiers) != 1 || len(identity.Proofs) != 1 || len(identity.Credentials) != 1 || len(identity.Verifications) != 1 || len(identity.Ownership) != 1 {
+		return fmt.Errorf("validate Resolved Intent: first Identity slice requires one identifier, proof, credential, verification, and ownership")
 	}
 
 	identifier := identity.Identifiers[0]
@@ -276,21 +277,28 @@ func validateIdentitySemantics(intent *ResolvedIntent) error {
 	}
 
 	credential := identity.Credentials[0]
+	proof := identity.Proofs[0]
+	if proof.ID != authenticationProofID(identity.Name, proof.Name) || proof.Kind != "local-password" {
+		return fmt.Errorf("validate Resolved Intent: proof %s is not the supported local-password proof", proof.ID)
+	}
 	if credential.ID != credentialID(identity.Name, credential.Name) || credential.Kind != "password" {
 		return fmt.Errorf("validate Resolved Intent: credential %s is not the canonical password credential", credential.ID)
+	}
+	if proof.Credential != credential.ID {
+		return fmt.Errorf("validate Resolved Intent: proof %s is not the supported local-password proof", proof.ID)
 	}
 	if !credential.InputPolicy.PreserveWhitespace || credential.InputPolicy.Length != (IRLengthConstraint{Min: 12, Max: 128, Unit: "unicode-scalar-value"}) {
 		return fmt.Errorf("validate Resolved Intent: password credential has unsupported input policy")
 	}
 
 	verification := identity.Verifications[0]
-	if err := validateRegistration(identity, subject, identifier, credential, verification, fields, states); err != nil {
+	if err := validateRegistration(identity, subject, identifier, proof, credential, verification, fields, states); err != nil {
 		return err
 	}
 	if err := validateVerification(identity, subject, identifier, verification, states, actions); err != nil {
 		return err
 	}
-	if err := validateAuthentication(identity, subject, identifier, credential, states); err != nil {
+	if err := validateAuthentication(identity, subject, identifier, proof, credential, states); err != nil {
 		return err
 	}
 	ownership := identity.Ownership[0]
@@ -338,9 +346,9 @@ func validateIdentitySemantics(intent *ResolvedIntent) error {
 	return validateAllAccess(intent, roles, map[SemanticID]IROwnership{ownership.ID: ownership})
 }
 
-func validateRegistration(identity IRIdentity, subject IREntity, identifier IRIdentifier, credential IRCredential, verification IRVerification, fields map[SemanticID]IRField, states map[SemanticID]IRState) error {
+func validateRegistration(identity IRIdentity, subject IREntity, identifier IRIdentifier, proof IRAuthenticationProof, credential IRCredential, verification IRVerification, fields map[SemanticID]IRField, states map[SemanticID]IRState) error {
 	registration := identity.Registration
-	if registration.ID != identityOperationID(identity.Name, "register") || registration.Identifier != identifier.ID || registration.Credential != credential.ID || registration.Verification != verification.ID {
+	if registration.ID != identityOperationID(identity.Name, "register") || registration.Identifier != identifier.ID || registration.Proof != proof.ID || registration.Credential != credential.ID || registration.Verification != verification.ID {
 		return fmt.Errorf("validate Resolved Intent: registration %s has invalid references", registration.ID)
 	}
 	for _, attribute := range registration.Attributes {
@@ -378,9 +386,9 @@ func validateVerification(identity IRIdentity, subject IREntity, identifier IRId
 	return nil
 }
 
-func validateAuthentication(identity IRIdentity, subject IREntity, identifier IRIdentifier, credential IRCredential, states map[SemanticID]IRState) error {
+func validateAuthentication(identity IRIdentity, subject IREntity, identifier IRIdentifier, proof IRAuthenticationProof, credential IRCredential, states map[SemanticID]IRState) error {
 	authentication := identity.Authentication
-	if authentication.ID != authenticationID(identity.Name) || authentication.SignInOperation != identityOperationID(identity.Name, "signin") || authentication.SignOutOperation != identityOperationID(identity.Name, "signout") || authentication.Identifier != identifier.ID || authentication.Credential != credential.ID || authentication.FailureDisclosure != "generic" {
+	if authentication.ID != authenticationID(identity.Name) || authentication.SignInOperation != identityOperationID(identity.Name, "signin") || authentication.SignOutOperation != identityOperationID(identity.Name, "signout") || authentication.Identifier != identifier.ID || authentication.Proof != proof.ID || authentication.Credential != credential.ID || authentication.FailureDisclosure != "generic" {
 		return fmt.Errorf("validate Resolved Intent: authentication %s has unsupported references", authentication.ID)
 	}
 	if err := validateStateValue(subject, authentication.EligibleState, states, "Active"); err != nil {

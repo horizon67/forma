@@ -54,6 +54,7 @@ func mergeProgram(destination, source *Program) {
 	destination.Types = append(destination.Types, source.Types...)
 	destination.Entities = append(destination.Entities, source.Entities...)
 	destination.Actions = append(destination.Actions, source.Actions...)
+	destination.Identities = append(destination.Identities, source.Identities...)
 	destination.Pages = append(destination.Pages, source.Pages...)
 	destination.Roles = append(destination.Roles, source.Roles...)
 }

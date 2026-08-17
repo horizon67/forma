@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B complete — B1–B5 implemented; minimal Stage C syntax next; not valid Forma syntax
+Status: Stage C first slice implemented — B1–B5 semantics plus local-password/email-verification surface syntax
 
 ## 1. 目的
 
@@ -104,6 +104,10 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 | Generation Request | historical `v0alpha1` / `v0alpha2`、previous `v0alpha3` | `v0alpha4` | Review Requirement diffとbaseline version metadataを追加 |
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
+Stage CではAuthentication Proof axisを明示するため、Resolved Intentを`v0.6`、Source Mapを`v0.4`へ上げた。
+`v0.6`は`proof/local-password`と`credential/password`を別nodeとして持ち、registrationとauthenticationがproofを
+明示参照する。Acceptance FactsとReview Requirementsのschema shapeは変更せず、`intentVersion`だけを追随させる。
+
 この表の名前はproposal上の候補であり、implementationとgoldenを同時に更新した時点で規範になる。
 Resolved Intent `v0.5`とSource Map `v0.3`はB1、Acceptance Facts `v0alpha2`はB2、Review Requirements
 `v0alpha1`とGeneration Request `v0alpha3`はB3で採用した。B4では既存`v0alpha3`へunknown fieldを足さず、
@@ -138,6 +142,7 @@ type IRIdentity struct {
     Name            string
     Subject         SemanticID
     Identifiers     []IRIdentifier
+    Proofs          []IRAuthenticationProof
     Credentials     []IRCredential
     Registration    IRRegistration
     Verifications   []IRVerification
@@ -146,7 +151,7 @@ type IRIdentity struct {
 }
 ```
 
-最初のsliceではIdentity 1件、Identifier 1件、Credential 1件、Verification 1件だけを許可する。fieldをsliceにする
+最初のsliceではIdentity 1件、Identifier 1件、Proof 1件、Credential 1件、Verification 1件だけを許可する。fieldをsliceにする
 のは複数identifierやpasswordlessを今すぐ実装するためではなく、後続比較例でtop-level schemaを壊さず検証する
 ためである。checkerは未対応の個数・組合せをcompile errorにする。
 
@@ -182,7 +187,28 @@ type IRCanonicalizationStep struct {
 canonicalizationは記載順に適用する。`trim-unicode-white-space`はUnicode `White_Space` propertyに含まれる
 code pointだけを両端から除く。`ascii-case-fold`はASCII `A-Z`だけを`a-z`へ変換する。保存表現は指定しない。
 
-### 6.2 Credential
+### 6.2 Authentication ProofとCredential
+
+```go
+type IRAuthenticationProof struct {
+    ID         SemanticID
+    Name       string
+    Kind       string
+    Credential SemanticID
+}
+```
+
+最初の`local-password` proofはpassword credentialを参照する。proofとcredentialを分けることで、将来の
+verification-evidence proofやexternal-assertion proofをCredential kindへ偽装せず追加できる。
+
+```json
+{
+  "id": "identity/UserAccount/proof/password",
+  "name": "password",
+  "kind": "local-password",
+  "credential": "identity/UserAccount/credential/password"
+}
+```
 
 ```go
 type IRCredential struct {
@@ -227,6 +253,7 @@ list、detail、form field、search、filter、sort、labelの解決対象にも
 type IRRegistration struct {
     ID                        SemanticID
     Identifier                SemanticID
+    Proof                     SemanticID
     Credential                SemanticID
     Attributes                []SemanticID
     InitialState              IRStateValueRef
@@ -245,6 +272,7 @@ type IRStateValueRef struct {
 {
   "id": "identity/UserAccount/operation/register",
   "identifier": "identity/UserAccount/identifier/email",
+  "proof": "identity/UserAccount/proof/password",
   "credential": "identity/UserAccount/credential/password",
   "attributes": ["entity/User/field/name"],
   "initialState": { "state": "entity/User/state/status", "value": "Pending" },
@@ -343,6 +371,7 @@ type IRAuthentication struct {
     SignInOperation   SemanticID
     SignOutOperation  SemanticID
     Identifier        SemanticID
+    Proof             SemanticID
     Credential        SemanticID
     EligibleState     IRStateValueRef
     FailureDisclosure string
@@ -362,6 +391,7 @@ type IRSession struct {
   "signInOperation": "identity/UserAccount/operation/signin",
   "signOutOperation": "identity/UserAccount/operation/signout",
   "identifier": "identity/UserAccount/identifier/email",
+  "proof": "identity/UserAccount/proof/password",
   "credential": "identity/UserAccount/credential/password",
   "eligibleState": { "state": "entity/User/state/status", "value": "Active" },
   "failureDisclosure": "generic",
@@ -503,6 +533,7 @@ ProfileEditでは`resourceBinding`が`page/ProfileEdit/parameter`になる。che
 | --- | --- |
 | Identity | `identity/UserAccount` |
 | Identifier | `identity/UserAccount/identifier/email` |
+| Authentication proof | `identity/UserAccount/proof/password` |
 | Credential | `identity/UserAccount/credential/password` |
 | Registration | `identity/UserAccount/operation/register` |
 | Verification | `identity/UserAccount/verification/email` |
@@ -527,6 +558,7 @@ Identity nodeも既存nodeと同じくSource Mapへ1対1で載せる。候補kin
 ```text
 identity
 identity-identifier
+identity-proof
 identity-credential
 identity-registration
 identity-verification
@@ -1010,6 +1042,16 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 - [x] 未対応組合せを通常field/actionへ縮退させず、Resolved Intent validatorとFact contract registryが拒否することを
   testした。
 
+### Stage C — first surface slice
+
+- [x] `identity`、Authentication `proof`、registration、verification、authentication、ownershipをParser / Checkerへ追加した。
+- [x] `interact`と`require authenticated` / `require owner`をpageへ追加した。
+- [x] local-password proofとpassword credentialを別semantic nodeにし、Resolved Intent `v0.6` / Source Map `v0.4`へ上げた。
+- [x] [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)からStage B fixtureと同じ
+  Intent semantics、38 Facts、3 Review Requirementsを再導出した。
+- [x] unsupported proof、identifier lifecycle operation、owner bindingをGeneration Requestより前に拒否するnegative testを追加した。
+- [x] 各operationのinteractionをapplication全体でちょうど1件に制限し、Factに覆われない追加surfaceを拒否した。
+
 ## 22. Stage B exit criteria
 
 - target repositoryやForma syntaxなしでIdentity semanticsをcanonical JSONへ表せる。
@@ -1071,3 +1113,6 @@ Identity
 
 各案はStage BのResolved Intentを一意に生成できること、未対応axisを黙って縮退させないこと、将来axisが既存syntaxへ
 破壊的変更なしで追加できることを必須条件とする。syntaxの短さはその後に評価する。
+
+最小syntax、page interaction、access合成、negative casesの決定案は
+[`identity-surface-syntax-proposal.md`](identity-surface-syntax-proposal.md)へ分離した。

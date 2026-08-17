@@ -6,11 +6,12 @@ type Name struct {
 }
 
 type Program struct {
-	Types    []*TypeDecl
-	Entities []*EntityDecl
-	Actions  []*ActionDecl
-	Pages    []*PageDecl
-	Roles    []*RoleDecl
+	Types      []*TypeDecl
+	Entities   []*EntityDecl
+	Actions    []*ActionDecl
+	Identities []*IdentityDecl
+	Pages      []*PageDecl
+	Roles      []*RoleDecl
 }
 
 type TypeDecl struct {
@@ -112,12 +113,114 @@ type RoleDecl struct {
 	Span Span
 }
 
+type IdentityDecl struct {
+	Name           Name
+	Subject        Name
+	Identifiers    []*IdentityIdentifierDecl
+	Proofs         []*IdentityProofDecl
+	Registration   *IdentityRegistrationDecl
+	Verifications  []*IdentityVerificationDecl
+	Authentication *IdentityAuthenticationDecl
+	Ownerships     []*IdentityOwnershipDecl
+	Span           Span
+}
+
+type IdentityIdentifierDecl struct {
+	Name             Name
+	Field            Name
+	Canonicalization []Name
+	Span             Span
+}
+
+type IdentityProofDecl struct {
+	Name               Name
+	Kind               Name
+	MinLength          int
+	MaxLength          int
+	LengthUnit         Name
+	PreserveWhitespace bool
+	Span               Span
+}
+
+type IdentityRegistrationDecl struct {
+	Name                      Name
+	Identifier                Name
+	Proof                     Name
+	Attributes                []Name
+	InitialState              Name
+	InitialValue              Name
+	Verification              Name
+	ExistingIdentifierOutcome Name
+	Span                      Span
+}
+
+type IdentityVerificationDecl struct {
+	Name             Name
+	Kind             Name
+	VerifyOperation  Name
+	ResendOperation  Name
+	EligibleState    Name
+	EligibleValue    Name
+	SuccessEntity    Name
+	SuccessAction    Name
+	LifetimeAmount   int
+	LifetimeUnit     Name
+	MaxUses          int
+	Rotation         Name
+	NoticeChannel    Name
+	NoticeEmission   Name
+	DeliveryFailure  Name
+	ResendDisclosure Name
+	Span             Span
+}
+
+type IdentityAuthenticationDecl struct {
+	Identifier        Name
+	Proof             Name
+	SignInOperation   Name
+	SignOutOperation  Name
+	EligibleState     Name
+	EligibleValue     Name
+	FailureDisclosure Name
+	Span              Span
+}
+
+type IdentityOwnershipDecl struct {
+	Name Name
+	Span Span
+}
+
 type PageDecl struct {
-	Name   Name
-	Param  *Parameter
-	Allows []Name
-	Views  []*ViewDecl
-	Span   Span
+	Name                 Name
+	Param                *Parameter
+	Allows               []Name
+	Requirements         []*AccessRequirementDecl
+	Views                []*ViewDecl
+	IdentityInteractions []*IdentityInteractionDecl
+	Span                 Span
+}
+
+type AccessRequirementDecl struct {
+	Kind      string
+	Identity  Name
+	Ownership Name
+	Binding   Name
+	Span      Span
+}
+
+type IdentityInteractionDecl struct {
+	Identity     Name
+	Operation    Name
+	Fields       []Name
+	Identifier   *Name
+	Proof        *Name
+	Evidence     *Name
+	SuccessPage  *Name
+	Stay         bool
+	Continuation *Name
+	Feedback     []Name
+	Requirements []*AccessRequirementDecl
+	Span         Span
 }
 
 type Parameter struct {

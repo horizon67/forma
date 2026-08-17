@@ -27,7 +27,7 @@ func (p *parser) parseProgram() *Program {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.report(p.peek().Span, "F1001", "expected a top-level declaration", "start a declaration with `type`, `entity`, `action`, `page`, or `role`")
+			p.report(p.peek().Span, "F1001", "expected a top-level declaration", "start a declaration with `type`, `entity`, `action`, `identity`, `page`, or `role`")
 			before := p.current
 			p.synchronizeLine()
 			if p.current == before && !p.atEnd() {
@@ -48,6 +48,10 @@ func (p *parser) parseProgram() *Program {
 			if decl := p.parseActionDecl(); decl != nil {
 				program.Actions = append(program.Actions, decl)
 			}
+		case "identity":
+			if decl := p.parseIdentityDecl(); decl != nil {
+				program.Identities = append(program.Identities, decl)
+			}
 		case "page":
 			if decl := p.parsePageDecl(); decl != nil {
 				program.Pages = append(program.Pages, decl)
@@ -57,11 +61,277 @@ func (p *parser) parseProgram() *Program {
 				program.Roles = append(program.Roles, decl)
 			}
 		default:
-			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown declaration `%s`", p.peek().Value), "expected `type`, `entity`, `action`, `page`, or `role`")
+			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown declaration `%s`", p.peek().Value), "expected `type`, `entity`, `action`, `identity`, `page`, or `role`")
 			p.synchronizeLine()
 		}
 	}
 	return program
+}
+
+func (p *parser) parseIdentityDecl() *IdentityDecl {
+	start := p.advance().Span
+	name := p.consumeTypeName("after `identity`")
+	forKeyword := p.consume(tokenIdent, "`for` after the identity name")
+	if forKeyword.Value != "" && forKeyword.Value != "for" {
+		p.report(forKeyword.Span, "F1002", fmt.Sprintf("expected `for`, found `%s`", forKeyword.Value), "bind the identity to its subject with `identity Name for Entity`")
+	}
+	subject := p.consumeTypeName("after `for`")
+	decl := &IdentityDecl{Name: name, Subject: subject}
+	if !p.beginBlock("an identity body") {
+		p.synchronizeLine()
+		return decl
+	}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		if !p.check(tokenIdent) {
+			p.unexpected("an identity member")
+			p.synchronizeLine()
+			continue
+		}
+		switch p.peek().Value {
+		case "identifier":
+			decl.Identifiers = append(decl.Identifiers, p.parseIdentityIdentifier())
+		case "proof":
+			decl.Proofs = append(decl.Proofs, p.parseIdentityProof())
+		case "registration":
+			item := p.parseIdentityRegistration()
+			if decl.Registration != nil {
+				p.report(item.Span, "F2701", "duplicate identity registration", "declare registration once per identity")
+			} else {
+				decl.Registration = item
+			}
+		case "verification":
+			decl.Verifications = append(decl.Verifications, p.parseIdentityVerification())
+		case "authentication":
+			item := p.parseIdentityAuthentication()
+			if decl.Authentication != nil {
+				p.report(item.Span, "F2701", "duplicate identity authentication", "declare authentication once per identity")
+			} else {
+				decl.Authentication = item
+			}
+		case "ownership":
+			decl.Ownerships = append(decl.Ownerships, p.parseIdentityOwnership())
+		default:
+			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown identity member `%s`", p.peek().Value), "expected `identifier`, `proof`, `registration`, `verification`, `authentication`, or `ownership`")
+			p.synchronizeLine()
+		}
+	}
+	end := p.consume(tokenRBrace, "`}` to close the identity")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityIdentifier() *IdentityIdentifierDecl {
+	start := p.advance().Span
+	name := p.consumeName("after `identifier`")
+	from := p.consume(tokenIdent, "`from` after the identifier name")
+	if from.Value != "" && from.Value != "from" {
+		p.report(from.Span, "F1002", fmt.Sprintf("expected `from`, found `%s`", from.Value), "name the subject field explicitly")
+	}
+	field := p.consumeName("after `from`")
+	decl := &IdentityIdentifierDecl{Name: name, Field: field}
+	if !p.beginBlock("an identifier body") {
+		p.synchronizeLine()
+		return decl
+	}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		keyword := p.consume(tokenIdent, "`canonicalize` in the identifier body")
+		if keyword.Value != "canonicalize" {
+			p.report(keyword.Span, "F1004", fmt.Sprintf("unknown identifier member `%s`", keyword.Value), "the first slice supports only `canonicalize`")
+			p.synchronizeLine()
+			continue
+		}
+		decl.Canonicalization = append(decl.Canonicalization, p.parseNameList()...)
+		p.finishLine()
+	}
+	end := p.consume(tokenRBrace, "`}` to close the identifier")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityProof() *IdentityProofDecl {
+	start := p.advance().Span
+	decl := &IdentityProofDecl{Name: p.consumeName("after `proof`"), Kind: p.consumeName("as the proof kind")}
+	if !p.beginBlock("a proof body") {
+		p.synchronizeLine()
+		return decl
+	}
+	seen := map[string]Span{}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		member := p.consume(tokenIdent, "a proof member")
+		if previous, exists := seen[member.Value]; exists {
+			p.report(member.Span, "F2005", fmt.Sprintf("duplicate proof member `%s`", member.Value), fmt.Sprintf("the first member is at line %d", previous.Start.Line))
+		}
+		seen[member.Value] = member.Span
+		switch member.Value {
+		case "minLength", "maxLength":
+			number := p.consume(tokenNumber, "a positive integer after `"+member.Value+"`")
+			value, _ := strconv.Atoi(number.Value)
+			if member.Value == "minLength" {
+				decl.MinLength = value
+			} else {
+				decl.MaxLength = value
+			}
+		case "lengthUnit":
+			decl.LengthUnit = p.consumeName("after `lengthUnit`")
+		case "preserveWhitespace":
+			decl.PreserveWhitespace = true
+		default:
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown proof member `%s`", member.Value), "the localPassword members are `minLength`, `maxLength`, `lengthUnit`, and `preserveWhitespace`")
+		}
+		p.finishLine()
+	}
+	end := p.consume(tokenRBrace, "`}` to close the proof")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityRegistration() *IdentityRegistrationDecl {
+	start := p.advance().Span
+	decl := &IdentityRegistrationDecl{Name: p.consumeName("after `registration`")}
+	if !p.beginBlock("a registration body") {
+		p.synchronizeLine()
+		return decl
+	}
+	p.parseIdentityOperationBody("registration", func(member token) {
+		switch member.Value {
+		case "identifier":
+			decl.Identifier = p.consumeName("after `identifier`")
+		case "proof":
+			decl.Proof = p.consumeName("after `proof`")
+		case "attributes":
+			decl.Attributes = p.parseNameList()
+		case "initial":
+			decl.InitialState = p.consumeName("as the state name after `initial`")
+			decl.InitialValue = p.consumeTypeName("as the state value after `initial`")
+		case "verification":
+			decl.Verification = p.consumeName("after `verification`")
+		case "existingIdentifier":
+			decl.ExistingIdentifierOutcome = p.consumeName("after `existingIdentifier`")
+		default:
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown registration member `%s`", member.Value), "use the closed registration member set")
+		}
+	})
+	end := p.consume(tokenRBrace, "`}` to close the registration")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityVerification() *IdentityVerificationDecl {
+	start := p.advance().Span
+	decl := &IdentityVerificationDecl{Name: p.consumeName("after `verification`"), Kind: p.consumeName("as the verification kind")}
+	if !p.beginBlock("a verification body") {
+		p.synchronizeLine()
+		return decl
+	}
+	p.parseIdentityOperationBody("verification", func(member token) {
+		switch member.Value {
+		case "verify":
+			decl.VerifyOperation = p.consumeName("after `verify`")
+		case "resend":
+			decl.ResendOperation = p.consumeName("after `resend`")
+		case "eligible":
+			decl.EligibleState = p.consumeName("as the state name after `eligible`")
+			decl.EligibleValue = p.consumeTypeName("as the state value after `eligible`")
+		case "success":
+			decl.SuccessEntity = p.consumeTypeName("as the action entity after `success`")
+			p.consume(tokenDot, "`.` in the success action reference")
+			decl.SuccessAction = p.consumeName("as the success action")
+		case "lifetime":
+			number := p.consume(tokenNumber, "an integer after `lifetime`")
+			decl.LifetimeAmount, _ = strconv.Atoi(number.Value)
+			decl.LifetimeUnit = p.consumeName("as the lifetime unit")
+		case "maxUses":
+			number := p.consume(tokenNumber, "an integer after `maxUses`")
+			decl.MaxUses, _ = strconv.Atoi(number.Value)
+		case "rotation":
+			decl.Rotation = p.consumeName("after `rotation`")
+		case "notice":
+			decl.NoticeChannel = p.consumeName("as the notice channel")
+			decl.NoticeEmission = p.consumeName("as the notice emission contract")
+		case "deliveryFailure":
+			decl.DeliveryFailure = p.consumeName("after `deliveryFailure`")
+		case "resendDisclosure":
+			decl.ResendDisclosure = p.consumeName("after `resendDisclosure`")
+		default:
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown verification member `%s`", member.Value), "use the closed verification member set")
+		}
+	})
+	end := p.consume(tokenRBrace, "`}` to close the verification")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityAuthentication() *IdentityAuthenticationDecl {
+	start := p.advance().Span
+	decl := &IdentityAuthenticationDecl{}
+	if !p.beginBlock("an authentication body") {
+		p.synchronizeLine()
+		return decl
+	}
+	p.parseIdentityOperationBody("authentication", func(member token) {
+		switch member.Value {
+		case "identifier":
+			decl.Identifier = p.consumeName("after `identifier`")
+		case "proof":
+			decl.Proof = p.consumeName("after `proof`")
+		case "signin":
+			decl.SignInOperation = p.consumeName("after `signin`")
+		case "signout":
+			decl.SignOutOperation = p.consumeName("after `signout`")
+		case "eligible":
+			decl.EligibleState = p.consumeName("as the state name after `eligible`")
+			decl.EligibleValue = p.consumeTypeName("as the state value after `eligible`")
+		case "failure":
+			decl.FailureDisclosure = p.consumeName("after `failure`")
+		default:
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown authentication member `%s`", member.Value), "use the closed authentication member set")
+		}
+	})
+	end := p.consume(tokenRBrace, "`}` to close authentication")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseIdentityOperationBody(kind string, parseMember func(token)) {
+	seen := map[string]Span{}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		member := p.consume(tokenIdent, "a "+kind+" member")
+		if previous, exists := seen[member.Value]; exists {
+			p.report(member.Span, "F2005", fmt.Sprintf("duplicate %s member `%s`", kind, member.Value), fmt.Sprintf("the first member is at line %d", previous.Start.Line))
+		}
+		seen[member.Value] = member.Span
+		parseMember(member)
+		p.finishLine()
+	}
+}
+
+func (p *parser) parseIdentityOwnership() *IdentityOwnershipDecl {
+	start := p.advance().Span
+	name := p.consumeName("after `ownership`")
+	p.finishLine()
+	return &IdentityOwnershipDecl{Name: name, Span: mergeSpan(start, p.previous().Span)}
 }
 
 func (p *parser) parseTypeDecl() *TypeDecl {
@@ -314,7 +584,7 @@ func (p *parser) parsePageDecl() *PageDecl {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.unexpected("`allow`, `list`, `detail`, or `form`")
+			p.unexpected("`allow`, `require`, `interact`, `list`, `detail`, or `form`")
 			p.synchronizeLine()
 			continue
 		}
@@ -326,6 +596,10 @@ func (p *parser) parsePageDecl() *PageDecl {
 			}
 			decl.Allows = append(decl.Allows, p.parseNameList()...)
 			p.finishLine()
+		case "require":
+			decl.Requirements = append(decl.Requirements, p.parseAccessRequirement())
+		case "interact":
+			decl.IdentityInteractions = append(decl.IdentityInteractions, p.parseIdentityInteraction())
 		case "list":
 			decl.Views = append(decl.Views, p.parseView(ViewList))
 		case "detail":
@@ -333,11 +607,92 @@ func (p *parser) parsePageDecl() *PageDecl {
 		case "form":
 			decl.Views = append(decl.Views, p.parseView(ViewForm))
 		default:
-			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown page member `%s`", p.peek().Value), "expected `allow`, `list`, `detail`, or `form`")
+			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown page member `%s`", p.peek().Value), "expected `allow`, `require`, `interact`, `list`, `detail`, or `form`")
 			p.synchronizeLine()
 		}
 	}
 	end := p.consume(tokenRBrace, "`}` to close the page")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseAccessRequirement() *AccessRequirementDecl {
+	start := p.advance().Span
+	kind := p.consume(tokenIdent, "`authenticated` or `owner` after `require`")
+	requirement := &AccessRequirementDecl{Kind: kind.Value}
+	switch kind.Value {
+	case "authenticated":
+		requirement.Identity = p.consumeTypeName("after `require authenticated`")
+	case "owner":
+		requirement.Identity = p.consumeTypeName("as the ownership identity")
+		p.consume(tokenDot, "`.` before the ownership name")
+		requirement.Ownership = p.consumeName("as the ownership name")
+		forKeyword := p.consume(tokenIdent, "`for` before the resource binding")
+		if forKeyword.Value != "" && forKeyword.Value != "for" {
+			p.report(forKeyword.Span, "F1002", fmt.Sprintf("expected `for`, found `%s`", forKeyword.Value), "bind ownership to a page parameter with `for binding`")
+		}
+		requirement.Binding = p.consumeName("after `for`")
+	default:
+		p.report(kind.Span, "F1004", fmt.Sprintf("unknown access requirement `%s`", kind.Value), "the Identity requirements are `authenticated` and `owner`")
+	}
+	p.finishLine()
+	requirement.Span = mergeSpan(start, p.previous().Span)
+	return requirement
+}
+
+func (p *parser) parseIdentityInteraction() *IdentityInteractionDecl {
+	start := p.advance().Span
+	decl := &IdentityInteractionDecl{Identity: p.consumeTypeName("after `interact`")}
+	p.consume(tokenDot, "`.` before the identity operation")
+	decl.Operation = p.consumeName("as the identity operation")
+	if !p.beginBlock("an identity interaction body") {
+		p.synchronizeLine()
+		return decl
+	}
+	seen := map[string]Span{}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		if p.check(tokenIdent) && p.peek().Value == "require" {
+			decl.Requirements = append(decl.Requirements, p.parseAccessRequirement())
+			continue
+		}
+		member := p.consume(tokenIdent, "an interaction member")
+		if previous, exists := seen[member.Value]; exists {
+			p.report(member.Span, "F2005", fmt.Sprintf("duplicate interaction member `%s`", member.Value), fmt.Sprintf("the first member is at line %d", previous.Start.Line))
+		}
+		seen[member.Value] = member.Span
+		switch member.Value {
+		case "fields":
+			decl.Fields = p.parseNameList()
+		case "identifier":
+			name := p.consumeName("after `identifier`")
+			decl.Identifier = &name
+		case "proof":
+			name := p.consumeName("after `proof`")
+			decl.Proof = &name
+		case "evidence":
+			name := p.consumeName("after `evidence`")
+			decl.Evidence = &name
+		case "success":
+			name := p.consumeTypeName("after `success`")
+			decl.SuccessPage = &name
+		case "stay":
+			decl.Stay = true
+		case "continue":
+			name := p.consumeTypeName("after `continue`")
+			decl.Continuation = &name
+		case "feedback":
+			decl.Feedback = p.parseNameList()
+		default:
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown interaction member `%s`", member.Value), "use the closed identity interaction member set")
+		}
+		p.finishLine()
+	}
+	end := p.consume(tokenRBrace, "`}` to close the identity interaction")
 	decl.Span = mergeSpan(start, end.Span)
 	p.consumeOptionalNewline()
 	return decl

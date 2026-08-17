@@ -110,6 +110,12 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 		}
 		ir.Actions = append(ir.Actions, item)
 	}
+	for _, identity := range c.program.Identities {
+		if c.identities[identity.Name.Text] != identity {
+			continue
+		}
+		ir.Identities = append(ir.Identities, c.buildIdentityIR(identity, sourceMap))
+	}
 	for _, page := range c.program.Pages {
 		if c.pages[page.Name.Text] != page {
 			continue
@@ -122,6 +128,10 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 			item.Param = &IRParameter{ID: parameterID, Name: page.Param.Name.Text, Entity: page.Param.Type.Text}
 			sourceMap.add(parameterID, "parameter", page.Param.Span)
 		}
+		if len(page.Requirements) > 0 {
+			access := c.buildAccess(id, semanticID(string(id), "access"), page.Requirements, sourceMap)
+			item.Access = &access
+		}
 		for _, view := range page.Views {
 			info := c.viewInfo[view]
 			if info == nil || info.Entity == nil {
@@ -129,12 +139,16 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 			}
 			item.Views = append(item.Views, c.buildViewIR(info, sourceMap))
 		}
+		for _, interaction := range page.IdentityInteractions {
+			item.IdentityInteractions = append(item.IdentityInteractions, c.buildIdentityInteraction(page, interaction, sourceMap))
+		}
 		ir.Pages = append(ir.Pages, item)
 	}
 	sort.Slice(ir.Roles, func(i, j int) bool { return ir.Roles[i].ID < ir.Roles[j].ID })
 	sort.Slice(ir.Types, func(i, j int) bool { return ir.Types[i].ID < ir.Types[j].ID })
 	sort.Slice(ir.Entities, func(i, j int) bool { return ir.Entities[i].ID < ir.Entities[j].ID })
 	sort.Slice(ir.Actions, func(i, j int) bool { return ir.Actions[i].ID < ir.Actions[j].ID })
+	sort.Slice(ir.Identities, func(i, j int) bool { return ir.Identities[i].ID < ir.Identities[j].ID })
 	sort.Slice(ir.Pages, func(i, j int) bool { return ir.Pages[i].ID < ir.Pages[j].ID })
 	CanonicalizeResolvedIntent(ir)
 	return ir, sourceMap.build()

@@ -1,6 +1,6 @@
 {
   "version": "forma/review-requirements/v0alpha1",
-  "intentVersion": "forma/resolved-intent/v0.5",
+  "intentVersion": "forma/resolved-intent/v0.6",
   "requirements": [
     {
       "id": "review/identity/UserAccount/fixture-fidelity",
@@ -24,6 +24,7 @@
       "sourceNodes": [
         "identity/UserAccount",
         "identity/UserAccount/credential/password",
+        "identity/UserAccount/proof/password",
         "identity/UserAccount/verification/email"
       ],
       "instruction": "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed."
@@ -35,6 +36,7 @@
       "sourceNodes": [
         "identity/UserAccount",
         "identity/UserAccount/credential/password",
+        "identity/UserAccount/proof/password",
         "identity/UserAccount/verification/email"
       ],
       "instruction": "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism."

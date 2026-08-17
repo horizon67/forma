@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.5",
+  "version": "forma/resolved-intent/v0.6",
   "types": [
     {
       "id": "type/Email",
@@ -82,6 +82,14 @@
           ]
         }
       ],
+      "proofs": [
+        {
+          "id": "identity/UserAccount/proof/password",
+          "name": "password",
+          "kind": "local-password",
+          "credential": "identity/UserAccount/credential/password"
+        }
+      ],
       "credentials": [
         {
           "id": "identity/UserAccount/credential/password",
@@ -100,6 +108,7 @@
       "registration": {
         "id": "identity/UserAccount/operation/register",
         "identifier": "identity/UserAccount/identifier/email",
+        "proof": "identity/UserAccount/proof/password",
         "credential": "identity/UserAccount/credential/password",
         "attributes": [
           "entity/User/field/name"
@@ -154,6 +163,7 @@
         "signInOperation": "identity/UserAccount/operation/signin",
         "signOutOperation": "identity/UserAccount/operation/signout",
         "identifier": "identity/UserAccount/identifier/email",
+        "proof": "identity/UserAccount/proof/password",
         "credential": "identity/UserAccount/credential/password",
         "eligibleState": {
           "state": "entity/User/state/status",

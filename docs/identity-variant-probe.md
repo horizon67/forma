@@ -12,7 +12,7 @@ Status: B5 comparison gate complete — test-only Go fixtures; not valid Forma s
 3. authenticated subjectによる既存email identifierの変更
 
 比較fixtureは[`../internal/compiler/identity_variants_test.go`](../internal/compiler/identity_variants_test.go)に置く。
-surface syntaxを先に決めず、現在のResolved Intent `v0.5`、Acceptance Facts `v0alpha2`、Review Requirements
+surface syntaxを先に決めず、当時のResolved Intent `v0.5`、Acceptance Facts `v0alpha2`、Review Requirements
 `v0alpha1`へ直接与えた。
 
 ## 2. 結果
@@ -30,11 +30,11 @@ gateは機能した。一方、3方式を現行schemaで完全に表現できる
 
 ### Probe
 
-canonical membership fixtureから`credentials`、registration/authenticationのcredential参照、画面のcredential inputを
-除いた。current validatorは次で拒否した。
+canonical membership fixtureから`proofs`と`credentials`、registration/authenticationのproof/credential参照、
+画面のcredential inputを除いた。current validatorは次で拒否した。
 
 ```text
-first Identity slice requires one identifier, credential, verification, and ownership
+first Identity slice requires one identifier, proof, credential, verification, and ownership
 ```
 
 `BuildAcceptanceFacts`も同じ境界で止まる。現在の`addIdentityFacts`は、identifier、credential、verification、
@@ -54,6 +54,10 @@ authentication、ownershipを1個ずつ持つ29-Fact bundleとして実装され
 後者まで消してよいわけではない。必要なのはFact削減だけでなく、authentication proofをlocal credentialから
 独立させることである。
 
+Stage Cのfirst sliceでは、この合成builderが未実装のまま複数interactionを受理しないよう、各operationのinteractionを
+application全体でちょうど1件に制限する。passwordlessなどでFact builderを合成型へ変更するときに、このcardinalityも
+同時に再検討する。
+
 passwordlessでもverification evidenceはruntime secretなので、`secret-redaction`と`secret-storage`を消してはならない。
 `fixture-fidelity`も同様に残る。将来のbuilderは「CredentialがないからReview Requirementsもない」と推論せず、
 verification evidenceと採用したproof nodeからsecret boundaryを導出する必要がある。
@@ -69,11 +73,11 @@ verification evidenceと採用したproof nodeからsecret boundaryを導出す�
 
 ### Probe
 
-providerを`IRCredential{kind: "external-provider"}`として押し込むfixtureを作った。serialization自体は可能だが、
-validatorは次で拒否した。
+providerをlocal-password proof/credentialの位置へ押し込むfixtureを作った。serialization自体は可能だが、
+Stage Cのvalidatorは次で拒否する。
 
 ```text
-credential ... is not the canonical password credential
+proof ... is not the supported local-password proof
 ```
 
 この拒否は正しい。external providerはUserがapplicationへ提示するlocal secretではなく、外部authorityのassertionと
@@ -131,8 +135,9 @@ email変更のverification evidenceもsecret redaction/storage reviewの対象�
 
 ## 6. 採用判断
 
-Resolved Intent `v0.5`は、**email identifier + local password + email verification**のfirst sliceとして維持する。
-passwordless、external provider、email変更を曖昧なoptional fieldで同versionへ追加しない。
+Stage CのResolved Intent `v0.6`は、`v0.5`のemail + password + verification semanticsを維持しつつ、
+local passwordを独立したAuthentication Proof nodeとして明示した。passwordless、external provider、email変更を
+曖昧なoptional fieldやCredential kindとして同versionへ追加しない。
 
 次のsurface syntaxでは対応範囲を明示し、未対応方式を通常field/actionへfallbackさせない。将来これらを採用する場合は、
 少なくとも次のsemantic axisを先に設計する。

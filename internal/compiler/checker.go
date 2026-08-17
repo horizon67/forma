@@ -39,11 +39,12 @@ type viewInfo struct {
 type checker struct {
 	program *Program
 
-	types    map[string]*TypeDecl
-	entities map[string]*EntityDecl
-	pages    map[string]*PageDecl
-	roles    map[string]*RoleDecl
-	actions  map[string]*ActionDecl
+	types      map[string]*TypeDecl
+	entities   map[string]*EntityDecl
+	pages      map[string]*PageDecl
+	roles      map[string]*RoleDecl
+	actions    map[string]*ActionDecl
+	identities map[string]*IdentityDecl
 
 	resolvedTypes    map[string]resolvedType
 	resolving        map[string]bool
@@ -65,6 +66,7 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 	c := &checker{
 		program: program, types: map[string]*TypeDecl{}, entities: map[string]*EntityDecl{},
 		pages: map[string]*PageDecl{}, roles: map[string]*RoleDecl{}, actions: map[string]*ActionDecl{},
+		identities:    map[string]*IdentityDecl{},
 		resolvedTypes: map[string]resolvedType{}, resolving: map[string]bool{}, cycleReported: map[string]bool{},
 		entityLabels: map[string]string{}, expressionFields: map[*Expression]*FieldDecl{},
 		expressionTypes: map[*Expression]string{}, viewInfo: map[*ViewDecl]*viewInfo{},
@@ -76,12 +78,23 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 	c.checkEntities()
 	c.indexViews()
 	c.checkActions()
+	c.checkIdentities()
 	c.checkPages()
+	c.checkIdentityInteractionCoverage()
 	SortDiagnostics(c.diagnostics)
 	if len(c.diagnostics) > 0 {
 		return nil, nil, c.diagnostics
 	}
 	ir, sourceMap := c.buildIntent()
+	if err := ValidateResolvedIntent(ir); err != nil {
+		span := Span{}
+		if len(program.Identities) > 0 {
+			span = program.Identities[0].Span
+		}
+		c.error(span, "F2799", err.Error(), "fix the Identity declarations so every reference and closed first-slice contract is valid")
+		SortDiagnostics(c.diagnostics)
+		return nil, nil, c.diagnostics
+	}
 	return ir, sourceMap, nil
 }
 
@@ -133,6 +146,13 @@ func (c *checker) collectDeclarations() {
 			continue
 		}
 		c.actions[key] = decl
+	}
+	for _, decl := range c.program.Identities {
+		if previous, exists := c.identities[decl.Name.Text]; exists {
+			c.duplicate("identity", decl.Name, previous.Name.Span)
+			continue
+		}
+		c.identities[decl.Name.Text] = decl
 	}
 }
 

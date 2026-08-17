@@ -1,6 +1,6 @@
 # Email-verified Membership Flow Probe
 
-Status: active P1 probe — Stage B1–B5 complete; minimal Stage C syntax next
+Status: active P1 probe — Stage B1–B5 and the minimal Stage C syntax implemented
 
 Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
@@ -347,12 +347,16 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 
 ### Stage C — experimental Forma syntax
 
-- Stage Bの意味を一意に作れる最小surface syntaxをParserとCheckerへ追加する。
-- [x] passwordless / external provider / email変更の比較fixtureへ同じmodelを当て、現行`v0.5`の対応範囲と不足axisを確認した。
-- passwordをIdentityの構造上の必須節にせず、current sliceではlocal-password proofだけを意味検査で受理する。
-- 将来のverification-evidence proof、external authority、identifier changeを既存syntaxへadditiveに追加できることを
+[`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)と
+[`identity-surface-syntax-proposal.md`](identity-surface-syntax-proposal.md)のfirst sliceを実装した。sourceから
+Resolved Intent `v0.6`、Source Map `v0.4`、38 Facts、3 Review Requirementsを再導出する。
+
+- [x] Stage Bの意味を一意に作れる最小surface syntaxをParserとCheckerへ追加した。
+- [x] passwordless / external provider / email変更の比較fixtureへ同じmodelを当て、`v0.5`時点の対応範囲と不足axisを確認した。
+- [x] passwordをIdentityの構造上の必須節にせず、current sliceではlocal-password proofだけを意味検査で受理した。
+- [x] 将来のverification-evidence proof、external authority、identifier changeを既存syntaxへadditiveに追加できることを
   [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md) §23の設計制約として守る。
-- unsupportedな組合せはagentへ渡さずcompile errorにする。
+- [x] unsupportedなproof、operation、owner bindingをagentへ渡さずcompile errorにした。
 
 ### Stage D — agent E2E
 

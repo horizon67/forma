@@ -384,7 +384,7 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 
 func (b *acceptanceBuilder) identityAcceptanceContext(identity IRIdentity) (identityAcceptanceContext, error) {
 	context := identityAcceptanceContext{identity: identity, interactions: map[SemanticID]IRIdentityInteraction{}, pages: b.pages}
-	if len(identity.Identifiers) != 1 || len(identity.Credentials) != 1 || len(identity.Verifications) != 1 || len(identity.Ownership) != 1 {
+	if len(identity.Identifiers) != 1 || len(identity.Proofs) != 1 || len(identity.Credentials) != 1 || len(identity.Verifications) != 1 || len(identity.Ownership) != 1 {
 		return context, fmt.Errorf("build Identity Acceptance Facts: identity %s is not the supported first slice", identity.ID)
 	}
 	context.identifier = identity.Identifiers[0]

@@ -160,6 +160,7 @@ func membershipIntentFixture(t *testing.T) (*ResolvedIntent, *SourceMap) {
 	accountID := identityID("UserAccount")
 	emailIdentifier := identifierID("UserAccount", "email")
 	passwordCredential := credentialID("UserAccount", "password")
+	passwordProof := authenticationProofID("UserAccount", "password")
 	registerOperation := identityOperationID("UserAccount", "register")
 	verifyOperation := identityOperationID("UserAccount", "verify")
 	resendOperation := identityOperationID("UserAccount", "resend")
@@ -174,6 +175,9 @@ func membershipIntentFixture(t *testing.T) (*ResolvedIntent, *SourceMap) {
 			ID: emailIdentifier, Name: "email", Field: emailField,
 			Canonicalization: []IRCanonicalizationStep{{Kind: "trim-unicode-white-space"}, {Kind: "ascii-case-fold"}},
 		}},
+		Proofs: []IRAuthenticationProof{{
+			ID: passwordProof, Name: "password", Kind: "local-password", Credential: passwordCredential,
+		}},
 		Credentials: []IRCredential{{
 			ID: passwordCredential, Name: "password", Kind: "password",
 			InputPolicy: IRCredentialInputPolicy{
@@ -182,7 +186,7 @@ func membershipIntentFixture(t *testing.T) (*ResolvedIntent, *SourceMap) {
 			},
 		}},
 		Registration: IRRegistration{
-			ID: registerOperation, Identifier: emailIdentifier, Credential: passwordCredential,
+			ID: registerOperation, Identifier: emailIdentifier, Proof: passwordProof, Credential: passwordCredential,
 			Attributes: []SemanticID{nameField}, InitialState: IRStateValueRef{State: stateID, Value: "Pending"},
 			Verification:              emailVerification,
 			AtomicOutcome:             []string{"verification-evidence", "subject", "credential-binding", "notice-emission-record"},
@@ -204,7 +208,7 @@ func membershipIntentFixture(t *testing.T) (*ResolvedIntent, *SourceMap) {
 		}},
 		Authentication: IRAuthentication{
 			ID: authenticationID("UserAccount"), SignInOperation: signInOperation, SignOutOperation: signOutOperation,
-			Identifier: emailIdentifier, Credential: passwordCredential,
+			Identifier: emailIdentifier, Proof: passwordProof, Credential: passwordCredential,
 			EligibleState: IRStateValueRef{State: stateID, Value: "Active"}, FailureDisclosure: "generic",
 			Session: IRSession{ID: sessionID("UserAccount", "current"), PrincipalSubject: userID, SignOutScope: "current-session"},
 		},
@@ -352,6 +356,8 @@ func membershipNodeKind(id SemanticID) string {
 		switch {
 		case strings.Contains(value, "/identifier/"):
 			return "identity-identifier"
+		case strings.Contains(value, "/proof/"):
+			return "identity-proof"
 		case strings.Contains(value, "/credential/"):
 			return "identity-credential"
 		case strings.Contains(value, "/operation/register"):

@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.5"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.6"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -196,15 +196,26 @@ type IRAccessRequirement struct {
 // describe application meaning and intentionally contain no storage, hashing,
 // transport, or framework mechanism.
 type IRIdentity struct {
-	ID             SemanticID       `json:"id"`
-	Name           string           `json:"name"`
-	Subject        SemanticID       `json:"subject"`
-	Identifiers    []IRIdentifier   `json:"identifiers"`
-	Credentials    []IRCredential   `json:"credentials"`
-	Registration   IRRegistration   `json:"registration"`
-	Verifications  []IRVerification `json:"verifications"`
-	Authentication IRAuthentication `json:"authentication"`
-	Ownership      []IROwnership    `json:"ownership"`
+	ID             SemanticID              `json:"id"`
+	Name           string                  `json:"name"`
+	Subject        SemanticID              `json:"subject"`
+	Identifiers    []IRIdentifier          `json:"identifiers"`
+	Proofs         []IRAuthenticationProof `json:"proofs"`
+	Credentials    []IRCredential          `json:"credentials"`
+	Registration   IRRegistration          `json:"registration"`
+	Verifications  []IRVerification        `json:"verifications"`
+	Authentication IRAuthentication        `json:"authentication"`
+	Ownership      []IROwnership           `json:"ownership"`
+}
+
+// IRAuthenticationProof describes how a principal proves an identity. A
+// local-password proof refers to a credential binding; future proof kinds may
+// instead refer to verification evidence or an external authority.
+type IRAuthenticationProof struct {
+	ID         SemanticID `json:"id"`
+	Name       string     `json:"name"`
+	Kind       string     `json:"kind"`
+	Credential SemanticID `json:"credential,omitempty"`
 }
 
 type IRIdentifier struct {
@@ -239,6 +250,7 @@ type IRLengthConstraint struct {
 type IRRegistration struct {
 	ID                        SemanticID      `json:"id"`
 	Identifier                SemanticID      `json:"identifier"`
+	Proof                     SemanticID      `json:"proof"`
 	Credential                SemanticID      `json:"credential"`
 	Attributes                []SemanticID    `json:"attributes"`
 	InitialState              IRStateValueRef `json:"initialState"`
@@ -291,6 +303,7 @@ type IRAuthentication struct {
 	SignInOperation   SemanticID      `json:"signInOperation"`
 	SignOutOperation  SemanticID      `json:"signOutOperation"`
 	Identifier        SemanticID      `json:"identifier"`
+	Proof             SemanticID      `json:"proof"`
 	Credential        SemanticID      `json:"credential"`
 	EligibleState     IRStateValueRef `json:"eligibleState"`
 	FailureDisclosure string          `json:"failureDisclosure"`

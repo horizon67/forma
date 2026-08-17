@@ -1,6 +1,6 @@
 {
   "version": "forma/acceptance-facts/v0alpha2",
-  "intentVersion": "forma/resolved-intent/v0.5",
+  "intentVersion": "forma/resolved-intent/v0.6",
   "facts": [
     {
       "id": "fact/identity/UserAccount/credential/password/non-projectable",

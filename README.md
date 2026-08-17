@@ -272,6 +272,7 @@ Go 1.24 or newer can run the checker and current generation workflow:
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
+go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
@@ -286,17 +287,17 @@ checked separately.
 `forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
 Generation Request, and `forma verify` validates agent feedback against the
 immutable request. The current milestone is the email-verified signup/signin
-Identity probe. Its flow contract and measured v0 gaps are fixed, and a
-syntax-independent, target-neutral Identity Resolved Intent, Source Map, and 29
-Acceptance Facts are implemented. Three requirements for secret redaction,
-storage, and fixture fidelity are now kept outside fact coverage and always
+Identity probe. Its minimal Stage C syntax now resolves a local-password proof,
+email verification, page interactions, and self ownership into target-neutral
+Resolved Intent v0.6, Source Map v0.4, 38 Acceptance Facts, and three Review
+Requirements. Secret redaction, storage, and fixture fidelity remain outside fact coverage and are always
 shown by `forma verify` for human review. Pairwise lineage from the actually
 applied historical admin request to an Identity-adding request is now verified
 without regenerating or rewriting the baseline. Passwordless,
 external-provider, and email-change fixtures now delimit the current model:
 authentication proof, external authority, and identifier-binding lifecycle are
-separate future axes. The next step is minimal syntax for the supported local
-password plus email-verification slice.
+separate future axes. The next step is to hand this Generation Request to a
+coding agent and run the complete signup/signin flow in a real repository.
 
 ## Design documents
 
@@ -310,6 +311,8 @@ password plus email-verification slice.
 - [Order approval and inventory probe](examples/orders.forma)
 - [Email-verified membership probe](docs/email-verified-membership-probe.md)
 - [Identity semantic model proposal](docs/identity-semantic-model-proposal.md)
+- [Identity surface syntax proposal](docs/identity-surface-syntax-proposal.md)
+- [Email-verified membership example](examples/email-verified-membership.forma)
 - [Public membership v0 subset](examples/public-membership.forma)
 - [Minimal expression proposal](docs/expression-proposal.md)
 - [Active admin agent-generation experiment](experiments/admin-agent-e2e/README.md)

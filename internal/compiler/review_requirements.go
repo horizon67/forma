@@ -40,6 +40,9 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 	requirements := make([]ReviewRequirement, 0, len(intent.Identities)*3)
 	for _, identity := range intent.Identities {
 		secretSources := []SemanticID{identity.ID}
+		for _, proof := range identity.Proofs {
+			secretSources = append(secretSources, proof.ID)
+		}
 		for _, credential := range identity.Credentials {
 			secretSources = append(secretSources, credential.ID)
 		}

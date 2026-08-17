@@ -1,6 +1,6 @@
 {
-  "version": "forma/source-map/v0.3",
-  "intentVersion": "forma/resolved-intent/v0.5",
+  "version": "forma/source-map/v0.4",
+  "intentVersion": "forma/resolved-intent/v0.6",
   "entries": [
     {
       "nodeId": "action/User/activate",
@@ -275,8 +275,8 @@
       }
     },
     {
-      "nodeId": "identity/UserAccount/session/current",
-      "kind": "identity-session",
+      "nodeId": "identity/UserAccount/proof/password",
+      "kind": "identity-proof",
       "span": {
         "file": "testdata/membership.intent.fixture",
         "start": {
@@ -287,6 +287,23 @@
         "end": {
           "offset": 0,
           "line": 17,
+          "column": 2
+        }
+      }
+    },
+    {
+      "nodeId": "identity/UserAccount/session/current",
+      "kind": "identity-session",
+      "span": {
+        "file": "testdata/membership.intent.fixture",
+        "start": {
+          "offset": 0,
+          "line": 18,
+          "column": 1
+        },
+        "end": {
+          "offset": 0,
+          "line": 18,
           "column": 2
         }
       }
@@ -298,12 +315,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 18,
+          "line": 19,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 18,
+          "line": 19,
           "column": 2
         }
       }
@@ -315,12 +332,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 19,
+          "line": 20,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 19,
+          "line": 20,
           "column": 2
         }
       }
@@ -332,12 +349,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 20,
+          "line": 21,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 20,
+          "line": 21,
           "column": 2
         }
       }
@@ -349,12 +366,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 21,
+          "line": 22,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 21,
+          "line": 22,
           "column": 2
         }
       }
@@ -366,12 +383,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 22,
+          "line": 23,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 22,
+          "line": 23,
           "column": 2
         }
       }
@@ -383,12 +400,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 23,
+          "line": 24,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 23,
+          "line": 24,
           "column": 2
         }
       }
@@ -400,12 +417,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 24,
+          "line": 25,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 24,
+          "line": 25,
           "column": 2
         }
       }
@@ -417,12 +434,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 25,
+          "line": 26,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 25,
+          "line": 26,
           "column": 2
         }
       }
@@ -434,12 +451,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 26,
+          "line": 27,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 26,
+          "line": 27,
           "column": 2
         }
       }
@@ -451,12 +468,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 27,
+          "line": 28,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 27,
+          "line": 28,
           "column": 2
         }
       }
@@ -468,12 +485,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 28,
+          "line": 29,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 28,
+          "line": 29,
           "column": 2
         }
       }
@@ -485,12 +502,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 29,
+          "line": 30,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 29,
+          "line": 30,
           "column": 2
         }
       }
@@ -502,12 +519,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 30,
+          "line": 31,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 30,
+          "line": 31,
           "column": 2
         }
       }
@@ -519,12 +536,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 31,
+          "line": 32,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 31,
+          "line": 32,
           "column": 2
         }
       }
@@ -536,12 +553,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 32,
+          "line": 33,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 32,
+          "line": 33,
           "column": 2
         }
       }
@@ -553,12 +570,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 33,
+          "line": 34,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 33,
+          "line": 34,
           "column": 2
         }
       }
@@ -570,12 +587,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 34,
+          "line": 35,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 34,
+          "line": 35,
           "column": 2
         }
       }
@@ -587,12 +604,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 35,
+          "line": 36,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 35,
+          "line": 36,
           "column": 2
         }
       }
@@ -604,12 +621,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 36,
+          "line": 37,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 36,
+          "line": 37,
           "column": 2
         }
       }
@@ -621,12 +638,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 37,
+          "line": 38,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 37,
+          "line": 38,
           "column": 2
         }
       }
@@ -638,12 +655,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 38,
+          "line": 39,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 38,
+          "line": 39,
           "column": 2
         }
       }
@@ -655,12 +672,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 39,
+          "line": 40,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 39,
+          "line": 40,
           "column": 2
         }
       }
@@ -672,12 +689,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 40,
+          "line": 41,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 40,
+          "line": 41,
           "column": 2
         }
       }
@@ -689,12 +706,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 41,
+          "line": 42,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 41,
+          "line": 42,
           "column": 2
         }
       }
@@ -706,12 +723,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 42,
+          "line": 43,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 42,
+          "line": 43,
           "column": 2
         }
       }
@@ -723,12 +740,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 43,
+          "line": 44,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 43,
+          "line": 44,
           "column": 2
         }
       }
@@ -740,12 +757,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 44,
+          "line": 45,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 44,
+          "line": 45,
           "column": 2
         }
       }
@@ -757,12 +774,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 45,
+          "line": 46,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 45,
+          "line": 46,
           "column": 2
         }
       }
@@ -774,12 +791,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 46,
+          "line": 47,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 46,
+          "line": 47,
           "column": 2
         }
       }
@@ -791,12 +808,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 47,
+          "line": 48,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 47,
+          "line": 48,
           "column": 2
         }
       }
@@ -808,12 +825,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 48,
+          "line": 49,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 48,
+          "line": 49,
           "column": 2
         }
       }
@@ -825,12 +842,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 49,
+          "line": 50,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 49,
+          "line": 50,
           "column": 2
         }
       }
@@ -842,12 +859,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 50,
+          "line": 51,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 50,
+          "line": 51,
           "column": 2
         }
       }
@@ -859,12 +876,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 51,
+          "line": 52,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 51,
+          "line": 52,
           "column": 2
         }
       }
@@ -876,12 +893,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 52,
+          "line": 53,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 52,
+          "line": 53,
           "column": 2
         }
       }
@@ -893,12 +910,12 @@
         "file": "testdata/membership.intent.fixture",
         "start": {
           "offset": 0,
-          "line": 53,
+          "line": 54,
           "column": 1
         },
         "end": {
           "offset": 0,
-          "line": 53,
+          "line": 54,
           "column": 2
         }
       }

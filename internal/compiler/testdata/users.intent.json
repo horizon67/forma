@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.5",
+  "version": "forma/resolved-intent/v0.6",
   "roles": [
     {
       "id": "role/admin",

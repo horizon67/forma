@@ -237,6 +237,7 @@ Go 1.24以上でcheckerと現在のgeneration workflowを実行できます。
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
+go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
@@ -249,13 +250,14 @@ applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
 `forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。現在のmilestoneは
-メール認証付きsignup/signinのIdentity probeです。flow contractとv0 gapを固定し、syntaxを増やさず
-target-neutralなIdentity Resolved Intent、Source Map、29 Acceptance Factsを実装しました。機械検査できない
-secret redaction、storage、fixture fidelityも3つのReview RequirementsとしてFact coverageから分離し、
+メール認証付きsignup/signinのIdentity probeです。最小Stage C syntaxからlocal-password proof、email verification、
+page interaction、self ownershipをtarget-neutralなResolved Intent `v0.6`、Source Map `v0.4`、38 Acceptance Facts、
+3 Review Requirementsへ解決できるようになりました。機械検査できないsecret redaction、storage、fixture fidelityは
+Fact coverageから分離し、
 `forma verify`が必ず人間へ表示します。さらに、実際に適用した過去のadmin requestを書き換えず、Identity追加request
 へのpairwise lineageも検証しました。passwordless、external provider、email変更の比較から、authentication proof、
-external authority、identifier binding lifecycleを将来の独立axisとして切り出しました。次は対応済みのlocal password +
-email verificationだけを一意に表す最小syntaxです。
+external authority、identifier binding lifecycleを将来の独立axisとして切り出しました。次はこのGeneration Requestを
+coding agentへ渡し、実repositoryでsignup/signin flowを通します。
 
 ## 設計資料
 
@@ -269,6 +271,8 @@ email verificationだけを一意に表す最小syntaxです。
 - [注文承認・在庫probe](examples/orders.forma)
 - [メール認証付き会員登録probe](docs/email-verified-membership-probe.md)
 - [Identity semantic model案](docs/identity-semantic-model-proposal.md)
+- [Identity surface syntax案](docs/identity-surface-syntax-proposal.md)
+- [メール認証付き会員登録の完全例](examples/email-verified-membership.forma)
 - [会員登録のv0 subset](examples/public-membership.forma)
 - [最小式レイヤ案](docs/expression-proposal.md)
 - [進行中の管理画面agent-generation experiment](experiments/admin-agent-e2e/README.md)

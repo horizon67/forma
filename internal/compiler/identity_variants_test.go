@@ -17,13 +17,13 @@ func TestIdentityVariantProposalGate(t *testing.T) {
 		{
 			name:        "passwordless",
 			fixture:     passwordlessIdentityFixture,
-			want:        "first Identity slice requires one identifier, credential, verification, and ownership",
+			want:        "first Identity slice requires one identifier, proof, credential, verification, and ownership",
 			missingAxis: "authentication proof independent of a local credential",
 		},
 		{
 			name:        "external provider",
 			fixture:     externalProviderIdentityFixture,
-			want:        "is not the canonical password credential",
+			want:        "is not the supported local-password proof",
 			missingAxis: "external authority and subject mapping",
 		},
 		{
@@ -121,8 +121,11 @@ func passwordlessIdentityFixture(t *testing.T) *ResolvedIntent {
 	t.Helper()
 	intent := clonedMembershipIntent(t)
 	identity := &intent.Identities[0]
+	identity.Proofs = nil
 	identity.Credentials = nil
+	identity.Registration.Proof = ""
 	identity.Registration.Credential = ""
+	identity.Authentication.Proof = ""
 	identity.Authentication.Credential = ""
 	for pageIndex := range intent.Pages {
 		for interactionIndex := range intent.Pages[pageIndex].IdentityInteractions {
@@ -145,8 +148,12 @@ func externalProviderIdentityFixture(t *testing.T) *ResolvedIntent {
 	intent := clonedMembershipIntent(t)
 	identity := &intent.Identities[0]
 	provider := credentialID(identity.Name, "provider")
+	providerProof := authenticationProofID(identity.Name, "provider")
+	identity.Proofs[0] = IRAuthenticationProof{ID: providerProof, Name: "provider", Kind: "external-assertion"}
 	identity.Credentials[0] = IRCredential{ID: provider, Name: "provider", Kind: "external-provider"}
+	identity.Registration.Proof = providerProof
 	identity.Registration.Credential = provider
+	identity.Authentication.Proof = providerProof
 	identity.Authentication.Credential = provider
 	for pageIndex := range intent.Pages {
 		for interactionIndex := range intent.Pages[pageIndex].IdentityInteractions {

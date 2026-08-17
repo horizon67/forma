@@ -12,8 +12,10 @@ Stage Bの具体的なResolved Intent候補は
 というdesign probeである。現在の[`examples/users.forma`](../examples/users.forma)は管理者向けの
 ユーザー管理を表し、認証方式、credential、verification、sessionは扱わない。
 
-規範仕様は[`v0-primitives.md`](v0-primitives.md)である。ここに示す`identity`、`register`、`verify`、
-`login`などは現在のParserでは受理されず、primitive、modifier、Resolved Intent nodeのいずれにするかも未決定である。
+規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書の古いsyntax sketchそのものは採用していないが、
+local password + email verificationの最小`identity` / `interact` syntaxは
+[`identity-surface-syntax-proposal.md`](identity-surface-syntax-proposal.md)に従ってreference Parserが受理する。
+passwordless、external provider、email変更は引き続き未対応である。
 
 ## 対象とするflow
 

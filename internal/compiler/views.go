@@ -76,6 +76,7 @@ func (c *checker) checkPages() {
 			continue
 		}
 		c.checkRoles(page.Allows)
+		c.checkIdentityPage(page)
 		for _, view := range page.Views {
 			info := c.viewInfo[view]
 			if info == nil || info.Entity == nil {
@@ -387,18 +388,35 @@ func (c *checker) actionRefAccess(id SemanticID, info *viewInfo, ref IRActionRef
 
 func (c *checker) composeAccess(id SemanticID, pageNames []string, action *ActionDecl) IRAccess {
 	access := IRAccess{ID: id, AllOf: []IRAccessRequirement{}}
-	seen := map[SemanticID]bool{}
-	for _, pageName := range pageNames {
+	seenPages := map[SemanticID]bool{}
+	seenRequirements := map[string]bool{}
+	for pageIndex, pageName := range pageNames {
 		page := c.pages[pageName]
-		if page == nil || len(page.Allows) == 0 {
+		if page == nil {
 			continue
 		}
 		source := pageID(page.Name.Text)
-		if seen[source] {
+		if seenPages[source] {
 			continue
 		}
-		seen[source] = true
-		access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, Kind: "roles", AnyOf: namesToStrings(page.Allows)})
+		seenPages[source] = true
+		if len(page.Allows) > 0 {
+			requirement := IRAccessRequirement{Source: source, Kind: "roles", AnyOf: namesToStrings(page.Allows)}
+			access.AllOf = append(access.AllOf, requirement)
+			seenRequirements[accessRequirementKey(requirement)] = true
+		}
+		// Identity requirements protect the operation at its source page. The
+		// destination page enforces its own access when it is queried; copying
+		// destination ownership would also refer to a different page binding.
+		if pageIndex == 0 {
+			for _, requirement := range c.pageSemanticRequirements(page) {
+				key := accessRequirementKey(requirement)
+				if !seenRequirements[key] {
+					access.AllOf = append(access.AllOf, requirement)
+					seenRequirements[key] = true
+				}
+			}
+		}
 	}
 	if action != nil {
 		var allows []string
@@ -410,13 +428,19 @@ func (c *checker) composeAccess(id SemanticID, pageNames []string, action *Actio
 		}
 		if len(allows) > 0 {
 			source := actionID(action.Entity.Text, action.Name.Text)
-			if !seen[source] {
-				access.AllOf = append(access.AllOf, IRAccessRequirement{Source: source, Kind: "roles", AnyOf: allows})
+			requirement := IRAccessRequirement{Source: source, Kind: "roles", AnyOf: allows}
+			key := accessRequirementKey(requirement)
+			if !seenRequirements[key] {
+				access.AllOf = append(access.AllOf, requirement)
 			}
 		}
 	}
 	sort.Slice(access.AllOf, func(i, j int) bool { return access.AllOf[i].Source < access.AllOf[j].Source })
 	return access
+}
+
+func accessRequirementKey(requirement IRAccessRequirement) string {
+	return fmt.Sprintf("%s|%s|%v|%s|%s|%s", requirement.Source, requirement.Kind, requirement.AnyOf, requirement.Identity, requirement.Ownership, requirement.ResourceBinding)
 }
 
 func (c *checker) uniqueDestination(name Name, kind string, candidates []*viewInfo, report bool) string {

@@ -37,7 +37,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage B5完了** | passwordless/provider/email変更の比較で対応範囲を固定。local password + email verificationの最小syntaxが次 |
+| public Identity | **P1 Stage C first slice完了** | local password + email verificationをForma sourceから38 Factsへ解決。次はagent生成E2E |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -299,6 +299,16 @@ passwordlessのcredential非依存26/38 Factsを受理し、Fact kindの部分�
 3件を明示的に拒否し、authentication proof、external authority、identifier binding lifecycleが独立した不足axisだと
 分かった。詳細は[`identity-variant-probe.md`](identity-variant-probe.md)に記録する。次は対応済みfirst sliceだけを
 一意に表す最小surface syntaxであり、未対応方式を通常field/actionへfallbackさせない。
+
+Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-proposal.md)の最小syntaxを実装する。
+`proof`をcredentialの別名にせず、local password proofとそのcredential bindingを別semantic nodeとして解決する。
+合格条件はsourceからStage B fixtureと同じIdentity semantics、38 Facts、3 Review Requirementsを再導出できることである。
+
+このfirst sliceは実装済みである。`examples/email-verified-membership.forma`をParser / Checkerが受理し、
+Authentication Proofとcredentialを別nodeにしたResolved Intent `v0.6`、Source Map `v0.4`へ解決する。canonical
+fixtureとの完全一致、38 Facts、3 Review Requirements、未対応proof / lifecycle / owner bindingのnegative testを固定した。
+各Identity operationのinteractionもapplication全体でちょうど1件に制限し、Factの付かない追加surfaceを拒否する。
+次はこのGeneration Requestをcoding agentへ渡し、実repositoryでsignup/signin flowを生成・検証する。
 
 ### Exit criteria
 
