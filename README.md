@@ -299,6 +299,7 @@ is its target-neutral Identity semantic model.
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
 - [Email-verified membership probe](docs/email-verified-membership-probe.md)
+- [Identity semantic model proposal](docs/identity-semantic-model-proposal.md)
 - [Public membership v0 subset](examples/public-membership.forma)
 - [Minimal expression proposal](docs/expression-proposal.md)
 - [Active admin agent-generation experiment](experiments/admin-agent-e2e/README.md)

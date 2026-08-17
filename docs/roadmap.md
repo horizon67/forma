@@ -236,6 +236,8 @@ migration probeが残るが、これらをIdentityより先のblockerにはし�
 
 最初のvertical sliceは
 [`email-verified-membership-probe.md`](email-verified-membership-probe.md)へ固定する。
+Stage Bのtarget-neutral shapeは
+[`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
 
 1. visitorがname、email、passwordでsignupし、Pending Userになる。
 2. 30分・一度限りのメールURLからverificationし、Activeになる。
@@ -255,7 +257,8 @@ migration probeが残るが、これらをIdentityより先のblockerにはし�
 - verification emailのemissionとdeliveryの分離
 - verification expiryを検査するclock boundary
 - Credentialを`preserveInput`と`stored: "input"`から除外するfact導出規則
-- compiler invariant、Acceptance Fact、人間review requirement（secret handlingとsetup fidelity）の分離
+- compiler invariant（secret boundaryとsetup pre/post）、Acceptance Fact、人間review requirement
+  （secret handlingとrepository fixture fidelity）の分離
 - credential/evidence値をRequestへ入れず、symbolic handleを使う独立したsemantic fixture
 
 候補syntaxを先に固定せず、[`public-membership-proposal.md`](public-membership-proposal.md)の比較例を

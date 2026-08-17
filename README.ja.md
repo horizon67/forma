@@ -262,6 +262,7 @@ target-neutralなIdentity semantic modelを設計します。
 - [ユーザー管理の完全例](examples/users.forma)
 - [注文承認・在庫probe](examples/orders.forma)
 - [メール認証付き会員登録probe](docs/email-verified-membership-probe.md)
+- [Identity semantic model案](docs/identity-semantic-model-proposal.md)
 - [会員登録のv0 subset](examples/public-membership.forma)
 - [最小式レイヤ案](docs/expression-proposal.md)
 - [進行中の管理画面agent-generation experiment](experiments/admin-agent-e2e/README.md)

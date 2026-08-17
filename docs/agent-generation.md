@@ -135,8 +135,12 @@ fact IDはsource位置やtarget repositoryに依存せず、subjectのSemanticID
 `dependsOn`として参照しない。各Factは新しい隔離されたscenarioから独立実行できるものとし、必要な初期状態は
 target-neutralなsemantic setupとして表す。credentialやevidenceは値そのものではなくsymbolic handleで参照し、
 具体的な合成test値と確立方法はcoding agentがrepository固有testへ落とす。Forma coreはframework別fixture
-adapterを持たない。setupが検査対象そのものを迂回・注入していないかはFormaが再計算できないため、Factの
-`passed`結果へ吸収せず、人間が確認するstable review requirementとして扱う。
+adapterを持たない。compilerが導出したclosed setupはFact kindごとのpre/post contractで検査し、expectationを
+setup時点で成立させるself-fulfillingな組合せを拒否する。そのsetupをrepository固有testへ変換した実装が
+operation・認可・観測経路を迂回していないかはFormaが再計算できないため、Factの`passed`結果へ吸収せず、
+人間が確認するstable review requirementとして扱う。
+Identityでの具体的なcandidate shapeは
+[`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
 
 ## Generation Request
 

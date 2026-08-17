@@ -974,6 +974,7 @@ enforce field, state, and role constraints
 - join、aggregate、derived listをどう表すか
 - domain actionの引数とformをどう統合するか
 - [メール認証付き会員登録probe](email-verified-membership-probe.md)と
+  [Identity semantic model案](identity-semantic-model-proposal.md)、
   [表側の会員登録とidentity](public-membership-proposal.md)をどのsemantic modelで表し、identity providerと
   login/logoutのどこまでを言語へ入れるか
 - notification、background job、fileを共通effectとして扱えるか

@@ -2,6 +2,9 @@
 
 Status: active P1 probe — flow and acceptance boundary fixed, syntax and semantic schema not yet decided
 
+Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
+[`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
+
 ## 1. 目的
 
 このprobeは、Formaが単一画面のCRUDだけでなく、メール認証を含む段階的な会員登録flowをcoding agentへ
@@ -188,9 +191,10 @@ library、signup flow、test factoryなどrepositoryに合う方法でpreconditi
 fake mail adapterなどの観測点から取得し、contractへ固定値として書かない。
 
 合成test credentialはproductionで発生したruntime secretではない。target test codeが既知のtest値を持つことと、
-Formaの交換形式やGeneration Feedbackがruntime secretを保持することを区別する。ただし、setupが操作対象そのものを
-迂回してFactを自明にしてはならない。たとえばsignin FactはActive Userをsetupしてよいが、signinの成功判定自体を
-直接注入してはならない。
+Formaの交換形式やGeneration Feedbackがruntime secretを保持することを区別する。compilerが導出するsetupは
+expectationのoutcomeを事前に成立させてはならず、repository固有testへの変換も操作対象そのものを迂回しては
+ならない。たとえばsignin FactはActive Userをsetupしてよいが、active sessionやsignin成功判定を直接注入しては
+ならない。
 
 semantic fixtureの確立に失敗した場合は、そのFactを失敗とする。他Factの失敗結果を引き継ぐ`dependsOn` graph、
 実行順序、部分成功という意味は最初のsliceへ導入しない。Forma coreはframework別fixture adapterを持たず、coding
@@ -208,6 +212,8 @@ security boundaryには、上の29 Acceptance Factsと同じ`passed`集合へ入
 - credentialを含むregistrationへ、すべてのinputをそのまま保存する`stored: "input"`を導出しない。
 - domain fieldの保存期待とcredential bindingの期待を分け、credentialの正しさは後のauthentication成功／失敗で
   観測する。
+- compilerが導出するsemantic setupはFact kindごとのpre/post contractを満たし、expectationのoutcomeをsetup時点で
+  成立させない。
 
 これらはagentのcoverage報告ではなく、Forma compiler自身のnegative testで保証する。
 
@@ -215,7 +221,8 @@ security boundaryには、上の29 Acceptance Factsと同じ`passed`集合へ入
 
 - Generation Feedback、user-visible diagnostic、repository logへcredential/evidence valueを出さない。
 - credentialとverification evidenceを平文のdomain dataとして保存せず、repository標準の安全な方式を使う。
-- semantic fixtureのsetupが、Factの検査対象そのものを迂回・注入していない。
+- agentがsemantic fixtureをrepository固有testへ変換する際、実operation・認可・観測経路をstubや直接注入で
+  迂回していない。
 
 Formaは実行時のsecret valueやrepository固有testのsetup codeを保持しないため、これら3件を再計算して
 `passed`とは判定できない。Stage Bでは
@@ -314,6 +321,9 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 
 ### Stage B — target-neutral semantic model
 
+具体的なcandidate shapeは
+[`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
+
 - Identity / Credential / Verification / Authentication / Ownershipの最小Resolved Intent shapeを作る。
 - 各nodeへstable semantic IDとSource Map entryを与える。
 - 上の29 factsを正常系・拒否系として機械的に導出する。
@@ -323,7 +333,9 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - Credentialを含むFactに`stored: "input"`が現れないことをnegative testで固定する。
 - Generation Request schemaに平文credential/evidenceを格納できるfixture fieldがないことを構造testで固定する。
 - secret valueを保持できるfieldがResolved Intent / Source Map schemaにないことを構造testで固定する。
-- 再計算できないsecret redaction、storage、setup fidelityを、Factとは別のstable review requirementsとして
+- Fact kindごとのpre/post contractでself-fulfillingなsemantic setupをcompilerが拒否する。
+- Identity Factのdistinct kind集合とpre/post contract registryを完全一致させ、規則未定義のkindを拒否する。
+- 再計算できないsecret redaction、storage、repository fixture fidelityを、Factとは別のstable review requirementsとして
   出力する。
 - `forma verify`が未解決のreview requirementsを必ず人間へ表示する境界を設計する。
 
