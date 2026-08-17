@@ -1,6 +1,6 @@
 # Agent Generation Model
 
-Status: architectural direction — incremental admin-flow request/feedback implemented as `v0alpha2`
+Status: architectural direction — Review Requirements and current Generation Request implemented as `v0alpha3`
 
 Formaのend-to-end実行モデルでは、AI coding agentは任意のgenerator implementationではなく、
 application codeを作る主体である。
@@ -8,7 +8,7 @@ application codeを作る主体である。
 ```text
 Forma source
   → parse / check / resolve
-  → Resolved Intent + Acceptance Facts
+  → Resolved Intent + Acceptance Facts + Review Requirements
   → Generation Request
   → AI coding agent + target repository
   → ordinary application code
@@ -143,6 +143,11 @@ operation・認可・観測経路を迂回していないかはFormaが再計算
 Identityでの具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
 
+人間確認が必要な境界は`forma/review-requirements/v0alpha1`としてAcceptance Factsから分離する。Identityごとに
+`secret-redaction`、`secret-storage`、`fixture-fidelity`の3件をstable ID付きで導出する。instructionはcompiler所有の
+固定文であり、agent feedbackへreview coverageや完了statusを追加しない。`forma verify`のexit 0は機械検査の成功だけを
+意味し、これら3件は成功出力にも必ず表示される。
+
 ## Generation Request
 
 最小のmachine-readable requestは次の情報を運ぶ。
@@ -152,6 +157,7 @@ GenerationRequest
   schemaVersion
   resolvedIntent
   acceptanceFacts
+  reviewRequirements
   sourceMap
   implementationPolicy
   requestedChange
@@ -162,6 +168,7 @@ GenerationRequest
   verification
     feedbackSchema
     requiredFactIds
+    displayReviewRequirementIds
     requireTestReference
     rejectUnknownFacts
 ```
@@ -244,9 +251,12 @@ Source Mapも各versionへ対応する。現在のverifierがrequestのversion�
 実行せず、matching Forma versionで検証するよう明示的に拒否する。将来過去versionをsupportする場合は、
 versionに対応するbuilderへdispatchする。
 
-現在は初回生成の`generation-request/v0alpha1`と`generation-feedback/v0alpha1`をhistorical baselineとして
-読み取り可能に保ち、incremental metadataとImplementation Policy Coverageを追加した交換形式を
-`v0alpha2`として出力する。同じschema名のままunknown fieldを追加しない。
+現在は`generation-request/v0alpha1`とReview Requirements導入前のincremental `v0alpha2`をhistorical artifactとして
+読み取り可能に保ち、Review Requirementsと表示対象IDを持つcurrent交換形式を`v0alpha3`として出力する。
+historical schemaはIdentityを含まずcanonical Review Requirementsが空の場合だけ受理し、同じschema名のまま
+unknown fieldを追加しない。Review Requirementのincremental diffとhistorical `v0alpha2`からのmigrationは、
+Generation Requestを`v0alpha4`へ上げる次のsliceである。それまではbuilderとbaseline validatorの両方が
+Review Requirementの変化を明示的に拒否する。
 
 この機構はfactの変換漏れを防ぐが、test内容がfactを忠実に検査していることまで証明しない。その確認には
 repositoryのreviewと、将来必要ならtest mutationなど別の検証を使う。

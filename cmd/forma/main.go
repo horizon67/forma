@@ -174,6 +174,7 @@ func runVerify(arguments []string, stdout, stderr io.Writer) int {
 	if request.ImplementationPolicy != nil {
 		printPolicyCoverage(stdout, feedback.PolicyCoverage)
 	}
+	printReviewRequirements(stdout, request.ReviewRequirements)
 	return 0
 }
 
@@ -296,6 +297,16 @@ func printPolicyCoverage(writer io.Writer, coverage []implementationpolicy.Cover
 		case "flagged":
 			fmt.Fprintf(writer, "  flagged %s for review: %s\n", item.PolicyID, strings.Join(item.Hits, ", "))
 		}
+	}
+}
+
+func printReviewRequirements(writer io.Writer, requirements *compiler.ReviewRequirements) {
+	if requirements == nil || len(requirements.Requirements) == 0 {
+		return
+	}
+	fmt.Fprintf(writer, "human review required: %d requirements are not machine-verified\n", len(requirements.Requirements))
+	for _, requirement := range requirements.Requirements {
+		fmt.Fprintf(writer, "  %s [%s]: %s\n", requirement.ID, requirement.Kind, requirement.Instruction)
 	}
 }
 

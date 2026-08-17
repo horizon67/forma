@@ -1,0 +1,43 @@
+{
+  "version": "forma/review-requirements/v0alpha1",
+  "intentVersion": "forma/resolved-intent/v0.5",
+  "requirements": [
+    {
+      "id": "review/identity/UserAccount/fixture-fidelity",
+      "kind": "fixture-fidelity",
+      "subject": "identity/UserAccount",
+      "sourceNodes": [
+        "identity/UserAccount",
+        "identity/UserAccount/operation/register",
+        "identity/UserAccount/operation/resend",
+        "identity/UserAccount/operation/signin",
+        "identity/UserAccount/operation/signout",
+        "identity/UserAccount/operation/verify",
+        "identity/UserAccount/ownership/self"
+      ],
+      "instruction": "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests."
+    },
+    {
+      "id": "review/identity/UserAccount/secret-redaction",
+      "kind": "secret-redaction",
+      "subject": "identity/UserAccount",
+      "sourceNodes": [
+        "identity/UserAccount",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/verification/email"
+      ],
+      "instruction": "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed."
+    },
+    {
+      "id": "review/identity/UserAccount/secret-storage",
+      "kind": "secret-storage",
+      "subject": "identity/UserAccount",
+      "sourceNodes": [
+        "identity/UserAccount",
+        "identity/UserAccount/credential/password",
+        "identity/UserAccount/verification/email"
+      ],
+      "instruction": "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism."
+    }
+  ]
+}

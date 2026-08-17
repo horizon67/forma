@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/horizon67/forma/internal/agentrequest"
+	"github.com/horizon67/forma/internal/compiler"
 )
 
 func TestResolveCommand(t *testing.T) {
@@ -48,7 +51,7 @@ func TestRequestCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &request); err != nil {
 		t.Fatalf("request output is not JSON: %v\n%s", err, stdout.String())
 	}
-	if request.Schema != "forma/generation-request/v0alpha2" || request.ResolvedIntent == nil {
+	if request.Schema != "forma/generation-request/v0alpha3" || request.ResolvedIntent == nil {
 		t.Fatalf("generation request = %#v", request)
 	}
 	if len(request.AcceptanceFacts.Facts) == 0 || len(request.AcceptanceFacts.Facts) != len(request.Verification.RequiredFactIDs) {
@@ -121,6 +124,66 @@ func TestVerifyIncrementalCommandChecksRepositoryPolicies(t *testing.T) {
 		"  deviated implementation/persistence: This controlled experiment retains the existing in-memory store.\n"
 	if got := stdout.String(); got != want {
 		t.Fatalf("unexpected stdout: %q", got)
+	}
+}
+
+func TestVerifyIdentityRequestAlwaysDisplaysHumanReview(t *testing.T) {
+	read := func(name string, target any) {
+		t.Helper()
+		content, err := os.ReadFile(filepath.Join("..", "..", "internal", "compiler", "testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(content, target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var intent compiler.ResolvedIntent
+	var sourceMap compiler.SourceMap
+	read("membership.intent.json", &intent)
+	read("membership.sourcemap.json", &sourceMap)
+	request, err := agentrequest.BuildFull(compiler.Result{Intent: &intent, SourceMap: &sourceMap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback := agentrequest.Feedback{Schema: agentrequest.FeedbackSchema, Stage: "test", Status: "succeeded"}
+	for _, factID := range request.Verification.RequiredFactIDs {
+		feedback.FactCoverage = append(feedback.FactCoverage, agentrequest.FactCoverage{
+			FactID: factID, TestReferences: []string{"tests/membership_test.go#" + strings.ReplaceAll(string(factID), "/", "_")}, Result: "passed",
+		})
+	}
+	directory := t.TempDir()
+	requestPath := filepath.Join(directory, "request.json")
+	requestContent, err := agentrequest.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(requestPath, requestContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	feedbackPath := filepath.Join(directory, "feedback.json")
+	feedbackContent, err := json.Marshal(feedback)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(feedbackPath, feedbackContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"verify", requestPath, feedbackPath}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "verified 38 acceptance facts: all passed") ||
+		!strings.Contains(output, "human review required: 3 requirements are not machine-verified") {
+		t.Fatalf("review output = %q", output)
+	}
+	for _, requirement := range request.ReviewRequirements.Requirements {
+		if !strings.Contains(output, string(requirement.ID)) || !strings.Contains(output, requirement.Instruction) {
+			t.Fatalf("review output omits %s: %q", requirement.ID, output)
+		}
 	}
 }
 

@@ -33,11 +33,11 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義。未実装項目が残る |
 | Go front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Mapを実装 |
 | Acceptance Facts | admin slice実装 | list/detail/editの正常系・拒否系をstable ID付きで導出 |
-| Generation Request | incremental slice実装 | historical `v0alpha1` full requestと`v0alpha2` incremental requestを検証可能 |
+| Generation Request | B3 current schema実装 | historical `v0alpha1` / `v0alpha2`を保持し、Review Requirementsを持つ`v0alpha3`を検証可能 |
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage B2完了** | Identity専用29 Factsと27 kind contractを実装。3 Review RequirementsのB3が次 |
+| public Identity | **P1 Stage B3完了** | Identity専用29 Factsと、Fact coverageから分離した3 Review Requirementsを実装。B4 lineageが次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -281,7 +281,12 @@ runtime値を持たないsubject/credential/evidence/session handleで表し、�
 canonical fixtureの27 distinct kindと`FactKindContract` registryの完全一致をfixture testで固定し、汎用validatorは
 生成されたkindがcontractを持つことを検査する。operation実行とbefore/after observation、setupが期待結果を
 先取りしないpre/post規則はcompiler invariantである。Credentialは`preserveInput`と`stored: input`から除外し、
-credential/evidence raw value用schema fieldもstructural testで禁止した。次はB3の3 Review Requirementsである。
+credential/evidence raw value用schema fieldもstructural testで禁止した。
+
+Stage B3では`secret-redaction`、`secret-storage`、`fixture-fidelity`をstable ID付きReview Requirementsとして
+Resolved Intentから決定的に導出する。Generation Request `v0alpha3`はこのartifactと表示対象IDを持ち、validatorが
+再導出して完全一致を要求する。これらはFact coverageやfeedbackの`passed`件数へ含めず、`forma verify`が機械検査の
+成功後も必ず人間へ表示する。次はB4で、適用済み`v0alpha2` requestからIdentity requestへのdiffとlineageを固定する。
 
 ### Exit criteria
 

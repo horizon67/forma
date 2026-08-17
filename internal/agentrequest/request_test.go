@@ -2,7 +2,9 @@ package agentrequest
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -65,6 +67,21 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 }
 
 func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
+	historicalContent, err := os.ReadFile(filepath.Join("testdata", "admin.incremental.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	historical, err := UnmarshalRequest(historicalContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if historical.Schema != PreviousRequestSchema {
+		t.Fatalf("historical incremental schema = %s, want %s", historical.Schema, PreviousRequestSchema)
+	}
+	if err := ValidateRequest(historical); err != nil {
+		t.Fatal(err)
+	}
+
 	previousContent, err := os.ReadFile(filepath.Join("testdata", "admin.request.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -97,23 +114,15 @@ func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertTargetNeutralRequest(t, request)
-	actual, err := Marshal(request)
-	if err != nil {
-		t.Fatal(err)
+	if request.Schema != RequestSchema || request.ReviewRequirements == nil || len(request.ReviewRequirements.Requirements) != 0 {
+		t.Fatalf("current admin review boundary = %#v", request.ReviewRequirements)
 	}
-	actual = append(actual, '\n')
-	goldenPath := filepath.Join("testdata", "admin.incremental.request.json")
-	if os.Getenv("UPDATE_GOLDEN") == "1" {
-		if err := os.WriteFile(goldenPath, actual, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	expected, err := os.ReadFile(goldenPath)
-	if err != nil {
-		t.Fatalf("read golden file: %v (run with UPDATE_GOLDEN=1)", err)
-	}
-	if !bytes.Equal(actual, expected) {
-		t.Fatalf("incremental Generation Request differs from %s", goldenPath)
+	if !reflect.DeepEqual(request.ResolvedIntent, historical.ResolvedIntent) ||
+		!reflect.DeepEqual(request.AcceptanceFacts, historical.AcceptanceFacts) ||
+		!reflect.DeepEqual(request.SourceMap, historical.SourceMap) ||
+		!reflect.DeepEqual(request.ImplementationPolicy, historical.ImplementationPolicy) ||
+		!reflect.DeepEqual(request.RequestedChange, historical.RequestedChange) {
+		t.Fatal("current request changed historical admin semantics")
 	}
 	if len(request.AcceptanceFacts.Facts) != 43 || len(request.RequestedChange.IntentChanges) != 8 ||
 		len(request.RequestedChange.FactChanges) != 13 || request.RequestedChange.UnchangedFacts != 30 {
@@ -145,6 +154,173 @@ func TestBuildFullRequestHasExactFactCoveragePolicy(t *testing.T) {
 		}
 	}
 	assertTargetNeutralRequest(t, request)
+}
+
+func TestIdentityRequestKeepsHumanReviewOutsideFactCoverage(t *testing.T) {
+	request, err := BuildFull(membershipRequestResult(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.ReviewRequirements == nil || len(request.ReviewRequirements.Requirements) != 3 {
+		t.Fatalf("review requirements = %#v", request.ReviewRequirements)
+	}
+	wantReviewIDs := compiler.ReviewRequirementIDs(request.ReviewRequirements)
+	if !reflect.DeepEqual(request.Verification.DisplayReviewRequirementIDs, wantReviewIDs) {
+		t.Fatalf("display review IDs = %v, want %v", request.Verification.DisplayReviewRequirementIDs, wantReviewIDs)
+	}
+	if len(request.AcceptanceFacts.Facts) != 38 || len(request.Verification.RequiredFactIDs) != 38 {
+		t.Fatalf("fact boundary = %d facts, %d required", len(request.AcceptanceFacts.Facts), len(request.Verification.RequiredFactIDs))
+	}
+	for _, id := range request.Verification.RequiredFactIDs {
+		if strings.HasPrefix(string(id), "review/") {
+			t.Fatalf("review requirement leaked into fact coverage: %s", id)
+		}
+	}
+	if err := ValidateCompletion(request, nil, passingFeedback(request), ""); err != nil {
+		t.Fatalf("machine coverage without review self-report was rejected: %v", err)
+	}
+}
+
+func TestValidateRequestRederivesReviewRequirements(t *testing.T) {
+	base, err := BuildFull(membershipRequestResult(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*Request)
+		want   string
+	}{
+		{
+			name: "missing artifact",
+			mutate: func(request *Request) {
+				request.ReviewRequirements = nil
+			},
+			want: "artifact is required",
+		},
+		{
+			name: "rewritten instruction",
+			mutate: func(request *Request) {
+				request.ReviewRequirements.Requirements[0].Instruction = "agent marked this passed"
+			},
+			want: "differs from canonical",
+		},
+		{
+			name: "hidden display requirement",
+			mutate: func(request *Request) {
+				request.Verification.DisplayReviewRequirementIDs = request.Verification.DisplayReviewRequirementIDs[1:]
+			},
+			want: "display review requirement IDs differ",
+		},
+		{
+			name: "historical schema cannot hide review",
+			mutate: func(request *Request) {
+				request.Schema = PreviousRequestSchema
+				request.ReviewRequirements = nil
+				request.Verification.DisplayReviewRequirementIDs = nil
+			},
+			want: "historical schema cannot represent required human review",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			content, err := Marshal(base)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request, err := UnmarshalRequest(content)
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&request)
+			if err := ValidateRequest(request); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("validation error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestFeedbackHasNoReviewCompletionChannel(t *testing.T) {
+	content := []byte(`{"schema":"forma/generation-feedback/v0alpha2","stage":"test","status":"succeeded","reviewCoverage":[]}`)
+	if _, err := UnmarshalFeedback(content); err == nil || !strings.Contains(err.Error(), "unknown field") {
+		t.Fatalf("feedback review coverage error = %v", err)
+	}
+}
+
+func TestB3RejectsIncrementalReviewChangesUntilDiffIsAvailable(t *testing.T) {
+	previous, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildIncremental(previous, membershipRequestResult(t), nil); err == nil || !strings.Contains(err.Error(), "require the B4 request diff slice") {
+		t.Fatalf("incremental review change error = %v", err)
+	}
+}
+
+func TestValidateIncrementalBaselineIndependentlyRejectsReviewChanges(t *testing.T) {
+	currentResult := membershipRequestResult(t)
+	current, err := BuildFull(currentResult)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	intentContent, err := json.Marshal(currentResult.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var baselineIntent compiler.ResolvedIntent
+	if err := json.Unmarshal(intentContent, &baselineIntent); err != nil {
+		t.Fatal(err)
+	}
+	baselineIntent.Identities = nil
+	baselineIntent.Pages = nil
+	baselineSourceMap := &compiler.SourceMap{Version: currentResult.SourceMap.Version, IntentVersion: currentResult.SourceMap.IntentVersion}
+	for _, entry := range currentResult.SourceMap.Entries {
+		if !strings.HasPrefix(string(entry.NodeID), "identity/") && !strings.HasPrefix(string(entry.NodeID), "page/") {
+			baselineSourceMap.Entries = append(baselineSourceMap.Entries, entry)
+		}
+	}
+	baseline, err := BuildFull(compiler.Result{Intent: &baselineIntent, SourceMap: baselineSourceMap})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	intentChanges, unchangedIntent, err := diffIntent(baseline.ResolvedIntent, current.ResolvedIntent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	factChanges, unchangedFacts, err := diffFacts(baseline.AcceptanceFacts, current.AcceptanceFacts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range append(append([]SemanticChange(nil), intentChanges...), factChanges...) {
+		if change.Kind == "removed" {
+			t.Fatalf("test baseline is not a semantic subset: %#v", change)
+		}
+	}
+	baselineContent, err := Marshal(baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intentNodes := make([]compiler.SemanticID, len(intentChanges))
+	for index, change := range intentChanges {
+		intentNodes[index] = change.NodeID
+	}
+	current.RequestedChange = RequestedChange{
+		Kind: "incremental",
+		Baseline: &RequestBaseline{
+			RequestSHA256: fmt.Sprintf("%x", sha256.Sum256(baselineContent)), RequestSchema: baseline.Schema,
+			ResolvedIntentVersion: baseline.ResolvedIntent.Version, AcceptanceFactsVersion: baseline.AcceptanceFacts.Version,
+		},
+		IntentNodes: intentNodes, IntentChanges: intentChanges, FactChanges: factChanges,
+		UnchangedIntentNodes: unchangedIntent, UnchangedFacts: unchangedFacts,
+	}
+	if err := ValidateRequest(current); err != nil {
+		t.Fatalf("forged request-local metadata is invalid: %v", err)
+	}
+	if err := ValidateIncrementalBaseline(current, baseline); err == nil || !strings.Contains(err.Error(), "Review Requirement changes require the B4 request diff slice") {
+		t.Fatalf("incremental baseline review error = %v", err)
+	}
 }
 
 func TestValidateRequestRejectsMissingSourceMapEntry(t *testing.T) {
@@ -325,14 +501,16 @@ func TestValidateCompletionChecksImplementationPolicyAgainstRepository(t *testin
 func assertTargetNeutralRequest(t *testing.T, request Request) {
 	t.Helper()
 	semanticPayload := struct {
-		ResolvedIntent  *compiler.ResolvedIntent  `json:"resolvedIntent"`
-		AcceptanceFacts *compiler.AcceptanceFacts `json:"acceptanceFacts"`
-		SourceMap       *compiler.SourceMap       `json:"sourceMap"`
-		RequestedChange RequestedChange           `json:"requestedChange"`
-		Verification    VerificationPolicy        `json:"verification"`
+		ResolvedIntent     *compiler.ResolvedIntent     `json:"resolvedIntent"`
+		AcceptanceFacts    *compiler.AcceptanceFacts    `json:"acceptanceFacts"`
+		ReviewRequirements *compiler.ReviewRequirements `json:"reviewRequirements"`
+		SourceMap          *compiler.SourceMap          `json:"sourceMap"`
+		RequestedChange    RequestedChange              `json:"requestedChange"`
+		Verification       VerificationPolicy           `json:"verification"`
 	}{
 		ResolvedIntent: request.ResolvedIntent, AcceptanceFacts: request.AcceptanceFacts,
-		SourceMap: request.SourceMap, RequestedChange: request.RequestedChange, Verification: request.Verification,
+		ReviewRequirements: request.ReviewRequirements, SourceMap: request.SourceMap,
+		RequestedChange: request.RequestedChange, Verification: request.Verification,
 	}
 	encoded, err := json.Marshal(semanticPayload)
 	if err != nil {
@@ -734,6 +912,25 @@ func passingFeedback(request Request) Feedback {
 		})
 	}
 	return feedback
+}
+
+func membershipRequestResult(t *testing.T) compiler.Result {
+	t.Helper()
+	read := func(name string, target any) {
+		t.Helper()
+		content, err := os.ReadFile(filepath.Join("..", "compiler", "testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(content, target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var intent compiler.ResolvedIntent
+	var sourceMap compiler.SourceMap
+	read("membership.intent.json", &intent)
+	read("membership.sourcemap.json", &sourceMap)
+	return compiler.Result{Intent: &intent, SourceMap: &sourceMap}
 }
 
 const testImplementationManifest = `schema: forma/implementation-policy/v0alpha1

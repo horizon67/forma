@@ -288,8 +288,10 @@ Generation Request, and `forma verify` validates agent feedback against the
 immutable request. The current milestone is the email-verified signup/signin
 Identity probe. Its flow contract and measured v0 gaps are fixed, and a
 syntax-independent, target-neutral Identity Resolved Intent, Source Map, and 29
-Acceptance Facts are implemented. The next step separates three requirements
-that need human review from machine-verifiable facts.
+Acceptance Facts are implemented. Three requirements for secret redaction,
+storage, and fixture fidelity are now kept outside fact coverage and always
+shown by `forma verify` for human review. The next step verifies lineage from an
+existing request to an Identity-adding request.
 
 ## Design documents
 

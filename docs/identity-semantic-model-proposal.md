@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B implementation — B1 schema and B2 Acceptance Facts complete; B3 Review Requirements next; not valid Forma syntax
+Status: Stage B implementation — B1 schema, B2 Acceptance Facts, and B3 Review Requirements complete; B4 request lineage next; not valid Forma syntax
 
 ## 1. 目的
 
@@ -101,12 +101,14 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 | Source Map | `forma/source-map/v0.2` | `v0.3` | Identity node kindと`v0.5` intentへ対応 |
 | Acceptance Facts | `forma/acceptance-facts/v0alpha1` | `v0alpha2` | semantic setupとIdentity fact payloadを追加 |
 | Review Requirements | なし | `forma/review-requirements/v0alpha1` | 人間review対象を独立交換形式にする |
-| Generation Request | `forma/generation-request/v0alpha2` | `v0alpha3` | Review Requirementsとそのincremental diffを追加 |
+| Generation Request | `forma/generation-request/v0alpha2` | `v0alpha3` | Review Requirementsと表示対象IDを追加 |
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
 この表の名前はproposal上の候補であり、implementationとgoldenを同時に更新した時点で規範になる。
-Resolved Intent `v0.5`とSource Map `v0.3`はB1、Acceptance Facts `v0alpha2`はB2で採用済みである。
-Review Requirements以降は後続sliceの候補である。
+Resolved Intent `v0.5`とSource Map `v0.3`はB1、Acceptance Facts `v0alpha2`はB2、Review Requirements
+`v0alpha1`とGeneration Request `v0alpha3`はB3で採用済みである。incremental diff以降は後続sliceの候補である。
+Review Requirement diffとbaseline version metadataを追加するB4では、既存`v0alpha3`へunknown fieldを足さず
+Generation Requestを`v0alpha4`へ上げる。
 
 ## 5. Resolved Intentのtop-level shape
 
@@ -879,7 +881,7 @@ attestation formatを決めない。
 
 ## 17. Generation Request v0alpha3
 
-候補shapeは次である。
+採用済みshapeは次である。
 
 ```text
 GenerationRequest
@@ -892,10 +894,8 @@ GenerationRequest
   requestedChange
     intentChanges
     factChanges
-    reviewRequirementChanges
     unchangedIntentNodes
     unchangedFacts
-    unchangedReviewRequirements
   verification
     requiredFactIds
     displayReviewRequirementIds
@@ -904,9 +904,10 @@ GenerationRequest
 `displayReviewRequirementIds`はagentへ完了報告させるためではなく、orchestration UIが必ず表示する集合の複製である。
 検証の正本はResolved Intentから再導出したReview Requirementsとする。
 
-incremental requestではreview requirementのadded/changed/removedも明示する。Identity追加なら3件がaddedになる。
+現在のB3 builderはReview Requirementsが変わるincremental requestを明示的に拒否する。
+B4の`v0alpha4`ではreview requirementのadded/changed/removedも明示し、Identity追加なら3件をaddedにする。
 
-`RequestBaseline`には既存のrequest、Resolved Intent、Acceptance Facts versionに加え、Source Map versionと
+B4の`RequestBaseline`には既存のrequest、Resolved Intent、Acceptance Facts versionに加え、Source Map versionと
 Review Requirements versionを記録する。historical `v0alpha2` baselineにはReview Requirementsが存在しないため、
 upgrade時は明示的な`none`として扱い、current versionを偽装して埋めない。
 
@@ -922,7 +923,7 @@ current versionだけを受理すると、このlineageが切れる。
    足して書き換えない。
 3. diff前にhistorical Resolved Intent / Factsをcurrent in-memory shapeへlosslessにupgradeする。
 4. admin flowにIdentityがなければ、upgradeだけでsemantic nodeやFactのadded/changedを発生させない。
-5. current Identity requestとの差分だけを`intentChanges`、`factChanges`、`reviewRequirementChanges`へ記録する。
+5. current `v0alpha4` Identity requestとの差分だけを`intentChanges`、`factChanges`、`reviewRequirementChanges`へ記録する。
 6. `ValidateIncrementalBaseline`も同じupgradeとdiffを再実行する。
 
 単にversion文字列をcurrentへ置換すること、baseline requestを新compilerで作り直してlineageを付け替えることは
@@ -979,13 +980,15 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 
 ### B3 — 3 Review Requirements
 
-- canonical builderとschemaを追加する。
-- request validationでResolved Intentから再導出する。
-- feedbackへreview coverageを追加せず、CLIへ必ず表示する。
+- [x] `forma/review-requirements/v0alpha1`のcanonical builderとschemaを追加した。
+- [x] current `v0alpha3` requestへ埋め込み、request validationでResolved Intentから再導出する。
+- [x] feedbackへreview coverageを追加せず、Identity requestのCLI成功出力へ3件を必ず表示する。
+- [x] historical `v0alpha1` / `v0alpha2` requestはIdentityを含まない場合だけReview Requirementsなしで受理する。
+- [x] B3ではbuilderと`ValidateIncrementalBaseline`の両方がReview Requirementの変化を拒否する。
 
 ### B4 — Generation Requestとhistorical baseline
 
-- `v0alpha3` requestとreview requirement diffを追加する。
+- `v0alpha4` incremental requestへreview requirement diffとbaseline version metadataを追加する。
 - historical `v0alpha2` baselineのversion-dispatched validationとlossless upgradeを実装する。
 - old admin baseline → current membership requestのpairwise lineageをtestする。
 

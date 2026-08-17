@@ -16,16 +16,18 @@ import (
 )
 
 const (
-	RequestSchema        = "forma/generation-request/v0alpha2"
-	FeedbackSchema       = "forma/generation-feedback/v0alpha2"
-	LegacyRequestSchema  = "forma/generation-request/v0alpha1"
-	LegacyFeedbackSchema = "forma/generation-feedback/v0alpha1"
+	RequestSchema         = "forma/generation-request/v0alpha3"
+	PreviousRequestSchema = "forma/generation-request/v0alpha2"
+	FeedbackSchema        = "forma/generation-feedback/v0alpha2"
+	LegacyRequestSchema   = "forma/generation-request/v0alpha1"
+	LegacyFeedbackSchema  = "forma/generation-feedback/v0alpha1"
 )
 
 type Request struct {
 	Schema               string                         `json:"schema"`
 	ResolvedIntent       *compiler.ResolvedIntent       `json:"resolvedIntent"`
 	AcceptanceFacts      *compiler.AcceptanceFacts      `json:"acceptanceFacts"`
+	ReviewRequirements   *compiler.ReviewRequirements   `json:"reviewRequirements,omitempty"`
 	SourceMap            *compiler.SourceMap            `json:"sourceMap"`
 	ImplementationPolicy *implementationpolicy.Manifest `json:"implementationPolicy,omitempty"`
 	RequestedChange      RequestedChange                `json:"requestedChange"`
@@ -55,10 +57,11 @@ type SemanticChange struct {
 }
 
 type VerificationPolicy struct {
-	FeedbackSchema       string                `json:"feedbackSchema"`
-	RequiredFactIDs      []compiler.SemanticID `json:"requiredFactIds"`
-	RequireTestReference bool                  `json:"requireTestReference"`
-	RejectUnknownFacts   bool                  `json:"rejectUnknownFacts"`
+	FeedbackSchema              string                `json:"feedbackSchema"`
+	RequiredFactIDs             []compiler.SemanticID `json:"requiredFactIds"`
+	DisplayReviewRequirementIDs []compiler.SemanticID `json:"displayReviewRequirementIds,omitempty"`
+	RequireTestReference        bool                  `json:"requireTestReference"`
+	RejectUnknownFacts          bool                  `json:"rejectUnknownFacts"`
 }
 
 type Feedback struct {
@@ -100,17 +103,23 @@ func BuildFullWithPolicy(result compiler.Result, manifest *implementationpolicy.
 	if err != nil {
 		return Request{}, err
 	}
+	reviewRequirements, err := compiler.BuildReviewRequirements(result.Intent)
+	if err != nil {
+		return Request{}, err
+	}
 	required := make([]compiler.SemanticID, 0, len(facts.Facts))
 	for _, fact := range facts.Facts {
 		required = append(required, fact.ID)
 	}
 	sort.Slice(required, func(i, j int) bool { return required[i] < required[j] })
 	request := Request{
-		Schema: RequestSchema, ResolvedIntent: result.Intent, AcceptanceFacts: facts, SourceMap: result.SourceMap,
+		Schema: RequestSchema, ResolvedIntent: result.Intent, AcceptanceFacts: facts,
+		ReviewRequirements: reviewRequirements, SourceMap: result.SourceMap,
 		RequestedChange: RequestedChange{Kind: "full"},
 		Verification: VerificationPolicy{
 			FeedbackSchema: FeedbackSchema, RequiredFactIDs: required,
-			RequireTestReference: true, RejectUnknownFacts: true,
+			DisplayReviewRequirementIDs: compiler.ReviewRequirementIDs(reviewRequirements),
+			RequireTestReference:        true, RejectUnknownFacts: true,
 		},
 	}
 	if manifest != nil {
@@ -137,6 +146,13 @@ func BuildIncremental(previous Request, result compiler.Result, manifest *implem
 	current, err := BuildFullWithPolicy(result, manifest)
 	if err != nil {
 		return Request{}, err
+	}
+	previousReviews, err := compiler.BuildReviewRequirements(previous.ResolvedIntent)
+	if err != nil {
+		return Request{}, fmt.Errorf("build incremental Generation Request: derive baseline Review Requirements: %w", err)
+	}
+	if !canonicalJSONEqual(previousReviews, current.ReviewRequirements) {
+		return Request{}, fmt.Errorf("build incremental Generation Request: Review Requirement changes require the B4 request diff slice")
 	}
 	intentChanges, unchangedIntent, err := diffIntent(previous.ResolvedIntent, current.ResolvedIntent)
 	if err != nil {
@@ -204,7 +220,7 @@ func UnmarshalFeedback(content []byte) (Feedback, error) {
 // request as immutable input and must not validate against a copy returned by
 // the coding agent.
 func ValidateRequest(request Request) error {
-	if request.Schema != RequestSchema && request.Schema != LegacyRequestSchema {
+	if request.Schema != RequestSchema && request.Schema != PreviousRequestSchema && request.Schema != LegacyRequestSchema {
 		return fmt.Errorf("validate Generation Request: unsupported schema %q", request.Schema)
 	}
 	if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.SourceMap == nil {
@@ -243,8 +259,30 @@ func ValidateRequest(request Request) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(canonicalFacts, request.AcceptanceFacts) {
+	if !canonicalJSONEqual(canonicalFacts, request.AcceptanceFacts) {
 		return fmt.Errorf("validate Generation Request: Acceptance Facts differ from canonical facts derived from Resolved Intent")
+	}
+	canonicalReviews, err := compiler.BuildReviewRequirements(request.ResolvedIntent)
+	if err != nil {
+		return err
+	}
+	if request.Schema == RequestSchema {
+		if err := compiler.ValidateReviewRequirements(request.ResolvedIntent, request.ReviewRequirements); err != nil {
+			return err
+		}
+		if !canonicalJSONEqual(canonicalReviews, request.ReviewRequirements) {
+			return fmt.Errorf("validate Generation Request: Review Requirements differ from canonical requirements derived from Resolved Intent")
+		}
+		if !reflect.DeepEqual(compiler.ReviewRequirementIDs(canonicalReviews), request.Verification.DisplayReviewRequirementIDs) {
+			return fmt.Errorf("validate Generation Request: display review requirement IDs differ from canonical Review Requirements")
+		}
+	} else {
+		if request.ReviewRequirements != nil || len(request.Verification.DisplayReviewRequirementIDs) != 0 {
+			return fmt.Errorf("validate Generation Request: historical schema contains Review Requirements")
+		}
+		if len(canonicalReviews.Requirements) != 0 {
+			return fmt.Errorf("validate Generation Request: historical schema cannot represent required human review")
+		}
 	}
 	expectedFeedbackSchema := FeedbackSchema
 	if request.Schema == LegacyRequestSchema {
@@ -375,6 +413,20 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 	if digest != recorded.RequestSHA256 {
 		return fmt.Errorf("validate incremental baseline: canonical baseline digest %s does not match recorded %s", digest, recorded.RequestSHA256)
 	}
+	baselineReviews, err := compiler.BuildReviewRequirements(baseline.ResolvedIntent)
+	if err != nil {
+		return fmt.Errorf("validate incremental baseline: derive baseline Review Requirements: %w", err)
+	}
+	currentReviews := request.ReviewRequirements
+	if currentReviews == nil {
+		currentReviews, err = compiler.BuildReviewRequirements(request.ResolvedIntent)
+		if err != nil {
+			return fmt.Errorf("validate incremental baseline: derive current Review Requirements: %w", err)
+		}
+	}
+	if !canonicalJSONEqual(baselineReviews, currentReviews) {
+		return fmt.Errorf("validate incremental baseline: Review Requirement changes require the B4 request diff slice")
+	}
 	intentChanges, unchangedIntent, err := diffIntent(baseline.ResolvedIntent, request.ResolvedIntent)
 	if err != nil {
 		return fmt.Errorf("validate incremental baseline: diff Resolved Intent: %w", err)
@@ -439,7 +491,7 @@ func validateIncrementalChange(request Request) error {
 			return fmt.Errorf("validate Generation Request: incremental baseline has invalid SHA-256 digest")
 		}
 	}
-	if (change.Baseline.RequestSchema != RequestSchema && change.Baseline.RequestSchema != LegacyRequestSchema) ||
+	if (change.Baseline.RequestSchema != RequestSchema && change.Baseline.RequestSchema != PreviousRequestSchema && change.Baseline.RequestSchema != LegacyRequestSchema) ||
 		change.Baseline.ResolvedIntentVersion != compiler.ResolvedIntentVersion ||
 		change.Baseline.AcceptanceFactsVersion != compiler.AcceptanceFactsVersion {
 		return fmt.Errorf("validate Generation Request: incremental baseline versions are unsupported")
@@ -652,6 +704,12 @@ func validateTestReferences(factID compiler.SemanticID, references []string) err
 		seen[reference] = true
 	}
 	return nil
+}
+
+func canonicalJSONEqual(left, right any) bool {
+	leftContent, leftErr := json.Marshal(left)
+	rightContent, rightErr := json.Marshal(right)
+	return leftErr == nil && rightErr == nil && bytes.Equal(leftContent, rightContent)
 }
 
 func unmarshalExact(content []byte, value any) error {
