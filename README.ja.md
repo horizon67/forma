@@ -155,7 +155,8 @@ state transitionを表します。正確なsyntaxとsemanticsは
 
 [最小式レイヤ案](docs/expression-proposal.md)、
 [注文承認・在庫probe](docs/order-approval-proposal.md)、
-[表側の会員登録案](docs/public-membership-proposal.md)で検討しています。
+[表側の会員登録案](docs/public-membership-proposal.md)で検討しています。P1で実測する具体的な段階flowは
+[メール認証付き会員登録probe](docs/email-verified-membership-probe.md)へ固定しました。
 
 ## CompilerがAIへ渡すもの
 
@@ -235,6 +236,7 @@ Go 1.24以上でcheckerと現在のgeneration workflowを実行できます。
 ```bash
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
+go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
@@ -242,12 +244,13 @@ go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --base
 go test ./...
 ```
 
-1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。二つのexampleは独立した
+1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。各exampleは独立した
 applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
-`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。次のmilestoneは
-signup/signinのIdentity probeで、その後に自動repair loopへ進みます。
+`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。現在のmilestoneは
+メール認証付きsignup/signinのIdentity probeです。flow contractの固定とv0 gapの実測を終え、次に
+target-neutralなIdentity semantic modelを設計します。
 
 ## 設計資料
 
@@ -258,6 +261,8 @@ signup/signinのIdentity probeで、その後に自動repair loopへ進みます
 - [言語設計原則](docs/language-design-principles.md)
 - [ユーザー管理の完全例](examples/users.forma)
 - [注文承認・在庫probe](examples/orders.forma)
+- [メール認証付き会員登録probe](docs/email-verified-membership-probe.md)
+- [会員登録のv0 subset](examples/public-membership.forma)
 - [最小式レイヤ案](docs/expression-proposal.md)
 - [進行中の管理画面agent-generation experiment](experiments/admin-agent-e2e/README.md)
 - [凍結済み管理画面生成prototype](experiments/admin-e2e/README.md)

@@ -1,0 +1,21 @@
+// The domain and presentation subset of email-verified membership that Forma v0 can express.
+// Credential, verification, email emission, session, and ownership semantics are intentionally
+// absent; their measured gaps are recorded in docs/email-verified-membership-probe.md.
+
+type Email = String matches /.+@.+/
+
+entity User {
+    name  String required label
+    email Email required unique
+
+    state status Pending | Active | Suspended initial Pending
+}
+
+action User.activate: Pending -> Active
+
+page SignUp {
+    form User {
+        fields name, email
+        submit create
+    }
+}

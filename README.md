@@ -174,7 +174,8 @@ The following concepts are being designed through concrete examples:
 They are explored in the
 [minimal expression proposal](docs/expression-proposal.md),
 [order approval and inventory probe](docs/order-approval-proposal.md), and
-[public membership proposal](docs/public-membership-proposal.md).
+[public membership proposal](docs/public-membership-proposal.md). The concrete staged flow for P1 is fixed in the
+[email-verified membership probe](docs/email-verified-membership-probe.md).
 
 ## What the compiler gives to AI
 
@@ -270,6 +271,7 @@ Go 1.24 or newer can run the checker and current generation workflow:
 ```bash
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
+go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
@@ -278,13 +280,14 @@ go test ./...
 ```
 
 The files and directories passed to one `forma check` invocation form one
-compilation unit. The two examples are independent applications and should be
+compilation unit. Each example is an independent application and should be
 checked separately.
 
 `forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
 Generation Request, and `forma verify` validates agent feedback against the
-immutable request. The next milestone is the signup/signin Identity probe,
-followed by the automated repair loop.
+immutable request. The current milestone is the email-verified signup/signin
+Identity probe. Its flow contract and measured v0 gaps are fixed; the next step
+is its target-neutral Identity semantic model.
 
 ## Design documents
 
@@ -295,6 +298,8 @@ followed by the automated repair loop.
 - [Language design principles](docs/language-design-principles.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
+- [Email-verified membership probe](docs/email-verified-membership-probe.md)
+- [Public membership v0 subset](examples/public-membership.forma)
 - [Minimal expression proposal](docs/expression-proposal.md)
 - [Active admin agent-generation experiment](experiments/admin-agent-e2e/README.md)
 - [Frozen admin generation prototype](experiments/admin-e2e/README.md)

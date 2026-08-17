@@ -13,7 +13,7 @@ Derived Value、Action Preconditionなどの式は現在のParserでは受理さ
 selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
 [Minimal Expression Layer Proposal](expression-proposal.md)に記録する。
 
-[`public-membership-proposal.md`](public-membership-proposal.md)がidentityのprobeであるのに対し、
+[`email-verified-membership-probe.md`](email-verified-membership-probe.md)がidentityの最初の実測probeであるのに対し、
 本書はeffectとoccurrenceのprobeである。両方に共通して必要なものだけをeffect proposalの対象とする。
 
 ## 対象とするflow
@@ -225,7 +225,7 @@ statement languageへ退行させないために、次を明示する必要が�
 注文承認だけで`effect` / `on`のgrammarを固定しない。少なくとも次を同じ候補syntaxとResolved Intentで記述する。
 
 1. 注文承認 — `OrderApproved` → 承認通知（effect）＋ 監査記録（changes）＋ 在庫引当（複数entity changes）。
-2. 会員登録 — `UserRegistered` → `VerificationEmail`。[identity probe](public-membership-proposal.md)と接続する。
+2. 会員登録 — `UserRegistered` → `VerificationEmail`。[identity probe](email-verified-membership-probe.md)と接続する。
 3. 通知の再送 — 状態変化を伴わないoccurrenceから同じeffectを発生させる。
 4. 期限超過の検出 — scheduleから発生するoccurrence。
 5. 在庫閾値割れ — 述語の成立変化から発生するoccurrence。表現できないなら、その理由を記録する。

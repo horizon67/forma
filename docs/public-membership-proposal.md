@@ -2,6 +2,10 @@
 
 Status: exploratory proposal — not valid v0 syntax and not a language decision
 
+P1で最初に実装・実測するメール認証付きflow、例外semantics、Acceptance Facts、段階的な実装計画は
+[`email-verified-membership-probe.md`](email-verified-membership-probe.md)へ固定した。本書は引き続き、
+Identity全体の設計候補とpasswordless・external provider・email変更を含む比較範囲を扱う。
+
 この文書は、一般利用者が自分で会員登録、メール認証、loginを行う表側applicationをFormaでどう表すか
 というdesign probeである。現在の[`examples/users.forma`](../examples/users.forma)は管理者向けの
 ユーザー管理を表し、認証方式、credential、verification、sessionは扱わない。

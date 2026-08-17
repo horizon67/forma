@@ -973,7 +973,8 @@ enforce field, state, and role constraints
 - runtime由来fieldをどのeffect modelで表すか
 - join、aggregate、derived listをどう表すか
 - domain actionの引数とformをどう統合するか
-- [表側の会員登録とidentity](public-membership-proposal.md)をどのsemantic modelで表し、identity providerと
+- [メール認証付き会員登録probe](email-verified-membership-probe.md)と
+  [表側の会員登録とidentity](public-membership-proposal.md)をどのsemantic modelで表し、identity providerと
   login/logoutのどこまでを言語へ入れるか
 - notification、background job、fileを共通effectとして扱えるか
 - repository固有constraintをForma semanticsへ混ぜず、Generation Requestへどう添付するか

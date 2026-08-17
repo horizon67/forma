@@ -37,7 +37,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **次に検証** | signup/signin、current principal、ownershipをまだagent E2Eで検証していない |
+| public Identity | **P1 Stage A完了** | メール認証flow、29 Facts、security invariant/review境界を固定。Stage Bが次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -47,7 +47,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 > Formaは、AIに渡す前処理として本当に機能するか。
 
 同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
-applicationを継続的に保守するsourceとして一段強い根拠を得た。次はpublic Identityの意味を検証する。
+applicationを継続的に保守するsourceとして一段強い根拠を得た。現在はpublic Identityの意味を検証している。
 
 ## 3. 優先順位
 
@@ -234,11 +234,15 @@ migration probeが残るが、これらをIdentityより先のblockerにはし�
 
 ### 最初のflow
 
-1. visitorがsignupする。
-2. 登録済みuserがsigninし、signoutできる。
-3. 未認証principalは保護されたpageを閲覧できない。
-4. authenticated userは自分のprofileだけを表示・編集できる。
-5. email変更など再verificationが必要なflowを拒否条件とともに扱う。
+最初のvertical sliceは
+[`email-verified-membership-probe.md`](email-verified-membership-probe.md)へ固定する。
+
+1. visitorがname、email、passwordでsignupし、Pending Userになる。
+2. 30分・一度限りのメールURLからverificationし、Activeになる。
+3. verificationを再送でき、古いevidenceは無効になる。
+4. Active Userだけがsigninし、signoutできる。
+5. 未認証principalは保護されたpageを閲覧できない。
+6. authenticated userは自分のprofileだけを表示・編集できる。
 
 ### 設計・検証する
 
@@ -248,15 +252,29 @@ migration probeが残るが、これらをIdentityより先のblockerにはし�
 - credentialを通常のentity fieldやdiagnosticへ漏らさない境界
 - session方式、hash、cookie、identity providerをagent/repositoryへ委ねる境界
 - Identity Intentと正常系・拒否系Acceptance Facts
+- verification emailのemissionとdeliveryの分離
+- verification expiryを検査するclock boundary
+- Credentialを`preserveInput`と`stored: "input"`から除外するfact導出規則
+- compiler invariant、Acceptance Fact、人間review requirement（secret handlingとsetup fidelity）の分離
+- credential/evidence値をRequestへ入れず、symbolic handleを使う独立したsemantic fixture
 
 候補syntaxを先に固定せず、[`public-membership-proposal.md`](public-membership-proposal.md)の比較例を
 Generation Requestへ落とせる最小semantic modelから決める。
+
+Stage Aでは現行v0 subsetを[`../examples/public-membership.forma`](../examples/public-membership.forma)として
+実測済みである。公開create form、Pending初期state、email constraintから11 Factsを導出できた。一方、
+Credential、Verification、Effect、resend、self authorizationは表現できず、password fieldをsecretとして
+区別できないことも確認した。現行Fact規則ではpasswordの再表示と平文相当の保存まで要求してしまうため、
+credential-awareな導出が必要である。また、signinやownershipのFactをsignup Factの成功結果へ依存させず、
+symbolic handleとsemantic setupから独立実行する方針を固定した。次はStage Bのtarget-neutral semantic modelを
+設計する。
 
 ### Exit criteria
 
 - target repositoryを知らなくてもflowと拒否条件を説明できる
 - 本人だけの操作をrole定数へ縮退させず検査できる
 - credential valueがResolved Intent、Source Map、diagnosticへ漏れない
+- credential/evidenceの値をGeneration Requestへ入れず、各Identity Factを独立実行できる
 - agentがrepository標準の安全なidentity実装を選べる
 - Identity Factsをtarget固有testへ変換し、正常系と否定系が成功する
 
