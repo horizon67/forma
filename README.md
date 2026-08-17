@@ -290,8 +290,11 @@ Identity probe. Its flow contract and measured v0 gaps are fixed, and a
 syntax-independent, target-neutral Identity Resolved Intent, Source Map, and 29
 Acceptance Facts are implemented. Three requirements for secret redaction,
 storage, and fixture fidelity are now kept outside fact coverage and always
-shown by `forma verify` for human review. The next step verifies lineage from an
-existing request to an Identity-adding request.
+shown by `forma verify` for human review. Pairwise lineage from the actually
+applied historical admin request to an Identity-adding request is now verified
+without regenerating or rewriting the baseline. The next step compares
+passwordless, external-provider, and email-change variants before syntax is
+chosen.
 
 ## Design documents
 

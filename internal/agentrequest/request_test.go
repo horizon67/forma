@@ -2,12 +2,13 @@ package agentrequest
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -41,27 +42,28 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if os.Getenv("UPDATE_GOLDEN") == "1" {
-		legacy.ResolvedIntent = current.ResolvedIntent
-		legacy.AcceptanceFacts = current.AcceptanceFacts
-		legacy.SourceMap = current.SourceMap
-		updated, err := Marshal(legacy)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(goldenPath, append(updated, '\n'), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
+	assertGitBlobID(t, content, "154ae2e37b6823864db46ce2cc86d09f6c1576e0")
 	if err := ValidateRequest(legacy); err != nil {
 		t.Fatal(err)
 	}
 	if legacy.Schema != LegacyRequestSchema || legacy.Verification.FeedbackSchema != LegacyFeedbackSchema {
 		t.Fatalf("legacy boundary = %#v", legacy)
 	}
-	if !reflect.DeepEqual(current.ResolvedIntent, legacy.ResolvedIntent) ||
-		!reflect.DeepEqual(current.AcceptanceFacts, legacy.AcceptanceFacts) ||
-		!reflect.DeepEqual(current.SourceMap, legacy.SourceMap) {
+	canonical, err := Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(canonical, bytes.TrimSuffix(content, []byte("\n"))) {
+		t.Fatalf("historical codec changed immutable v0alpha1 bytes in %s", goldenPath)
+	}
+	upgraded, err := compilerOutputsForDiff(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(current.ResolvedIntent, upgraded.intent) ||
+		!reflect.DeepEqual(current.AcceptanceFacts, upgraded.facts) ||
+		!reflect.DeepEqual(current.SourceMap, upgraded.sources) ||
+		!reflect.DeepEqual(current.ReviewRequirements, upgraded.reviews) {
 		t.Fatalf("current compiler output differs from immutable v0alpha1 baseline %s", goldenPath)
 	}
 }
@@ -75,11 +77,19 @@ func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if historical.Schema != PreviousRequestSchema {
-		t.Fatalf("historical incremental schema = %s, want %s", historical.Schema, PreviousRequestSchema)
+	assertGitBlobID(t, historicalContent, "5751ecf85e9b7be2665aa91854ee5b69798e81a3")
+	if historical.Schema != HistoricalIncrementalRequestSchema {
+		t.Fatalf("historical incremental schema = %s, want %s", historical.Schema, HistoricalIncrementalRequestSchema)
 	}
 	if err := ValidateRequest(historical); err != nil {
 		t.Fatal(err)
+	}
+	canonicalHistorical, err := Marshal(historical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(canonicalHistorical, bytes.TrimSuffix(historicalContent, []byte("\n"))) {
+		t.Fatal("historical codec changed immutable v0alpha2 bytes")
 	}
 
 	previousContent, err := os.ReadFile(filepath.Join("testdata", "admin.request.json"))
@@ -117,16 +127,68 @@ func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
 	if request.Schema != RequestSchema || request.ReviewRequirements == nil || len(request.ReviewRequirements.Requirements) != 0 {
 		t.Fatalf("current admin review boundary = %#v", request.ReviewRequirements)
 	}
-	if !reflect.DeepEqual(request.ResolvedIntent, historical.ResolvedIntent) ||
-		!reflect.DeepEqual(request.AcceptanceFacts, historical.AcceptanceFacts) ||
-		!reflect.DeepEqual(request.SourceMap, historical.SourceMap) ||
+	upgradedHistorical, err := compilerOutputsForDiff(historical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(request.ResolvedIntent, upgradedHistorical.intent) ||
+		!reflect.DeepEqual(request.AcceptanceFacts, upgradedHistorical.facts) ||
+		!reflect.DeepEqual(request.SourceMap, upgradedHistorical.sources) ||
+		!reflect.DeepEqual(request.ReviewRequirements, upgradedHistorical.reviews) ||
 		!reflect.DeepEqual(request.ImplementationPolicy, historical.ImplementationPolicy) ||
-		!reflect.DeepEqual(request.RequestedChange, historical.RequestedChange) {
+		!reflect.DeepEqual(request.RequestedChange.IntentChanges, historical.RequestedChange.IntentChanges) ||
+		!reflect.DeepEqual(request.RequestedChange.FactChanges, historical.RequestedChange.FactChanges) ||
+		request.RequestedChange.UnchangedIntentNodes != historical.RequestedChange.UnchangedIntentNodes ||
+		request.RequestedChange.UnchangedFacts != historical.RequestedChange.UnchangedFacts {
 		t.Fatal("current request changed historical admin semantics")
+	}
+	if request.RequestedChange.Baseline.SourceMapVersion != historicalSourceMapVersion ||
+		request.RequestedChange.Baseline.ReviewRequirementsVersion != noReviewRequirementsVersion {
+		t.Fatalf("B4 baseline versions = %#v", request.RequestedChange.Baseline)
+	}
+	if err := ValidateIncrementalBaseline(request, previous); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateIncrementalBaseline(historical, previous); err != nil {
+		t.Fatalf("historical pairwise lineage is invalid: %v", err)
 	}
 	if len(request.AcceptanceFacts.Facts) != 43 || len(request.RequestedChange.IntentChanges) != 8 ||
 		len(request.RequestedChange.FactChanges) != 13 || request.RequestedChange.UnchangedFacts != 30 {
 		t.Fatalf("incremental change summary = %#v", request.RequestedChange)
+	}
+}
+
+func TestB4LineageFromAppliedHistoricalAdminToIdentity(t *testing.T) {
+	historicalContent, err := os.ReadFile(filepath.Join("testdata", "admin.incremental.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertGitBlobID(t, historicalContent, "5751ecf85e9b7be2665aa91854ee5b69798e81a3")
+	historical, err := UnmarshalRequest(historicalContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentResult := historicalAdminWithIdentityResult(t, historical)
+	request, err := BuildIncremental(historical, currentResult, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.Schema != RequestSchema || request.RequestedChange.Baseline.RequestSchema != HistoricalIncrementalRequestSchema {
+		t.Fatalf("B4 lineage boundary = %#v", request.RequestedChange.Baseline)
+	}
+	if request.RequestedChange.Baseline.SourceMapVersion != historicalSourceMapVersion ||
+		request.RequestedChange.Baseline.ReviewRequirementsVersion != noReviewRequirementsVersion {
+		t.Fatalf("B4 historical compiler versions = %#v", request.RequestedChange.Baseline)
+	}
+	if len(request.RequestedChange.ReviewRequirementChanges) != 3 || request.RequestedChange.UnchangedReviewRequirements != 0 {
+		t.Fatalf("B4 review requirement diff = %#v", request.RequestedChange)
+	}
+	if len(request.AcceptanceFacts.Facts) != 81 || len(request.RequestedChange.FactChanges) != 38 ||
+		request.RequestedChange.UnchangedFacts != 43 {
+		t.Fatalf("B4 fact lineage = %d total, %#v", len(request.AcceptanceFacts.Facts), request.RequestedChange)
+	}
+	if err := ValidateIncrementalBaseline(request, historical); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -213,13 +275,13 @@ func TestValidateRequestRederivesReviewRequirements(t *testing.T) {
 			want: "display review requirement IDs differ",
 		},
 		{
-			name: "historical schema cannot hide review",
+			name: "previous schema cannot hide review",
 			mutate: func(request *Request) {
 				request.Schema = PreviousRequestSchema
 				request.ReviewRequirements = nil
 				request.Verification.DisplayReviewRequirementIDs = nil
 			},
-			want: "historical schema cannot represent required human review",
+			want: "artifact is required",
 		},
 	}
 	for _, test := range tests {
@@ -247,79 +309,37 @@ func TestFeedbackHasNoReviewCompletionChannel(t *testing.T) {
 	}
 }
 
-func TestB3RejectsIncrementalReviewChangesUntilDiffIsAvailable(t *testing.T) {
-	previous, err := BuildFull(compileRequestSource(t))
+func TestB4RecordsReviewRequirementDiff(t *testing.T) {
+	baseline := membershipPreIdentityBaseline(t)
+	request, err := BuildIncremental(baseline, membershipRequestResult(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := BuildIncremental(previous, membershipRequestResult(t), nil); err == nil || !strings.Contains(err.Error(), "require the B4 request diff slice") {
-		t.Fatalf("incremental review change error = %v", err)
+	if len(request.RequestedChange.ReviewRequirementChanges) != 3 || request.RequestedChange.UnchangedReviewRequirements != 0 {
+		t.Fatalf("review requirement diff = %#v", request.RequestedChange)
+	}
+	for _, change := range request.RequestedChange.ReviewRequirementChanges {
+		if change.Kind != "added" || !strings.HasPrefix(string(change.NodeID), "review/identity/") {
+			t.Fatalf("review requirement change = %#v", change)
+		}
+	}
+	if err := ValidateIncrementalBaseline(request, baseline); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestValidateIncrementalBaselineIndependentlyRejectsReviewChanges(t *testing.T) {
-	currentResult := membershipRequestResult(t)
-	current, err := BuildFull(currentResult)
+func TestValidateIncrementalBaselineIndependentlyChecksReviewDiff(t *testing.T) {
+	baseline := membershipPreIdentityBaseline(t)
+	request, err := BuildIncremental(baseline, membershipRequestResult(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	intentContent, err := json.Marshal(currentResult.Intent)
-	if err != nil {
-		t.Fatal(err)
+	request.RequestedChange.ReviewRequirementChanges = request.RequestedChange.ReviewRequirementChanges[1:]
+	if err := ValidateRequest(request); err != nil {
+		t.Fatalf("locally valid incomplete review diff should require its baseline to reject: %v", err)
 	}
-	var baselineIntent compiler.ResolvedIntent
-	if err := json.Unmarshal(intentContent, &baselineIntent); err != nil {
-		t.Fatal(err)
-	}
-	baselineIntent.Identities = nil
-	baselineIntent.Pages = nil
-	baselineSourceMap := &compiler.SourceMap{Version: currentResult.SourceMap.Version, IntentVersion: currentResult.SourceMap.IntentVersion}
-	for _, entry := range currentResult.SourceMap.Entries {
-		if !strings.HasPrefix(string(entry.NodeID), "identity/") && !strings.HasPrefix(string(entry.NodeID), "page/") {
-			baselineSourceMap.Entries = append(baselineSourceMap.Entries, entry)
-		}
-	}
-	baseline, err := BuildFull(compiler.Result{Intent: &baselineIntent, SourceMap: baselineSourceMap})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	intentChanges, unchangedIntent, err := diffIntent(baseline.ResolvedIntent, current.ResolvedIntent)
-	if err != nil {
-		t.Fatal(err)
-	}
-	factChanges, unchangedFacts, err := diffFacts(baseline.AcceptanceFacts, current.AcceptanceFacts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, change := range append(append([]SemanticChange(nil), intentChanges...), factChanges...) {
-		if change.Kind == "removed" {
-			t.Fatalf("test baseline is not a semantic subset: %#v", change)
-		}
-	}
-	baselineContent, err := Marshal(baseline)
-	if err != nil {
-		t.Fatal(err)
-	}
-	intentNodes := make([]compiler.SemanticID, len(intentChanges))
-	for index, change := range intentChanges {
-		intentNodes[index] = change.NodeID
-	}
-	current.RequestedChange = RequestedChange{
-		Kind: "incremental",
-		Baseline: &RequestBaseline{
-			RequestSHA256: fmt.Sprintf("%x", sha256.Sum256(baselineContent)), RequestSchema: baseline.Schema,
-			ResolvedIntentVersion: baseline.ResolvedIntent.Version, AcceptanceFactsVersion: baseline.AcceptanceFacts.Version,
-		},
-		IntentNodes: intentNodes, IntentChanges: intentChanges, FactChanges: factChanges,
-		UnchangedIntentNodes: unchangedIntent, UnchangedFacts: unchangedFacts,
-	}
-	if err := ValidateRequest(current); err != nil {
-		t.Fatalf("forged request-local metadata is invalid: %v", err)
-	}
-	if err := ValidateIncrementalBaseline(current, baseline); err == nil || !strings.Contains(err.Error(), "Review Requirement changes require the B4 request diff slice") {
-		t.Fatalf("incremental baseline review error = %v", err)
+	if err := ValidateIncrementalBaseline(request, baseline); err == nil || !strings.Contains(err.Error(), "differ from baseline-derived") {
+		t.Fatalf("incremental baseline review diff error = %v", err)
 	}
 }
 
@@ -931,6 +951,95 @@ func membershipRequestResult(t *testing.T) compiler.Result {
 	read("membership.intent.json", &intent)
 	read("membership.sourcemap.json", &sourceMap)
 	return compiler.Result{Intent: &intent, SourceMap: &sourceMap}
+}
+
+func membershipPreIdentityBaseline(t *testing.T) Request {
+	t.Helper()
+	current := membershipRequestResult(t)
+	content, err := json.Marshal(current.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var intent compiler.ResolvedIntent
+	if err := json.Unmarshal(content, &intent); err != nil {
+		t.Fatal(err)
+	}
+	intent.Identities = nil
+	intent.Pages = nil
+	sourceMap := &compiler.SourceMap{Version: current.SourceMap.Version, IntentVersion: current.SourceMap.IntentVersion}
+	for _, entry := range current.SourceMap.Entries {
+		if !strings.HasPrefix(string(entry.NodeID), "identity/") && !strings.HasPrefix(string(entry.NodeID), "page/") {
+			sourceMap.Entries = append(sourceMap.Entries, entry)
+		}
+	}
+	baseline, err := BuildFull(compiler.Result{Intent: &intent, SourceMap: sourceMap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return baseline
+}
+
+func historicalAdminWithIdentityResult(t *testing.T, historical Request) compiler.Result {
+	t.Helper()
+	upgraded, err := compilerOutputsForDiff(historical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	clone := func(source, target any) {
+		t.Helper()
+		content, err := json.Marshal(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(content, target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var intent compiler.ResolvedIntent
+	var sourceMap compiler.SourceMap
+	clone(upgraded.intent, &intent)
+	clone(upgraded.sources, &sourceMap)
+	membership := membershipRequestResult(t)
+	intent.Identities = append(intent.Identities, membership.Intent.Identities...)
+	intent.Pages = append(intent.Pages, membership.Intent.Pages...)
+	foundActivate := false
+	for index := range intent.Actions {
+		if intent.Actions[index].ID == "action/User/activate" {
+			intent.Actions[index].Sources = []string{"Pending"}
+			foundActivate = true
+		}
+	}
+	if !foundActivate {
+		intent.Actions = append(intent.Actions, membership.Intent.Actions...)
+	}
+	sort.Slice(intent.Pages, func(i, j int) bool { return intent.Pages[i].ID < intent.Pages[j].ID })
+
+	existing := make(map[compiler.SemanticID]bool, len(sourceMap.Entries))
+	for _, entry := range sourceMap.Entries {
+		existing[entry.NodeID] = true
+	}
+	for _, entry := range membership.SourceMap.Entries {
+		if !existing[entry.NodeID] {
+			sourceMap.Entries = append(sourceMap.Entries, entry)
+			existing[entry.NodeID] = true
+		}
+	}
+	sort.Slice(sourceMap.Entries, func(i, j int) bool { return sourceMap.Entries[i].NodeID < sourceMap.Entries[j].NodeID })
+	result := compiler.Result{Intent: &intent, SourceMap: &sourceMap}
+	if err := compiler.ValidateSourceMapCoverage(result.Intent, result.SourceMap); err != nil {
+		t.Fatalf("combined historical admin and Identity fixture is invalid: %v", err)
+	}
+	return result
+}
+
+func assertGitBlobID(t *testing.T, content []byte, want string) {
+	t.Helper()
+	hash := sha1.New()
+	_, _ = fmt.Fprintf(hash, "blob %d%c", len(content), 0)
+	_, _ = hash.Write(content)
+	if got := fmt.Sprintf("%x", hash.Sum(nil)); got != want {
+		t.Fatalf("git blob ID = %s, want immutable historical blob %s", got, want)
+	}
 }
 
 const testImplementationManifest = `schema: forma/implementation-policy/v0alpha1

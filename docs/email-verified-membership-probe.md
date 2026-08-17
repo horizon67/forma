@@ -1,6 +1,6 @@
 # Email-verified Membership Flow Probe
 
-Status: active P1 probe — Stage B1 schema, B2 Acceptance Facts, and B3 Review Requirements complete; B4 request lineage next; syntax undecided
+Status: active P1 probe — Stage B1–B4 complete; B5 comparison gate next; syntax undecided
 
 Stage Bで検討するtarget-neutral node、29 Factsのcandidate ID、semantic setup、Review Requirements、version境界は
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
@@ -319,7 +319,7 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - 現行v0の受理・拒否境界を実測する。
 - syntaxを決めない。
 
-### Stage B — target-neutral semantic model（B1/B2/B3 complete、B4 next）
+### Stage B — target-neutral semantic model（B1–B4 complete、B5 next）
 
 具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)で設計する。
@@ -339,6 +339,9 @@ Identity固有の安全性を、汎用Effectや自由なAction bodyだけへ分�
 - [x] 再計算できないsecret redaction、storage、repository fixture fidelityを、Factとは別のstable review requirementsとして
   出力した。
 - [x] `forma verify`が未解決のreview requirementsを必ず人間へ表示し、feedbackの`passed`へ吸収しない境界を実装した。
+- [x] Review Requirement diffと全compiler artifact versionを持つGeneration Request `v0alpha4`を実装した。
+- [x] 実際に適用したadmin `v0alpha2` requestのbyte identityを保ち、43既存FactsをunchangedとしてIdentity追加requestへの
+  pairwise lineageを検証した。
 
 ### Stage C — experimental Forma syntax
 

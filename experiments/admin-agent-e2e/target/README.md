@@ -42,4 +42,6 @@ go run ./cmd/forma verify \
 ```
 
 The historical full-run source, feedback, and Git identities remain under
-[`../baseline`](../baseline) and [`../baseline.json`](../baseline.json).
+[`../baseline`](../baseline) and [`../baseline.json`](../baseline.json). The
+applied incremental request and target identities are fixed separately in
+[`../incremental-baseline.json`](../incremental-baseline.json).

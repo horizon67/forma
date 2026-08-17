@@ -145,6 +145,11 @@ Generation Requestからrepository規約に沿って独立設計されたこと�
 [`baseline.json`](baseline.json)へ固定した。sourceとhistorical feedbackは[`baseline/`](baseline/)に保存し、
 target変更前にroot/target双方の`go test ./...`と`go vet ./...`、`forma verify`が成功することを確認した。
 
+適用後のcommit、target tree、source、incremental request、feedbackのGit identityは
+[`incremental-baseline.json`](incremental-baseline.json)へ別に固定した。特にrequest blob
+`5751ecf85e9b7be2665aa91854ee5b69798e81a3`は、Identity B4 migrationで作り直さずhistorical `v0alpha2`
+baselineとしてそのまま使う。
+
 ### Requested change
 
 - optionalな`User.nickname`を追加する。

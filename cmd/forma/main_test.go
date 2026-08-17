@@ -51,7 +51,7 @@ func TestRequestCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &request); err != nil {
 		t.Fatalf("request output is not JSON: %v\n%s", err, stdout.String())
 	}
-	if request.Schema != "forma/generation-request/v0alpha3" || request.ResolvedIntent == nil {
+	if request.Schema != "forma/generation-request/v0alpha4" || request.ResolvedIntent == nil {
 		t.Fatalf("generation request = %#v", request)
 	}
 	if len(request.AcceptanceFacts.Facts) == 0 || len(request.AcceptanceFacts.Facts) != len(request.Verification.RequiredFactIDs) {

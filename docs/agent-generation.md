@@ -1,6 +1,6 @@
 # Agent Generation Model
 
-Status: architectural direction — Review Requirements and current Generation Request implemented as `v0alpha3`
+Status: architectural direction — historical lineage and current Generation Request implemented as `v0alpha4`
 
 Formaのend-to-end実行モデルでは、AI coding agentは任意のgenerator implementationではなく、
 application codeを作る主体である。
@@ -252,11 +252,16 @@ Source Mapも各versionへ対応する。現在のverifierがrequestのversion�
 versionに対応するbuilderへdispatchする。
 
 現在は`generation-request/v0alpha1`とReview Requirements導入前のincremental `v0alpha2`をhistorical artifactとして
-読み取り可能に保ち、Review Requirementsと表示対象IDを持つcurrent交換形式を`v0alpha3`として出力する。
+読み取り可能に保ち、Review Requirementsを持つ`v0alpha3`もprevious schemaとして受理する。current交換形式
+`v0alpha4`はReview Requirementのincremental diffと、baselineのSource Map / Review Requirements versionを持つ。
 historical schemaはIdentityを含まずcanonical Review Requirementsが空の場合だけ受理し、同じschema名のまま
-unknown fieldを追加しない。Review Requirementのincremental diffとhistorical `v0alpha2`からのmigrationは、
-Generation Requestを`v0alpha4`へ上げる次のsliceである。それまではbuilderとbaseline validatorの両方が
-Review Requirementの変化を明示的に拒否する。
+unknown fieldを追加しない。
+
+historical requestのdigestはschema専用codecで元のcanonical byte列から計算する。diff前にcompiler outputだけを
+current in-memory shapeへlosslessにupgradeし、requestをcurrent compilerで作り直したりlineageを付け替えたりしない。
+`ValidateIncrementalBaseline`も同じupgradeとintent / fact / review diffを再実行する。実際にtargetへ適用された
+admin `v0alpha2` Git blob `5751ecf85e9b7be2665aa91854ee5b69798e81a3`から、admin semanticsを保ったまま
+Identityを追加する`v0alpha4` requestへのpairwise lineageをtestで固定している。
 
 この機構はfactの変換漏れを防ぐが、test内容がfactを忠実に検査していることまで証明しない。その確認には
 repositoryのreviewと、将来必要ならtest mutationなど別の検証を使う。

@@ -252,7 +252,8 @@ applicationなので、上記のように個別に検査します。
 メール認証付きsignup/signinのIdentity probeです。flow contractとv0 gapを固定し、syntaxを増やさず
 target-neutralなIdentity Resolved Intent、Source Map、29 Acceptance Factsを実装しました。機械検査できない
 secret redaction、storage、fixture fidelityも3つのReview RequirementsとしてFact coverageから分離し、
-`forma verify`が必ず人間へ表示します。次は既存requestからIdentity追加requestへのlineageを検証します。
+`forma verify`が必ず人間へ表示します。さらに、実際に適用した過去のadmin requestを書き換えず、Identity追加request
+へのpairwise lineageも検証しました。次はsyntaxを決める前にpasswordless、external provider、email変更を比較します。
 
 ## 設計資料
 

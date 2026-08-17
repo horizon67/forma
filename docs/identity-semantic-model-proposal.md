@@ -1,6 +1,6 @@
 # Identity Semantic Model Proposal
 
-Status: Stage B implementation — B1 schema, B2 Acceptance Facts, and B3 Review Requirements complete; B4 request lineage next; not valid Forma syntax
+Status: Stage B implementation — B1–B4 complete; B5 comparison gate next; not valid Forma syntax
 
 ## 1. 目的
 
@@ -95,20 +95,19 @@ Requirementsとする。agentの自己申告でこれらを`passed`へ変換し�
 
 採用時は既存schemaへunknown fieldを黙って追加しない。候補versionは次とする。
 
-| schema | 現行 | 候補 | 理由 |
+| schema | 前version | 採用version | 理由 |
 | --- | --- | --- | --- |
 | Resolved Intent | `forma/resolved-intent/v0.4` | `v0.5` | Identity node、page interaction、access predicateを追加 |
 | Source Map | `forma/source-map/v0.2` | `v0.3` | Identity node kindと`v0.5` intentへ対応 |
 | Acceptance Facts | `forma/acceptance-facts/v0alpha1` | `v0alpha2` | semantic setupとIdentity fact payloadを追加 |
 | Review Requirements | なし | `forma/review-requirements/v0alpha1` | 人間review対象を独立交換形式にする |
-| Generation Request | `forma/generation-request/v0alpha2` | `v0alpha3` | Review Requirementsと表示対象IDを追加 |
+| Generation Request | historical `v0alpha1` / `v0alpha2`、previous `v0alpha3` | `v0alpha4` | Review Requirement diffとbaseline version metadataを追加 |
 | Generation Feedback | `forma/generation-feedback/v0alpha2` | 維持 | agentがReview Requirementを完了報告するfieldを追加しない |
 
 この表の名前はproposal上の候補であり、implementationとgoldenを同時に更新した時点で規範になる。
 Resolved Intent `v0.5`とSource Map `v0.3`はB1、Acceptance Facts `v0alpha2`はB2、Review Requirements
-`v0alpha1`とGeneration Request `v0alpha3`はB3で採用済みである。incremental diff以降は後続sliceの候補である。
-Review Requirement diffとbaseline version metadataを追加するB4では、既存`v0alpha3`へunknown fieldを足さず
-Generation Requestを`v0alpha4`へ上げる。
+`v0alpha1`とGeneration Request `v0alpha3`はB3で採用した。B4では既存`v0alpha3`へunknown fieldを足さず、
+Review Requirement diffとbaseline version metadataを持つGeneration Request `v0alpha4`へ上げた。
 
 ## 5. Resolved Intentのtop-level shape
 
@@ -879,23 +878,31 @@ type ReviewRequirement struct {
 人間の確認結果を将来記録する場合も、agent feedbackではなく別のreview attestationとして設計する。このsliceでは
 attestation formatを決めない。
 
-## 17. Generation Request v0alpha3
+## 17. Generation Request v0alpha3 → v0alpha4
 
-採用済みshapeは次である。
+B3で採用した`v0alpha3`へ、B4でreview diffと完全なbaseline version metadataを追加した。current shapeは次である。
 
 ```text
 GenerationRequest
-  schema: forma/generation-request/v0alpha3
+  schema: forma/generation-request/v0alpha4
   resolvedIntent
   acceptanceFacts
   reviewRequirements
   sourceMap
   implementationPolicy
   requestedChange
+    baseline
+      requestSchema
+      resolvedIntentVersion
+      acceptanceFactsVersion
+      sourceMapVersion
+      reviewRequirementsVersion
     intentChanges
     factChanges
+    reviewRequirementChanges
     unchangedIntentNodes
     unchangedFacts
+    unchangedReviewRequirements
   verification
     requiredFactIds
     displayReviewRequirementIds
@@ -904,8 +911,8 @@ GenerationRequest
 `displayReviewRequirementIds`はagentへ完了報告させるためではなく、orchestration UIが必ず表示する集合の複製である。
 検証の正本はResolved Intentから再導出したReview Requirementsとする。
 
-現在のB3 builderはReview Requirementsが変わるincremental requestを明示的に拒否する。
-B4の`v0alpha4`ではreview requirementのadded/changed/removedも明示し、Identity追加なら3件をaddedにする。
+B3の`v0alpha3` builderはReview Requirementsが変わるincremental requestを明示的に拒否していた。
+B4のcurrent `v0alpha4`はreview requirementのadded/changed/removedも明示し、Identity追加では3件をaddedにする。
 
 B4の`RequestBaseline`には既存のrequest、Resolved Intent、Acceptance Facts versionに加え、Source Map versionと
 Review Requirements versionを記録する。historical `v0alpha2` baselineにはReview Requirementsが存在しないため、
@@ -988,9 +995,11 @@ at-most-once、access enforcement、durable emissionはobservable Factとして�
 
 ### B4 — Generation Requestとhistorical baseline
 
-- `v0alpha4` incremental requestへreview requirement diffとbaseline version metadataを追加する。
-- historical `v0alpha2` baselineのversion-dispatched validationとlossless upgradeを実装する。
-- old admin baseline → current membership requestのpairwise lineageをtestする。
+- [x] `v0alpha4` incremental requestへreview requirement diffとbaseline version metadataを追加した。
+- [x] historical `v0alpha1` / `v0alpha2`のschema専用codec、version-dispatched validation、lossless upgradeを実装した。
+- [x] 実際に適用されたadmin `v0alpha2` Git blob `5751ecf85e9b7be2665aa91854ee5b69798e81a3`から、admin semanticsを
+  保ったIdentity追加requestへのpairwise lineageをtestした。
+- [x] historical bytesのidentity、43既存Factsのunchanged、38 Factsと3 Review Requirementsのaddedを固定した。
 
 ### B5 — proposal gate
 

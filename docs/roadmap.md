@@ -33,11 +33,11 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義。未実装項目が残る |
 | Go front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Mapを実装 |
 | Acceptance Facts | admin slice実装 | list/detail/editの正常系・拒否系をstable ID付きで導出 |
-| Generation Request | B3 current schema実装 | historical `v0alpha1` / `v0alpha2`を保持し、Review Requirementsを持つ`v0alpha3`を検証可能 |
+| Generation Request | B4 current schema実装 | historical `v0alpha1` / `v0alpha2`をbyte identityごと保持し、review diffとversion metadataを持つ`v0alpha4`を検証可能 |
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage B3完了** | Identity専用29 Factsと、Fact coverageから分離した3 Review Requirementsを実装。B4 lineageが次 |
+| public Identity | **P1 Stage B4完了** | Identity専用29 Facts、3 Review Requirements、適用済みadmin requestからのpairwise lineageを実装。B5 comparison gateが次 |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -286,7 +286,13 @@ credential/evidence raw value用schema fieldもstructural testで禁止した。
 Stage B3では`secret-redaction`、`secret-storage`、`fixture-fidelity`をstable ID付きReview Requirementsとして
 Resolved Intentから決定的に導出する。Generation Request `v0alpha3`はこのartifactと表示対象IDを持ち、validatorが
 再導出して完全一致を要求する。これらはFact coverageやfeedbackの`passed`件数へ含めず、`forma verify`が機械検査の
-成功後も必ず人間へ表示する。次はB4で、適用済み`v0alpha2` requestからIdentity requestへのdiffとlineageを固定する。
+成功後も必ず人間へ表示する。
+
+Stage B4ではGeneration Requestを`v0alpha4`へ上げ、Review Requirement diffとbaselineのSource Map / Review
+Requirements versionを追加した。historical `v0alpha1` / `v0alpha2`は専用codecで元のcanonical bytesを保ち、
+compiler outputだけをlosslessにupgradeしてdiffする。適用済みadmin `v0alpha2` blobからadmin semanticsを保った
+Identity追加requestへ、43既存Factsをunchanged、38 Factsと3 Review Requirementsをaddedとしてpairwise lineageを
+検証した。次はB5でpasswordless、external provider、email変更をsyntaxなしのfixtureとして比較する。
 
 ### Exit criteria
 

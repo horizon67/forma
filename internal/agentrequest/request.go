@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	RequestSchema         = "forma/generation-request/v0alpha3"
-	PreviousRequestSchema = "forma/generation-request/v0alpha2"
-	FeedbackSchema        = "forma/generation-feedback/v0alpha2"
-	LegacyRequestSchema   = "forma/generation-request/v0alpha1"
-	LegacyFeedbackSchema  = "forma/generation-feedback/v0alpha1"
+	RequestSchema                      = "forma/generation-request/v0alpha4"
+	PreviousRequestSchema              = "forma/generation-request/v0alpha3"
+	HistoricalIncrementalRequestSchema = "forma/generation-request/v0alpha2"
+	FeedbackSchema                     = "forma/generation-feedback/v0alpha2"
+	LegacyRequestSchema                = "forma/generation-request/v0alpha1"
+	LegacyFeedbackSchema               = "forma/generation-feedback/v0alpha1"
 )
 
 type Request struct {
@@ -35,20 +36,24 @@ type Request struct {
 }
 
 type RequestedChange struct {
-	Kind                 string                `json:"kind"`
-	Baseline             *RequestBaseline      `json:"baseline,omitempty"`
-	IntentNodes          []compiler.SemanticID `json:"intentNodes,omitempty"`
-	IntentChanges        []SemanticChange      `json:"intentChanges,omitempty"`
-	FactChanges          []SemanticChange      `json:"factChanges,omitempty"`
-	UnchangedIntentNodes int                   `json:"unchangedIntentNodes,omitempty"`
-	UnchangedFacts       int                   `json:"unchangedFacts,omitempty"`
+	Kind                        string                `json:"kind"`
+	Baseline                    *RequestBaseline      `json:"baseline,omitempty"`
+	IntentNodes                 []compiler.SemanticID `json:"intentNodes,omitempty"`
+	IntentChanges               []SemanticChange      `json:"intentChanges,omitempty"`
+	FactChanges                 []SemanticChange      `json:"factChanges,omitempty"`
+	ReviewRequirementChanges    []SemanticChange      `json:"reviewRequirementChanges,omitempty"`
+	UnchangedIntentNodes        int                   `json:"unchangedIntentNodes,omitempty"`
+	UnchangedFacts              int                   `json:"unchangedFacts,omitempty"`
+	UnchangedReviewRequirements int                   `json:"unchangedReviewRequirements,omitempty"`
 }
 
 type RequestBaseline struct {
-	RequestSHA256          string `json:"requestSha256"`
-	RequestSchema          string `json:"requestSchema"`
-	ResolvedIntentVersion  string `json:"resolvedIntentVersion"`
-	AcceptanceFactsVersion string `json:"acceptanceFactsVersion"`
+	RequestSHA256             string `json:"requestSha256"`
+	RequestSchema             string `json:"requestSchema"`
+	ResolvedIntentVersion     string `json:"resolvedIntentVersion"`
+	AcceptanceFactsVersion    string `json:"acceptanceFactsVersion"`
+	SourceMapVersion          string `json:"sourceMapVersion,omitempty"`
+	ReviewRequirementsVersion string `json:"reviewRequirementsVersion,omitempty"`
 }
 
 type SemanticChange struct {
@@ -147,27 +152,29 @@ func BuildIncremental(previous Request, result compiler.Result, manifest *implem
 	if err != nil {
 		return Request{}, err
 	}
-	previousReviews, err := compiler.BuildReviewRequirements(previous.ResolvedIntent)
+	previousOutputs, err := compilerOutputsForDiff(previous)
 	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: derive baseline Review Requirements: %w", err)
+		return Request{}, fmt.Errorf("build incremental Generation Request: upgrade baseline: %w", err)
 	}
-	if !canonicalJSONEqual(previousReviews, current.ReviewRequirements) {
-		return Request{}, fmt.Errorf("build incremental Generation Request: Review Requirement changes require the B4 request diff slice")
-	}
-	intentChanges, unchangedIntent, err := diffIntent(previous.ResolvedIntent, current.ResolvedIntent)
+	intentChanges, unchangedIntent, err := diffIntent(previousOutputs.intent, current.ResolvedIntent)
 	if err != nil {
 		return Request{}, fmt.Errorf("build incremental Generation Request: diff Resolved Intent: %w", err)
 	}
-	factChanges, unchangedFacts, err := diffFacts(previous.AcceptanceFacts, current.AcceptanceFacts)
+	factChanges, unchangedFacts, err := diffFacts(previousOutputs.facts, current.AcceptanceFacts)
 	if err != nil {
 		return Request{}, fmt.Errorf("build incremental Generation Request: diff Acceptance Facts: %w", err)
 	}
-	for _, change := range append(append([]SemanticChange(nil), intentChanges...), factChanges...) {
+	reviewChanges, unchangedReviews, err := diffReviewRequirements(previousOutputs.reviews, current.ReviewRequirements)
+	if err != nil {
+		return Request{}, fmt.Errorf("build incremental Generation Request: diff Review Requirements: %w", err)
+	}
+	allChanges := append(append(append([]SemanticChange(nil), intentChanges...), factChanges...), reviewChanges...)
+	for _, change := range allChanges {
 		if change.Kind == "removed" {
 			return Request{}, fmt.Errorf("build incremental Generation Request: removed nodes are not supported by the first incremental slice")
 		}
 	}
-	if len(intentChanges) == 0 && len(factChanges) == 0 {
+	if len(intentChanges) == 0 && len(factChanges) == 0 && len(reviewChanges) == 0 {
 		return Request{}, fmt.Errorf("build incremental Generation Request: baseline and current intent are identical")
 	}
 	baselineContent, err := Marshal(previous)
@@ -185,9 +192,10 @@ func BuildIncremental(previous Request, result compiler.Result, manifest *implem
 			RequestSHA256: fmt.Sprintf("%x", digest), RequestSchema: previous.Schema,
 			ResolvedIntentVersion:  previous.ResolvedIntent.Version,
 			AcceptanceFactsVersion: previous.AcceptanceFacts.Version,
+			SourceMapVersion:       previous.SourceMap.Version, ReviewRequirementsVersion: reviewRequirementsVersion(previous),
 		},
-		IntentNodes: intentNodes, IntentChanges: intentChanges, FactChanges: factChanges,
-		UnchangedIntentNodes: unchangedIntent, UnchangedFacts: unchangedFacts,
+		IntentNodes: intentNodes, IntentChanges: intentChanges, FactChanges: factChanges, ReviewRequirementChanges: reviewChanges,
+		UnchangedIntentNodes: unchangedIntent, UnchangedFacts: unchangedFacts, UnchangedReviewRequirements: unchangedReviews,
 	}
 	if err := ValidateRequest(current); err != nil {
 		return Request{}, err
@@ -196,7 +204,7 @@ func BuildIncremental(previous Request, result compiler.Result, manifest *implem
 }
 
 func Marshal(request Request) ([]byte, error) {
-	return json.MarshalIndent(request, "", "  ")
+	return marshalRequestForSchema(request)
 }
 
 func UnmarshalRequest(content []byte) (Request, error) {
@@ -220,7 +228,10 @@ func UnmarshalFeedback(content []byte) (Feedback, error) {
 // request as immutable input and must not validate against a copy returned by
 // the coding agent.
 func ValidateRequest(request Request) error {
-	if request.Schema != RequestSchema && request.Schema != PreviousRequestSchema && request.Schema != LegacyRequestSchema {
+	if request.Schema == LegacyRequestSchema || request.Schema == HistoricalIncrementalRequestSchema {
+		return validateHistoricalRequest(request)
+	}
+	if request.Schema != RequestSchema && request.Schema != PreviousRequestSchema {
 		return fmt.Errorf("validate Generation Request: unsupported schema %q", request.Schema)
 	}
 	if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.SourceMap == nil {
@@ -266,7 +277,7 @@ func ValidateRequest(request Request) error {
 	if err != nil {
 		return err
 	}
-	if request.Schema == RequestSchema {
+	if request.Schema == RequestSchema || request.Schema == PreviousRequestSchema {
 		if err := compiler.ValidateReviewRequirements(request.ResolvedIntent, request.ReviewRequirements); err != nil {
 			return err
 		}
@@ -276,21 +287,8 @@ func ValidateRequest(request Request) error {
 		if !reflect.DeepEqual(compiler.ReviewRequirementIDs(canonicalReviews), request.Verification.DisplayReviewRequirementIDs) {
 			return fmt.Errorf("validate Generation Request: display review requirement IDs differ from canonical Review Requirements")
 		}
-	} else {
-		if request.ReviewRequirements != nil || len(request.Verification.DisplayReviewRequirementIDs) != 0 {
-			return fmt.Errorf("validate Generation Request: historical schema contains Review Requirements")
-		}
-		if len(canonicalReviews.Requirements) != 0 {
-			return fmt.Errorf("validate Generation Request: historical schema cannot represent required human review")
-		}
 	}
 	expectedFeedbackSchema := FeedbackSchema
-	if request.Schema == LegacyRequestSchema {
-		expectedFeedbackSchema = LegacyFeedbackSchema
-		if request.ImplementationPolicy != nil || request.RequestedChange.Kind != "full" {
-			return fmt.Errorf("validate Generation Request: legacy schema does not support implementation policy or incremental changes")
-		}
-	}
 	if request.Verification.FeedbackSchema != expectedFeedbackSchema || !request.Verification.RequireTestReference || !request.Verification.RejectUnknownFacts {
 		return fmt.Errorf("validate Generation Request: verification policy was weakened")
 	}
@@ -301,8 +299,8 @@ func ValidateRequest(request Request) error {
 	switch request.RequestedChange.Kind {
 	case "full":
 		if request.RequestedChange.Baseline != nil || len(request.RequestedChange.IntentNodes) != 0 ||
-			len(request.RequestedChange.IntentChanges) != 0 || len(request.RequestedChange.FactChanges) != 0 ||
-			request.RequestedChange.UnchangedIntentNodes != 0 || request.RequestedChange.UnchangedFacts != 0 {
+			len(request.RequestedChange.IntentChanges) != 0 || len(request.RequestedChange.FactChanges) != 0 || len(request.RequestedChange.ReviewRequirementChanges) != 0 ||
+			request.RequestedChange.UnchangedIntentNodes != 0 || request.RequestedChange.UnchangedFacts != 0 || request.RequestedChange.UnchangedReviewRequirements != 0 {
 			return fmt.Errorf("validate Generation Request: full request contains incremental change metadata")
 		}
 	case "incremental":
@@ -405,6 +403,14 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 		recorded.AcceptanceFactsVersion != baseline.AcceptanceFacts.Version {
 		return fmt.Errorf("validate incremental baseline: baseline versions do not match recorded versions")
 	}
+	if request.Schema == RequestSchema {
+		if recorded.SourceMapVersion != baseline.SourceMap.Version ||
+			recorded.ReviewRequirementsVersion != reviewRequirementsVersion(baseline) {
+			return fmt.Errorf("validate incremental baseline: extended baseline versions do not match recorded versions")
+		}
+	} else if recorded.SourceMapVersion != "" || recorded.ReviewRequirementsVersion != "" {
+		return fmt.Errorf("validate incremental baseline: historical request contains current baseline version metadata")
+	}
 	content, err := Marshal(baseline)
 	if err != nil {
 		return fmt.Errorf("validate incremental baseline: marshal baseline: %w", err)
@@ -413,37 +419,42 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 	if digest != recorded.RequestSHA256 {
 		return fmt.Errorf("validate incremental baseline: canonical baseline digest %s does not match recorded %s", digest, recorded.RequestSHA256)
 	}
-	baselineReviews, err := compiler.BuildReviewRequirements(baseline.ResolvedIntent)
+	baselineOutputs, err := compilerOutputsForDiff(baseline)
 	if err != nil {
-		return fmt.Errorf("validate incremental baseline: derive baseline Review Requirements: %w", err)
+		return fmt.Errorf("validate incremental baseline: upgrade baseline compiler outputs: %w", err)
 	}
-	currentReviews := request.ReviewRequirements
-	if currentReviews == nil {
-		currentReviews, err = compiler.BuildReviewRequirements(request.ResolvedIntent)
-		if err != nil {
-			return fmt.Errorf("validate incremental baseline: derive current Review Requirements: %w", err)
-		}
+	currentOutputs, err := compilerOutputsForDiff(request)
+	if err != nil {
+		return fmt.Errorf("validate incremental baseline: upgrade current compiler outputs: %w", err)
 	}
-	if !canonicalJSONEqual(baselineReviews, currentReviews) {
-		return fmt.Errorf("validate incremental baseline: Review Requirement changes require the B4 request diff slice")
-	}
-	intentChanges, unchangedIntent, err := diffIntent(baseline.ResolvedIntent, request.ResolvedIntent)
+	intentChanges, unchangedIntent, err := diffIntent(baselineOutputs.intent, currentOutputs.intent)
 	if err != nil {
 		return fmt.Errorf("validate incremental baseline: diff Resolved Intent: %w", err)
 	}
-	factChanges, unchangedFacts, err := diffFacts(baseline.AcceptanceFacts, request.AcceptanceFacts)
+	factChanges, unchangedFacts, err := diffFacts(baselineOutputs.facts, currentOutputs.facts)
 	if err != nil {
 		return fmt.Errorf("validate incremental baseline: diff Acceptance Facts: %w", err)
+	}
+	reviewChanges, unchangedReviews, err := diffReviewRequirements(baselineOutputs.reviews, currentOutputs.reviews)
+	if err != nil {
+		return fmt.Errorf("validate incremental baseline: diff Review Requirements: %w", err)
 	}
 	intentNodes := make([]compiler.SemanticID, 0, len(intentChanges))
 	for _, change := range intentChanges {
 		intentNodes = append(intentNodes, change.NodeID)
 	}
 	requested := request.RequestedChange
-	if !reflect.DeepEqual(intentChanges, requested.IntentChanges) ||
-		!reflect.DeepEqual(factChanges, requested.FactChanges) ||
-		!reflect.DeepEqual(intentNodes, requested.IntentNodes) ||
-		unchangedIntent != requested.UnchangedIntentNodes || unchangedFacts != requested.UnchangedFacts {
+	changeSetsMatch := reflect.DeepEqual(intentChanges, requested.IntentChanges) &&
+		reflect.DeepEqual(factChanges, requested.FactChanges) &&
+		reflect.DeepEqual(intentNodes, requested.IntentNodes) &&
+		unchangedIntent == requested.UnchangedIntentNodes && unchangedFacts == requested.UnchangedFacts
+	if request.Schema == RequestSchema {
+		changeSetsMatch = changeSetsMatch && reflect.DeepEqual(reviewChanges, requested.ReviewRequirementChanges) &&
+			unchangedReviews == requested.UnchangedReviewRequirements
+	} else {
+		changeSetsMatch = changeSetsMatch && len(reviewChanges) == 0
+	}
+	if !changeSetsMatch {
 		return fmt.Errorf("validate incremental baseline: recorded semantic changes differ from baseline-derived changes")
 	}
 	return nil
@@ -483,23 +494,26 @@ func validateIncrementalChange(request Request) error {
 	if change.Baseline == nil {
 		return fmt.Errorf("validate Generation Request: incremental request has no baseline")
 	}
-	if len(change.Baseline.RequestSHA256) != sha256.Size*2 {
+	if !validSHA256(change.Baseline.RequestSHA256) {
 		return fmt.Errorf("validate Generation Request: incremental baseline has invalid SHA-256 digest")
 	}
-	for _, character := range change.Baseline.RequestSHA256 {
-		if !strings.ContainsRune("0123456789abcdef", character) {
-			return fmt.Errorf("validate Generation Request: incremental baseline has invalid SHA-256 digest")
-		}
-	}
-	if (change.Baseline.RequestSchema != RequestSchema && change.Baseline.RequestSchema != PreviousRequestSchema && change.Baseline.RequestSchema != LegacyRequestSchema) ||
-		change.Baseline.ResolvedIntentVersion != compiler.ResolvedIntentVersion ||
-		change.Baseline.AcceptanceFactsVersion != compiler.AcceptanceFactsVersion {
+	wantIntentVersion, wantFactsVersion, wantSourceMapVersion, wantReviewsVersion, ok := compilerVersionsForRequestSchema(change.Baseline.RequestSchema)
+	if !ok || change.Baseline.ResolvedIntentVersion != wantIntentVersion ||
+		change.Baseline.AcceptanceFactsVersion != wantFactsVersion {
 		return fmt.Errorf("validate Generation Request: incremental baseline versions are unsupported")
 	}
-	if len(change.IntentChanges) == 0 && len(change.FactChanges) == 0 {
+	if request.Schema == RequestSchema {
+		if change.Baseline.SourceMapVersion != wantSourceMapVersion || change.Baseline.ReviewRequirementsVersion != wantReviewsVersion {
+			return fmt.Errorf("validate Generation Request: incremental extended baseline versions are unsupported")
+		}
+	} else if change.Baseline.SourceMapVersion != "" || change.Baseline.ReviewRequirementsVersion != "" ||
+		len(change.ReviewRequirementChanges) != 0 || change.UnchangedReviewRequirements != 0 {
+		return fmt.Errorf("validate Generation Request: v0alpha3 cannot contain B4 review change metadata")
+	}
+	if len(change.IntentChanges) == 0 && len(change.FactChanges) == 0 && len(change.ReviewRequirementChanges) == 0 {
 		return fmt.Errorf("validate Generation Request: incremental request has no changes")
 	}
-	if change.UnchangedIntentNodes < 0 || change.UnchangedFacts < 0 {
+	if change.UnchangedIntentNodes < 0 || change.UnchangedFacts < 0 || change.UnchangedReviewRequirements < 0 {
 		return fmt.Errorf("validate Generation Request: incremental unchanged counts must not be negative")
 	}
 	intentNodes, err := resolvedIntentNodes(request.ResolvedIntent)
@@ -521,6 +535,13 @@ func validateIncrementalChange(request Request) error {
 		return fmt.Errorf("validate Generation Request: index Acceptance Facts: %w", err)
 	}
 	if err := validateSemanticChanges("fact", change.FactChanges, factNodes); err != nil {
+		return err
+	}
+	reviewNodes, err := reviewRequirementNodes(request.ReviewRequirements)
+	if err != nil {
+		return fmt.Errorf("validate Generation Request: index Review Requirements: %w", err)
+	}
+	if err := validateSemanticChanges("review requirement", change.ReviewRequirementChanges, reviewNodes); err != nil {
 		return err
 	}
 	return nil
@@ -573,6 +594,18 @@ func diffFacts(previous, current *compiler.AcceptanceFacts) ([]SemanticChange, i
 		return nil, 0, err
 	}
 	currentNodes, err := acceptanceFactNodes(current)
+	if err != nil {
+		return nil, 0, err
+	}
+	return diffSemanticNodes(previousNodes, currentNodes)
+}
+
+func diffReviewRequirements(previous, current *compiler.ReviewRequirements) ([]SemanticChange, int, error) {
+	previousNodes, err := reviewRequirementNodes(previous)
+	if err != nil {
+		return nil, 0, err
+	}
+	currentNodes, err := reviewRequirementNodes(current)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -680,6 +713,27 @@ func acceptanceFactNodes(facts *compiler.AcceptanceFacts) (map[compiler.Semantic
 			return nil, err
 		}
 		result[fact.ID] = content
+	}
+	return result, nil
+}
+
+func reviewRequirementNodes(requirements *compiler.ReviewRequirements) (map[compiler.SemanticID]json.RawMessage, error) {
+	if requirements == nil {
+		return nil, fmt.Errorf("nil Review Requirements")
+	}
+	result := make(map[compiler.SemanticID]json.RawMessage, len(requirements.Requirements))
+	for _, requirement := range requirements.Requirements {
+		if requirement.ID == "" {
+			return nil, fmt.Errorf("Review Requirement has empty ID")
+		}
+		if _, exists := result[requirement.ID]; exists {
+			return nil, fmt.Errorf("duplicate Review Requirement %s", requirement.ID)
+		}
+		content, err := json.Marshal(requirement)
+		if err != nil {
+			return nil, err
+		}
+		result[requirement.ID] = content
 	}
 	return result, nil
 }
