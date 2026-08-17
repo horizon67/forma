@@ -45,10 +45,11 @@ type Team struct {
 }
 
 type User struct {
-	ID     string
-	Name   string
-	Email  string
-	TeamID string
-	Plan   Plan
-	Status Status
+	ID       string
+	Name     string
+	Nickname string
+	Email    string
+	TeamID   string
+	Plan     Plan
+	Status   Status
 }

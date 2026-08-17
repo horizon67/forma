@@ -1,0 +1,20 @@
+schema: forma/implementation-policy/v0alpha1
+
+policies:
+  - id: implementation/server-rendering
+    policy: required
+    value: html/template
+    instruction: Server-rendered UIはhtml/templateで維持する
+
+  - id: implementation/persistence
+    policy: preferred
+    value: database/sql
+    instruction: 永続化にはdatabase/sqlを優先する
+
+  - id: implementation/router
+    policy: forbidden
+    value: github.com/gorilla/mux
+    instruction: 標準net/http routerを維持する
+
+conventions:
+  - cmd/serverとinternal package境界を維持する

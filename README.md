@@ -139,7 +139,8 @@ specify Ransack as the search library, and the repository may be a Rails
 application. The coding agent combines all three into a repository-native
 implementation. Forma core does not interpret the technology name `ransack`.
 
-The Implementation Policy Manifest is still a proposal. See its
+The smallest experimental `v0alpha1` Implementation Policy Manifest is
+implemented, but its schema is not yet final. See its
 [design](docs/implementation-policy-manifest-proposal.md) for details.
 
 ## What Forma describes
@@ -251,6 +252,12 @@ standalone Go repository. All 43 derived Acceptance Facts were verified. This
 experiment did not have Forma generate a Go admin application; Forma decided
 the meaning, and AI implemented an ordinary Go application.
 
+The following incremental run updated the same repository without rebuilding
+it, adding `User.nickname` and changing the page size from 20 to 10. All 43
+Facts and the existing 12 tests remained covered, and the required, preferred
+deviation, and forbidden paths of the Implementation Policy Manifest were
+verified.
+
 The old Go admin generator and target-neutral conformance adapter under
 `experiments/` are **frozen meaning-discovery prototypes**, not the planned
 architecture. A second framework generator or shared runtime adapter is not the
@@ -265,7 +272,8 @@ go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
-go run ./cmd/forma verify internal/agentrequest/testdata/admin.request.json experiments/admin-agent-e2e/target/generation-feedback.json
+go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
+go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
 go test ./...
 ```
 
@@ -275,9 +283,8 @@ checked separately.
 
 `forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
 Generation Request, and `forma verify` validates agent feedback against the
-immutable request. The next milestone is an incremental change to an existing
-target repository with a minimal Implementation Policy Manifest. A signup/signin
-Identity probe and the automated repair loop follow it.
+immutable request. The next milestone is the signup/signin Identity probe,
+followed by the automated repair loop.
 
 ## Design documents
 

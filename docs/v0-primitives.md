@@ -889,8 +889,8 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 | Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.4`として部分実装 |
 | Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.2`として実装済み |
 | Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha1`のadmin-flow sliceを実装 |
-| Generation Request | intent、facts、source map、requested change、verification policy | `forma/generation-request/v0alpha1`のfull requestを実装 |
-| Generation Feedback | stage、command、diagnostic、関連intent node、fact coverage、status | `v0alpha1`型、`forma verify`、管理画面43 factsの初回target runを実装。自動repair loopは未実装 |
+| Generation Request | intent、facts、source map、implementation policy、requested change、verification policy | historical `v0alpha1` full requestと`v0alpha2` incremental requestを実装 |
+| Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、43 facts・3 policiesのincremental runを実装。自動repair loopは未実装 |
 
 framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の
 schemaへ固定しない。model provider、prompt template、tool listもagent execution設定であり、language
@@ -899,8 +899,9 @@ versionのblockerではない。
 ### 14.2 現行reference front-endとの差分
 
 現在のGo front-endはdesign draft v0.4のsurface syntaxを部分実装し、Lexer、Parser、syntax AST、
-主要な静的検査、core Resolved Intent、golden output、Source Map、admin-flow Acceptance Facts、full
-Generation Requestまで実装済みである。ただしdesign draft v0.4に対して、少なくとも次は未実装である。
+主要な静的検査、core Resolved Intent、golden output、Source Map、admin-flow Acceptance Facts、fullおよび
+最小incremental Generation Requestまで実装済みである。ただしdesign draft v0.4に対して、少なくとも次は
+未実装である。
 
 reference front-endはこの規範v0に加え、[Minimal Expression Layer Proposal](expression-proposal.md)を
 検証するexperimental syntaxとして、selfのrequired field同士を`<=`で比較する名前付きInvariantも受理する。
@@ -910,7 +911,7 @@ reference front-endはこの規範v0に加え、[Minimal Expression Layer Propos
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
 - v0で閉じたstring/regex escape setの厳密な検査
 - state transitionなどadmin CRUD外のAcceptance Fact kind
-- incremental Generation Requestと、自動repairを行うGeneration Feedback loop
+- rename、削除、migrationを扱うincremental change modelと、自動repairを行うGeneration Feedback loop
 
 したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.4 Resolved Intent schemaの
 完成形ではない。

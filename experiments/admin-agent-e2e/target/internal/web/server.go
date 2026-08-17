@@ -18,7 +18,7 @@ import (
 	"example.com/forma-admin-target/internal/store"
 )
 
-const pageSize = 20
+const pageSize = 10
 
 type Server struct {
 	repository  store.Repository
@@ -55,6 +55,7 @@ func (server *Server) Handler() http.Handler {
 type presentedUser struct {
 	ID       string
 	Name     string
+	Nickname string
 	Email    string
 	TeamName string
 	Plan     domain.Plan
@@ -151,10 +152,11 @@ func (server *Server) userDetail(writer http.ResponseWriter, request *http.Reque
 }
 
 type formValues struct {
-	Name   string
-	Email  string
-	TeamID string
-	Plan   domain.Plan
+	Name     string
+	Nickname string
+	Email    string
+	TeamID   string
+	Plan     domain.Plan
 }
 
 type formData struct {
@@ -187,7 +189,8 @@ func (server *Server) updateUser(writer http.ResponseWriter, request *http.Reque
 	}
 	userID := request.PathValue("id")
 	values := formValues{
-		Name: strings.TrimSpace(request.FormValue("name")), Email: strings.TrimSpace(request.FormValue("email")),
+		Name: strings.TrimSpace(request.FormValue("name")), Nickname: strings.TrimSpace(request.FormValue("nickname")),
+		Email:  strings.TrimSpace(request.FormValue("email")),
 		TeamID: request.FormValue("team"), Plan: domain.Plan(request.FormValue("plan")),
 	}
 	user, ok, err := server.repository.FindUser(request.Context(), userID)
@@ -223,6 +226,7 @@ func (server *Server) updateUser(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 	user.Name = values.Name
+	user.Nickname = values.Nickname
 	user.Email = values.Email
 	user.TeamID = values.TeamID
 	user.Plan = values.Plan
@@ -314,11 +318,14 @@ func (server *Server) render(writer http.ResponseWriter, status int, name string
 }
 
 func presentUser(user domain.User, teamName string) presentedUser {
-	return presentedUser{ID: user.ID, Name: user.Name, Email: user.Email, TeamName: teamName, Plan: user.Plan, Status: user.Status}
+	return presentedUser{
+		ID: user.ID, Name: user.Name, Nickname: user.Nickname, Email: user.Email,
+		TeamName: teamName, Plan: user.Plan, Status: user.Status,
+	}
 }
 
 func formValuesFromUser(user domain.User) formValues {
-	return formValues{Name: user.Name, Email: user.Email, TeamID: user.TeamID, Plan: user.Plan}
+	return formValues{Name: user.Name, Nickname: user.Nickname, Email: user.Email, TeamID: user.TeamID, Plan: user.Plan}
 }
 
 func listPageURL(values url.Values, page int) string {

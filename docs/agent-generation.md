@@ -1,6 +1,6 @@
 # Agent Generation Model
 
-Status: architectural direction — minimal admin-flow request schema implemented as `v0alpha1`
+Status: architectural direction — incremental admin-flow request/feedback implemented as `v0alpha2`
 
 Formaのend-to-end実行モデルでは、AI coding agentは任意のgenerator implementationではなく、
 application codeを作る主体である。
@@ -141,7 +141,12 @@ GenerationRequest
   resolvedIntent
   acceptanceFacts
   sourceMap
+  implementationPolicy
   requestedChange
+    kind: full | incremental
+    baseline request identity
+    intentChanges
+    factChanges
   verification
     feedbackSchema
     requiredFactIds
@@ -149,11 +154,16 @@ GenerationRequest
     rejectUnknownFacts
 ```
 
-`requestedChange`は初回生成ならapplication全体、更新なら前回から変化したintent nodeを表す。
-target repositoryそのものはrequestへ複製せず、agentへworkspaceとして渡す。architecture constraintsや
-禁止事項が必要なら、repositoryのpolicy fileまたは明示的なuser instructionとして同時に渡す。これらを
-genericかつ検証可能なentryとして構造化する案は
+`requestedChange`は初回生成ならapplication全体、更新なら前回から変化したintent nodeとAcceptance Factを
+表す。incremental requestはimmutableなprevious requestのcanonical SHA-256、schema version、added/changed
+node、unchanged件数を持つ。最初のsliceではremoved nodeを拒否し、rename/delete modelを推測しない。
+
+target repositoryそのものはrequestへ複製せず、agentへworkspaceとして渡す。architecture constraintや
+禁止事項は、正規化した`implementationPolicy`としてapplication intentと分離して格納する。最小の
+`required`、`preferred`、`forbidden`とcoverage規則は
 [`implementation-policy-manifest-proposal.md`](implementation-policy-manifest-proposal.md)に記録する。
+incremental requestで新しいManifestを指定しない場合はbaseline requestに埋め込まれたManifestを保持し、
+policyを意図せず消さない。
 
 model名、prompt template、tool listをForma language semanticsへ含めない。それらはagent executionの
 設定であり、Generation Requestの意味ではない。
@@ -176,6 +186,10 @@ GenerationFeedback
     factId
     testReferences
     result: passed | failed | not-run
+  policyCoverage
+    policyId
+    status: satisfied | deviated | flagged
+    evidence | reason | hits
   command
   diagnostics
   summary
@@ -195,17 +209,32 @@ ID集合とtest結果の検査である。
 
 ```bash
 forma verify request.json generation-feedback.json
+forma verify --repository target/ --baseline previous-request.json incremental-request.json generation-feedback.json
 ```
 
 このcommandはJSON schemaの未知field、request内のfacts/policy改竄、coverage集合の不一致、不正なtest
 reference、未成功resultを拒否する。またdistinct test数と1 testあたりの最大fact数を表示し、coverageの
-集中を可視化する。repositoryのtest command自体はagent execution側が実行する。
+集中を可視化する。Implementation Policyを持つrequestではrepository rootを受け取り、required evidence、
+preferred deviation reason、forbidden token scanも検査する。repositoryのtest command自体はagent execution
+側が実行する。
+forbidden scanにhitがある場合は機械的failureにはしないが、`flagged` policy IDとhit pathをCLIへ表示し、
+人間のreviewへ残す。
+
+incremental requestのverifyでは直前のrequestを`--baseline`で必須入力とする。verifierはbaselineをcanonical
+JSONへmarshalしたbyte列のSHA-256を照合し、Resolved IntentとAcceptance Factsのdiffも再導出して、requestに
+記録されたadded/changed/unchanged集合と一致することを確認する。fileそのもののSHA-256ではないため、末尾改行や
+JSONの空白だけを変えてもidentityは変わらない。この検査が保証するのは隣接するrequest間のpairwiseな
+lineageであり、repositoryへどのrequestが最後に適用されたかの証明はorchestration layerが所有する。
 
 `AcceptanceFacts.version`はJSON shapeだけでなく、Resolved Intentからfactを導出する規則のversionでもある。
 fact kind、ID、input、expected、導出対象を変える場合はこのversionを更新する。同様にResolved Intentと
 Source Mapも各versionへ対応する。現在のverifierがrequestのversionをsupportしない場合、canonical比較を
 実行せず、matching Forma versionで検証するよう明示的に拒否する。将来過去versionをsupportする場合は、
 versionに対応するbuilderへdispatchする。
+
+現在は初回生成の`generation-request/v0alpha1`と`generation-feedback/v0alpha1`をhistorical baselineとして
+読み取り可能に保ち、incremental metadataとImplementation Policy Coverageを追加した交換形式を
+`v0alpha2`として出力する。同じschema名のままunknown fieldを追加しない。
 
 この機構はfactの変換漏れを防ぐが、test内容がfactを忠実に検査していることまで証明しない。その確認には
 repositoryのreviewと、将来必要ならtest mutationなど別の検証を使う。
@@ -222,6 +251,12 @@ Forma sourceへ反映し、Resolved Intentの差分を次のGeneration Request�
 
 目標はbyte-identicalな再生成ではない。目標は、既存の設計と手書きcodeを尊重しながら、intent差分を
 小さく安全なrepository変更として適用し、build/testを通すことである。
+
+最初のincremental experimentでは、immutableな`v0alpha1` full requestをbaselineとし、`User.nickname`追加と
+page size 20→10を`v0alpha2` incremental requestへ導出した。8 intent nodesがadded/changed、13 Factsの
+payloadがchanged、30 Factsがunchangedだった。既存targetへfull regenerationなしで適用し、43/43 Facts、
+12 distinct tests、2 policyの`satisfied`と1 preferred policyのreason付き`deviated`、root/targetのbuild checksを
+確認した。
 
 ## 現在のprototypeとの関係
 

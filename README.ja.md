@@ -124,7 +124,7 @@ architecture、library、convention、testを使って実装します。
 repositoryがRails applicationなら、coding agentはその3つを統合してrepository-nativeな実装を作ります。
 Forma core自身は`ransack`という技術名を解釈しません。
 
-Implementation Policy Manifestは現在proposal段階です。詳しくは
+Implementation Policy Manifestは最小の実験的`v0alpha1`を実装済みですが、schemaはまだ未確定です。詳しくは
 [設計案](docs/implementation-policy-manifest-proposal.md)を参照してください。
 
 ## Formaで記述するもの
@@ -220,6 +220,10 @@ repositoryへ管理画面を実装しました。そこで導出した43件す�
 これは「FormaがGo管理画面を生成した」のではなく、「Formaが意味を決め、AIが通常のGo applicationを
 実装した」というexperimentです。
 
+続くincremental runでは、同じrepositoryを作り直さず、`User.nickname`追加とpage size 20→10を適用しました。
+43/43 Factsと既存12 testsを維持し、Implementation Policy Manifestのrequired、preferred deviation、
+forbiddenの3経路も検証できました。
+
 `experiments/`配下の旧Go管理画面generatorとtarget-neutral conformance adapterは、正式architecture
 ではなく、**意味を発見するための凍結済みprototype**です。次に二つ目のframework generatorや共通
 runtime adapterを作る予定はありません。
@@ -233,7 +237,8 @@ go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
-go run ./cmd/forma verify internal/agentrequest/testdata/admin.request.json experiments/admin-agent-e2e/target/generation-feedback.json
+go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
+go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
 go test ./...
 ```
 
@@ -241,9 +246,8 @@ go test ./...
 applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
-`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。次のmilestoneは、
-最小Implementation Policy Manifestを伴う既存target repositoryへのincremental changeです。その後、
-signup/signinのIdentity probeと自動repair loopへ進みます。
+`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。次のmilestoneは
+signup/signinのIdentity probeで、その後に自動repair loopへ進みます。
 
 ## 設計資料
 

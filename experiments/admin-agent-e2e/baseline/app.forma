@@ -10,11 +10,10 @@ entity Team {
 }
 
 entity User {
-    name     String required label
-    nickname String
-    email    Email required unique
-    team     Team
-    plan     Plan required
+    name  String required label
+    email Email required unique
+    team  Team
+    plan  Plan required
 
     state status Pending | Confirmed | Active | Suspended initial Pending
 }
@@ -23,11 +22,11 @@ page Users {
     allow admin
 
     list User {
-        columns name, nickname, email, team, plan, status
-        search name, nickname, email
+        columns name, email, team, plan, status
+        search name, email
         filter team, plan, status
         sort name asc
-        paginate 10
+        paginate 20
         actions view, edit
     }
 }
@@ -36,7 +35,7 @@ page UserDetail(user User) {
     allow admin
 
     detail user {
-        fields name, nickname, email, team, plan, status
+        fields name, email, team, plan, status
         actions edit
     }
 }
@@ -45,7 +44,7 @@ page UserEdit(user User) {
     allow admin
 
     form user {
-        fields name, nickname, email, team, plan
+        fields name, email, team, plan
         submit edit
     }
 }

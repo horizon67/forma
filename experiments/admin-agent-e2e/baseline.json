@@ -1,0 +1,19 @@
+{
+  "schema": "forma/experiment-baseline/v0alpha1",
+  "commit": "8376119e9574b7e3f01654c17905dd43138b6cab",
+  "targetTree": "c63f7a8417f3f9488544d617437afdde8254d835",
+  "sourceBlob": "1fa7d2884b4946337b229456a96c59a7d33fae23",
+  "requestBlob": "154ae2e37b6823864db46ce2cc86d09f6c1576e0",
+  "source": "experiments/admin-agent-e2e/baseline/app.forma",
+  "request": "internal/agentrequest/testdata/admin.request.json",
+  "factCount": 43,
+  "distinctTests": 12,
+  "maxFactsPerTest": 8,
+  "checks": [
+    "root: go test ./...",
+    "root: go vet ./...",
+    "target: go test ./...",
+    "target: go vet ./...",
+    "forma verify: passed"
+  ]
+}

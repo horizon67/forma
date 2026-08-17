@@ -13,8 +13,8 @@ const pageTemplates = `
   <button type="submit">Apply</button>
 </form>
 {{if .Empty}}<p data-state="empty">No users found.</p>{{else}}
-<table><thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Plan</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-{{range .Users}}<tr data-user-row="{{.ID}}"><td>{{.Name}}</td><td>{{.Email}}</td><td>{{.TeamName}}</td><td>{{.Plan}}</td><td>{{.Status}}</td><td><a href="/admin/users/{{.ID}}">View</a> <a href="/admin/users/{{.ID}}/edit">Edit</a></td></tr>{{end}}
+<table><thead><tr><th>Name</th><th>Nickname</th><th>Email</th><th>Team</th><th>Plan</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{{range .Users}}<tr data-user-row="{{.ID}}"><td>{{.Name}}</td><td>{{.Nickname}}</td><td>{{.Email}}</td><td>{{.TeamName}}</td><td>{{.Plan}}</td><td>{{.Status}}</td><td><a href="/admin/users/{{.ID}}">View</a> <a href="/admin/users/{{.ID}}/edit">Edit</a></td></tr>{{end}}
 </tbody></table>
 {{end}}
 <nav>{{if .Previous}}<a rel="prev" href="{{.Previous}}">Previous</a>{{end}} {{if .Next}}<a rel="next" href="{{.Next}}">Next</a>{{end}}</nav>
@@ -24,7 +24,7 @@ const pageTemplates = `
 <html><head><meta charset="utf-8"><title>User detail</title></head><body>
 <main><h1>User detail</h1>
 {{if .Failure}}<div role="alert" data-state="failure">{{.Failure}}</div>{{else if .Empty}}<p data-state="empty">User not found.</p>{{else}}
-<dl><dt>Name</dt><dd>{{.User.Name}}</dd><dt>Email</dt><dd>{{.User.Email}}</dd><dt>Team</dt><dd>{{.User.TeamName}}</dd><dt>Plan</dt><dd>{{.User.Plan}}</dd><dt>Status</dt><dd>{{.User.Status}}</dd></dl>
+<dl><dt>Name</dt><dd>{{.User.Name}}</dd><dt>Nickname</dt><dd>{{.User.Nickname}}</dd><dt>Email</dt><dd>{{.User.Email}}</dd><dt>Team</dt><dd>{{.User.TeamName}}</dd><dt>Plan</dt><dd>{{.User.Plan}}</dd><dt>Status</dt><dd>{{.User.Status}}</dd></dl>
 <a href="/admin/users/{{.User.ID}}/edit">Edit</a>
 {{end}}</main></body></html>{{end}}
 
@@ -36,6 +36,7 @@ const pageTemplates = `
 {{if .Token}}<form method="post" action="/admin/users/{{.UserID}}/edit">
   <input type="hidden" name="submission" value="{{.Token}}">
   <label>Name <input name="name" value="{{.Form.Name}}"></label>{{with index .Errors "name"}}<p role="alert" data-error="name">{{.}}</p>{{end}}
+  <label>Nickname <input name="nickname" value="{{.Form.Nickname}}"></label>
   <label>Email <input type="email" name="email" value="{{.Form.Email}}"></label>{{with index .Errors "email"}}<p role="alert" data-error="email">{{.}}</p>{{end}}
   <label>Team <select name="team"><option value="">None</option>{{range .Teams}}<option value="{{.ID}}" {{if eq $.Form.TeamID .ID}}selected{{end}}>{{.Name}}</option>{{end}}</select></label>{{with index .Errors "team"}}<p role="alert" data-error="team">{{.}}</p>{{end}}
   <label>Plan <select name="plan"><option value="">Select</option>{{range .Plans}}<option value="{{.}}" {{if eq $.Form.Plan .}}selected{{end}}>{{.}}</option>{{end}}</select></label>{{with index .Errors "plan"}}<p role="alert" data-error="plan">{{.}}</p>{{end}}

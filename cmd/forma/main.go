@@ -11,6 +11,7 @@ import (
 
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
+	"github.com/horizon67/forma/internal/implementationpolicy"
 )
 
 func main() {
@@ -34,7 +35,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 		printUsage(stderr)
 		return 2
 	}
-	paths, err := collectPaths(args[1:])
+	sourceArguments := args[1:]
+	requestOptions := generationRequestOptions{}
+	if command == "request" {
+		var err error
+		requestOptions, sourceArguments, err = parseGenerationRequestOptions(sourceArguments)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: %v\n", err)
+			return 2
+		}
+	}
+	paths, err := collectPaths(sourceArguments)
 	if err != nil {
 		fmt.Fprintf(stderr, "forma: %v\n", err)
 		return 2
@@ -81,7 +92,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if command == "request" {
-		request, err := agentrequest.BuildFull(result)
+		request, err := buildGenerationRequest(result, requestOptions)
 		if err != nil {
 			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
 			return 1
@@ -106,13 +117,18 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 func runVerify(arguments []string, stdout, stderr io.Writer) int {
-	if len(arguments) != 2 {
-		fmt.Fprintln(stderr, "forma: verify requires <request.json> and <feedback.json>")
+	options, files, err := parseVerifyOptions(arguments)
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: %v\n", err)
 		return 2
 	}
-	requestContent, err := os.ReadFile(arguments[0])
+	if len(files) != 2 {
+		fmt.Fprintln(stderr, "forma: verify requires [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
+		return 2
+	}
+	requestContent, err := os.ReadFile(files[0])
 	if err != nil {
-		fmt.Fprintf(stderr, "forma: read %s: %v\n", arguments[0], err)
+		fmt.Fprintf(stderr, "forma: read %s: %v\n", files[0], err)
 		return 2
 	}
 	request, err := agentrequest.UnmarshalRequest(requestContent)
@@ -120,9 +136,9 @@ func runVerify(arguments []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "forma: %v\n", err)
 		return 1
 	}
-	feedbackContent, err := os.ReadFile(arguments[1])
+	feedbackContent, err := os.ReadFile(files[1])
 	if err != nil {
-		fmt.Fprintf(stderr, "forma: read %s: %v\n", arguments[1], err)
+		fmt.Fprintf(stderr, "forma: read %s: %v\n", files[1], err)
 		return 2
 	}
 	feedback, err := agentrequest.UnmarshalFeedback(feedbackContent)
@@ -130,7 +146,21 @@ func runVerify(arguments []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "forma: %v\n", err)
 		return 1
 	}
-	if err := agentrequest.ValidateCoverage(request, feedback); err != nil {
+	var baseline *agentrequest.Request
+	if options.baselinePath != "" {
+		baselineContent, err := os.ReadFile(options.baselinePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: read %s: %v\n", options.baselinePath, err)
+			return 2
+		}
+		decoded, err := agentrequest.UnmarshalRequest(baselineContent)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: decode incremental baseline: %v\n", err)
+			return 1
+		}
+		baseline = &decoded
+	}
+	if err := agentrequest.ValidateCompletion(request, baseline, feedback, options.repositoryRoot); err != nil {
 		fmt.Fprintf(stderr, "forma: %v\n", err)
 		return 1
 	}
@@ -141,7 +171,132 @@ func runVerify(arguments []string, stdout, stderr io.Writer) int {
 	summary := agentrequest.SummarizeCoverage(feedback)
 	fmt.Fprintf(stdout, "verified %d acceptance facts: all passed\n", len(request.AcceptanceFacts.Facts))
 	fmt.Fprintf(stdout, "  %d distinct tests, max %d facts per test\n", summary.DistinctTests, summary.MaxFactsPerTest)
+	if request.ImplementationPolicy != nil {
+		printPolicyCoverage(stdout, feedback.PolicyCoverage)
+	}
 	return 0
+}
+
+type generationRequestOptions struct {
+	previousPath string
+	manifestPath string
+}
+
+func parseGenerationRequestOptions(arguments []string) (generationRequestOptions, []string, error) {
+	var options generationRequestOptions
+	var sources []string
+	for index := 0; index < len(arguments); index++ {
+		switch arguments[index] {
+		case "--previous":
+			if options.previousPath != "" {
+				return generationRequestOptions{}, nil, fmt.Errorf("request option --previous was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return generationRequestOptions{}, nil, fmt.Errorf("request option --previous requires a request JSON path")
+			}
+			options.previousPath = arguments[index]
+		case "--manifest":
+			if options.manifestPath != "" {
+				return generationRequestOptions{}, nil, fmt.Errorf("request option --manifest was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return generationRequestOptions{}, nil, fmt.Errorf("request option --manifest requires a YAML path")
+			}
+			options.manifestPath = arguments[index]
+		default:
+			if strings.HasPrefix(arguments[index], "-") {
+				return generationRequestOptions{}, nil, fmt.Errorf("unknown request option %q", arguments[index])
+			}
+			sources = append(sources, arguments[index])
+		}
+	}
+	return options, sources, nil
+}
+
+func buildGenerationRequest(result compiler.Result, options generationRequestOptions) (agentrequest.Request, error) {
+	var manifest *implementationpolicy.Manifest
+	if options.manifestPath != "" {
+		content, err := os.ReadFile(options.manifestPath)
+		if err != nil {
+			return agentrequest.Request{}, fmt.Errorf("read Implementation Policy Manifest %s: %w", options.manifestPath, err)
+		}
+		parsed, err := implementationpolicy.ParseYAML(content)
+		if err != nil {
+			return agentrequest.Request{}, err
+		}
+		manifest = &parsed
+	}
+	if options.previousPath == "" {
+		return agentrequest.BuildFullWithPolicy(result, manifest)
+	}
+	content, err := os.ReadFile(options.previousPath)
+	if err != nil {
+		return agentrequest.Request{}, fmt.Errorf("read previous Generation Request %s: %w", options.previousPath, err)
+	}
+	previous, err := agentrequest.UnmarshalRequest(content)
+	if err != nil {
+		return agentrequest.Request{}, err
+	}
+	return agentrequest.BuildIncremental(previous, result, manifest)
+}
+
+type verifyOptions struct {
+	repositoryRoot string
+	baselinePath   string
+}
+
+func parseVerifyOptions(arguments []string) (verifyOptions, []string, error) {
+	var options verifyOptions
+	var files []string
+	for index := 0; index < len(arguments); index++ {
+		switch arguments[index] {
+		case "--repository":
+			if options.repositoryRoot != "" {
+				return verifyOptions{}, nil, fmt.Errorf("verify option --repository was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return verifyOptions{}, nil, fmt.Errorf("verify option --repository requires a directory")
+			}
+			options.repositoryRoot = arguments[index]
+		case "--baseline":
+			if options.baselinePath != "" {
+				return verifyOptions{}, nil, fmt.Errorf("verify option --baseline was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return verifyOptions{}, nil, fmt.Errorf("verify option --baseline requires a request JSON path")
+			}
+			options.baselinePath = arguments[index]
+		default:
+			if strings.HasPrefix(arguments[index], "-") {
+				return verifyOptions{}, nil, fmt.Errorf("unknown verify option %q", arguments[index])
+			}
+			files = append(files, arguments[index])
+		}
+	}
+	return options, files, nil
+}
+
+func printPolicyCoverage(writer io.Writer, coverage []implementationpolicy.Coverage) {
+	items := append([]implementationpolicy.Coverage(nil), coverage...)
+	sort.Slice(items, func(i, j int) bool { return items[i].PolicyID < items[j].PolicyID })
+	counts := map[string]int{}
+	for _, item := range items {
+		counts[item.Status]++
+	}
+	fmt.Fprintf(writer, "verified %d implementation policies\n", len(items))
+	fmt.Fprintf(writer, "  %d satisfied, %d deviated, %d flagged\n", counts["satisfied"], counts["deviated"], counts["flagged"])
+	for _, item := range items {
+		switch item.Status {
+		case "deviated":
+			fmt.Fprintf(writer, "  deviated %s: %s\n", item.PolicyID, item.Reason)
+		case "flagged":
+			fmt.Fprintf(writer, "  flagged %s for review: %s\n", item.PolicyID, strings.Join(item.Hits, ", "))
+		}
+	}
 }
 
 func collectPaths(arguments []string) ([]string, error) {
@@ -196,12 +351,12 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "Usage:")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
-	fmt.Fprintln(writer, "  forma request <file.forma | directory>...")
-	fmt.Fprintln(writer, "  forma verify <request.json> <feedback.json>")
+	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
 	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
 	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
-	fmt.Fprintln(writer, "  request  emit a full Generation Request for a coding agent")
+	fmt.Fprintln(writer, "  request  emit a full or incremental Generation Request for a coding agent")
 	fmt.Fprintln(writer, "  verify   validate Generation Feedback against an immutable request")
 }

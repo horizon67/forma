@@ -1,6 +1,6 @@
 # Admin Agent Generation Experiment
 
-Status: active experiment — first full target-repository run completed
+Status: active experiment — first full run and first incremental update completed
 
 このexperimentは、Forma自身が管理画面generatorを持たず、structuredな要求をAI coding agentへ渡して
 通常のrepositoryへ実装できるかを検証する。
@@ -21,7 +21,7 @@ experimentでは、そのgenerator、template、profile capability、runtime ada
 ## 対象flow
 
 - adminだけが利用できるUser一覧・詳細・編集
-- name/email検索、team/plan/status filter、name sort、page size 20
+- name/nickname/email検索、team/plan/status filter、name sort、page size 10
 - Team relationと`Team.name`による人間向けlabel
 - Planのclosed set
 - emailのrequired、unique、format constraint
@@ -42,8 +42,21 @@ requestには次を含む。
 - canonicalなResolved Intent
 - stable ID付きAcceptance Facts
 - Source Map
-- `requestedChange.kind = full`
+- `requestedChange.kind = full | incremental`
+- incremental時のbaseline digest、intent/fact change、unchanged件数
+- optionalな正規化済みImplementation Policy Manifest
 - 全fact IDを列挙したverification policy
+
+初回のimmutable `v0alpha1` requestは
+[`admin.request.json`](../../internal/agentrequest/testdata/admin.request.json)、incremental `v0alpha2` requestは
+[`admin.incremental.request.json`](../../internal/agentrequest/testdata/admin.incremental.request.json)に固定した。
+
+```bash
+go run ./cmd/forma request \
+  --previous internal/agentrequest/testdata/admin.request.json \
+  --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml \
+  experiments/admin-agent-e2e/app.forma
+```
 
 repository固有testは対応するfact IDをtest名、metadata、またはsidecar manifestから参照できなければ
 ならない。`testReferences`は`repository/relative/path#test-identifier`で返す。1つのintegration/E2E testが
@@ -77,7 +90,7 @@ go vet ./...
 cd ../../..
 go run ./cmd/forma verify \
   internal/agentrequest/testdata/admin.request.json \
-  experiments/admin-agent-e2e/target/generation-feedback.json
+  experiments/admin-agent-e2e/baseline/generation-feedback.json
 ```
 
 結果は43/43 factsが`passed`である。coverageは12本のdistinct testに分かれ、最大集中は1 testあたり
@@ -89,7 +102,8 @@ go run ./cmd/forma verify \
 - editの正常保存、detailへのnavigation、required/unique/matches/closed-set拒否、入力保持
 - 同じ論理submitを2回dispatchしてもmutation適用は1回
 
-`generation-feedback.json`はrepository相対のtest referenceを持ち、`forma verify`はcanonical factsとの
+historical [`baseline/generation-feedback.json`](baseline/generation-feedback.json)はrepository相対のtest
+referenceを持ち、`forma verify`はcanonical factsとの
 完全一致、未知・重複・未参照fact、test reference形式、全resultを検査する。出力にはdistinct test数と
 1 testあたりの最大fact数も表示し、異常なcoverage集中を人間が確認できるようにした。
 
@@ -122,10 +136,57 @@ Generation Requestからrepository規約に沿って独立設計されたこと�
   検証していない。
 
 管理画面list/detail/editについて、現時点で新しいForma primitiveが必要になる不足は見つからなかった。
-次は同じtarget repositoryへのincremental changeで、既存codeを保った更新を測る。
 
-## 次のincremental probe
+## 最初のincremental run
 
-初回実装後に、Forma sourceへUserの編集fieldまたはconstraintを一つ追加する。full regenerationはせず、
-変更されたintent nodeとfactだけをrequested changeとしてagentへ渡し、既存codeとtestを保ったまま
-更新できるか確認する。
+### Baseline
+
+変更前のcommit、target tree、Forma source blob、full request blob、43 Factsと12 testsを
+[`baseline.json`](baseline.json)へ固定した。sourceとhistorical feedbackは[`baseline/`](baseline/)に保存し、
+target変更前にroot/target双方の`go test ./...`と`go vet ./...`、`forma verify`が成功することを確認した。
+
+### Requested change
+
+- optionalな`User.nickname`を追加する。
+- list、detail、editへnicknameを追加し、search対象にする。
+- logical page sizeを20から10へ変更する。
+- existing targetをfull regenerationしない。
+
+compilerは8 intent nodesをadded/changed、13 Factsをchanged、30 Factsをunchangedとして導出した。Fact IDは
+43件のまま安定し、field projection、search input、page boundary、form mutationとvalidation時の入力保持が
+新しいpayloadへ更新された。
+
+### Implementation Policy
+
+target内の[`forma.implementation.yaml`](target/forma.implementation.yaml)をcanonical JSONへ正規化して
+incremental requestへ埋め込んだ。結果は次のとおり。
+
+- required server-rendering policy: evidence fileとopaque valueを確認して`satisfied`
+- preferred persistence policy: existing in-memory storeを維持するreason付き`deviated`
+- forbidden router policy: repository text scanが0 hitsで`satisfied`
+
+Forma coreは技術valueごとの分岐を持たず、schema、ID、mode、evidence、reason、scan結果だけを検査する。
+
+### Result
+
+既存の`cmd/server`と`internal/{auth,domain,store,web}`境界を維持し、domain、store search、server presentation、
+template、既存testだけを局所的に更新した。`ARCHITECTURE.md`、entry point、auth、target `go.mod`、無関係な
+store testのblobはbaselineと同一だった。
+
+```bash
+cd experiments/admin-agent-e2e/target
+go test ./...
+go vet ./...
+
+cd ../../..
+go run ./cmd/forma verify \
+  --repository experiments/admin-agent-e2e/target \
+  --baseline internal/agentrequest/testdata/admin.request.json \
+  internal/agentrequest/testdata/admin.incremental.request.json \
+  experiments/admin-agent-e2e/target/generation-feedback.json
+```
+
+結果は43/43 Acceptance Facts、12 distinct testsを確認した。implementation policyは2件が`satisfied`、
+preferred persistence 1件がreason付き`deviated`で、人間のreview対象としてCLIにも表示される。これにより、
+Formaが初回生成用の詳しいpromptに留まらず、既存repositoryを保った更新の前処理としても機能する根拠を
+得た。rename、削除、constraint migrationは後続incremental probeへ残し、次はroadmapのIdentity probeへ進む。

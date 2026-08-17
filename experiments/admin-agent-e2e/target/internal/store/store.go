@@ -87,7 +87,8 @@ func (repository *Memory) ListUsers(_ context.Context, query UserQuery) (UserPag
 	search := strings.ToLower(strings.TrimSpace(query.Search))
 	for _, id := range repository.order {
 		user := repository.users[id]
-		if search != "" && !strings.Contains(strings.ToLower(user.Name), search) && !strings.Contains(strings.ToLower(user.Email), search) {
+		if search != "" && !strings.Contains(strings.ToLower(user.Name), search) &&
+			!strings.Contains(strings.ToLower(user.Nickname), search) && !strings.Contains(strings.ToLower(user.Email), search) {
 			continue
 		}
 		if query.TeamID != "" && user.TeamID != query.TeamID {

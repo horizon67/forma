@@ -287,9 +287,9 @@ password signupだけでgrammarを固定しない。少なくとも次を同じ�
 
 ## Roadmapへの影響
 
-管理画面list/detail/editの最初のagent generation experimentはIdentityを含めずに完了した。現在は
-既存repositoryを保持できるかを先に検証するため、incremental updateをP0とする。その直後のP1で本書の
-signup/signin flowを実施し、最小Identity IntentとAcceptance FactsをGeneration Requestへ載せる。
+管理画面list/detail/editの初回生成と、既存repositoryを保持する最初のincremental updateはIdentityを
+含めずに完了した。次のP1として本書のsignup/signin flowを実施し、最小Identity IntentとAcceptance Factsを
+Generation Requestへ載せる。
 
 IdentityをExpressionやEffectの一般化より先に置くのは、public applicationを記述できるかという中心的な
 言語境界であり、role定数だけではownershipを表現できないためである。credential保護やsession方式は

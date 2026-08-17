@@ -5,13 +5,62 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/horizon67/forma/internal/compiler"
+	"github.com/horizon67/forma/internal/implementationpolicy"
 )
 
 func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
+	sourcePath := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "baseline", "app.forma")
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := compiler.Compile([]compiler.SourceFile{
+		compiler.NewSourceFile("experiments/admin-agent-e2e/app.forma", string(content)),
+	})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", result.Diagnostics)
+	}
+	current, err := BuildFull(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertTargetNeutralRequest(t, current)
+	goldenPath := filepath.Join("testdata", "admin.request.json")
+	content, err = os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := UnmarshalRequest(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateRequest(legacy); err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Schema != LegacyRequestSchema || legacy.Verification.FeedbackSchema != LegacyFeedbackSchema {
+		t.Fatalf("legacy boundary = %#v", legacy)
+	}
+	if !reflect.DeepEqual(current.ResolvedIntent, legacy.ResolvedIntent) ||
+		!reflect.DeepEqual(current.AcceptanceFacts, legacy.AcceptanceFacts) ||
+		!reflect.DeepEqual(current.SourceMap, legacy.SourceMap) {
+		t.Fatalf("current compiler output differs from immutable v0alpha1 baseline %s", goldenPath)
+	}
+}
+
+func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
+	previousContent, err := os.ReadFile(filepath.Join("testdata", "admin.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous, err := UnmarshalRequest(previousContent)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sourcePath := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "app.forma")
 	content, err := os.ReadFile(sourcePath)
 	if err != nil {
@@ -23,7 +72,15 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", result.Diagnostics)
 	}
-	request, err := BuildFull(result)
+	manifestContent, err := os.ReadFile(filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target", "forma.implementation.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := implementationpolicy.ParseYAML(manifestContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request, err := BuildIncremental(previous, result, &manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,11 +90,8 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	actual = append(actual, '\n')
-	goldenPath := filepath.Join("testdata", "admin.request.json")
+	goldenPath := filepath.Join("testdata", "admin.incremental.request.json")
 	if os.Getenv("UPDATE_GOLDEN") == "1" {
-		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
-			t.Fatal(err)
-		}
 		if err := os.WriteFile(goldenPath, actual, 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +101,11 @@ func TestAdminAgentExperimentGoldenRequest(t *testing.T) {
 		t.Fatalf("read golden file: %v (run with UPDATE_GOLDEN=1)", err)
 	}
 	if !bytes.Equal(actual, expected) {
-		t.Fatalf("Generation Request differs from %s\nactual:\n%s", goldenPath, actual)
+		t.Fatalf("incremental Generation Request differs from %s", goldenPath)
+	}
+	if len(request.AcceptanceFacts.Facts) != 43 || len(request.RequestedChange.IntentChanges) != 8 ||
+		len(request.RequestedChange.FactChanges) != 13 || request.RequestedChange.UnchangedFacts != 30 {
+		t.Fatalf("incremental change summary = %#v", request.RequestedChange)
 	}
 }
 
@@ -77,9 +135,181 @@ func TestBuildFullRequestHasExactFactCoveragePolicy(t *testing.T) {
 	assertTargetNeutralRequest(t, request)
 }
 
+func TestBuildIncrementalRequestDerivesStableSemanticDiff(t *testing.T) {
+	previous, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := implementationpolicy.ParseYAML([]byte(testImplementationManifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	current := compiler.Compile([]compiler.SourceFile{compiler.NewSourceFile("request.forma", `role admin
+entity User {
+    name String required label
+    nickname String
+}
+page Users {
+    allow admin
+    list User {
+        columns name, nickname
+        search name, nickname
+        paginate 10
+    }
+}
+`)})
+	if len(current.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", current.Diagnostics)
+	}
+	request, err := BuildIncremental(previous, current, &manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.RequestedChange.Kind != "incremental" || request.RequestedChange.Baseline == nil {
+		t.Fatalf("requested change = %#v", request.RequestedChange)
+	}
+	if len(request.RequestedChange.Baseline.RequestSHA256) != 64 {
+		t.Fatalf("baseline = %#v", request.RequestedChange.Baseline)
+	}
+	wantIntent := map[compiler.SemanticID]string{
+		"entity/User/field/nickname": "added",
+		"entity/User":                "changed",
+		"page/Users/view/list/User":  "changed",
+	}
+	for _, change := range request.RequestedChange.IntentChanges {
+		if want, ok := wantIntent[change.NodeID]; ok {
+			if want != "" && change.Kind != want {
+				t.Errorf("intent change %s = %s, want %s", change.NodeID, change.Kind, want)
+			}
+			delete(wantIntent, change.NodeID)
+		}
+	}
+	for id, kind := range wantIntent {
+		t.Errorf("missing intent change %s (%s)", id, kind)
+	}
+	wantFacts := map[compiler.SemanticID]string{
+		"fact/page/Users/view/list/User/fields":        "changed",
+		"fact/page/Users/view/list/User/search":        "added",
+		"fact/page/Users/view/list/User/page-boundary": "added",
+	}
+	for _, change := range request.RequestedChange.FactChanges {
+		if want, ok := wantFacts[change.NodeID]; ok {
+			if change.Kind != want {
+				t.Errorf("fact change %s = %s, want %s", change.NodeID, change.Kind, want)
+			}
+			delete(wantFacts, change.NodeID)
+		}
+	}
+	for id, kind := range wantFacts {
+		t.Errorf("missing fact change %s (%s)", id, kind)
+	}
+	if request.ImplementationPolicy == nil || len(request.ImplementationPolicy.Policies) != 3 {
+		t.Fatalf("implementation policy = %#v", request.ImplementationPolicy)
+	}
+	if err := ValidateRequest(request); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildIncrementalRejectsNoChangeAndRemoval(t *testing.T) {
+	previous, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildIncremental(previous, compileRequestSource(t), nil); err == nil || !strings.Contains(err.Error(), "identical") {
+		t.Fatalf("no-change error = %v", err)
+	}
+	removed := compiler.Compile([]compiler.SourceFile{compiler.NewSourceFile("request.forma", `role admin
+entity User {
+    name String required label
+}
+`)})
+	if len(removed.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", removed.Diagnostics)
+	}
+	if _, err := BuildIncremental(previous, removed, nil); err == nil || !strings.Contains(err.Error(), "removed nodes are not supported") {
+		t.Fatalf("removal error = %v", err)
+	}
+}
+
+func TestBuildIncrementalPreservesExistingImplementationPolicy(t *testing.T) {
+	manifest, err := implementationpolicy.ParseYAML([]byte(testImplementationManifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous, err := BuildFullWithPolicy(compileRequestSource(t), &manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current := compiler.Compile([]compiler.SourceFile{compiler.NewSourceFile("request.forma", `role admin
+entity User {
+    name String required label
+    nickname String
+}
+page Users {
+    allow admin
+    list User {
+        columns name, nickname
+    }
+}
+`)})
+	if len(current.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", current.Diagnostics)
+	}
+	request, err := BuildIncremental(previous, current, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(request.ImplementationPolicy, previous.ImplementationPolicy) {
+		t.Fatalf("implementation policy was not preserved: %#v", request.ImplementationPolicy)
+	}
+}
+
+func TestValidateCompletionChecksImplementationPolicyAgainstRepository(t *testing.T) {
+	manifest, err := implementationpolicy.ParseYAML([]byte(testImplementationManifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request, err := BuildFullWithPolicy(compileRequestSource(t), &manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	serverPath := filepath.Join(root, "internal", "web", "server.go")
+	if err := os.MkdirAll(filepath.Dir(serverPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(serverPath, []byte("import \"html/template\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	feedback := passingFeedback(request)
+	feedback.PolicyCoverage = []implementationpolicy.Coverage{
+		{PolicyID: "implementation/server-rendering", Status: "satisfied", Evidence: []string{"internal/web/server.go"}},
+		{PolicyID: "implementation/persistence", Status: "deviated", Reason: "the controlled target remains in memory"},
+		{PolicyID: "implementation/router", Status: "satisfied"},
+	}
+	if err := ValidateCompletion(request, nil, feedback, root); err != nil {
+		t.Fatal(err)
+	}
+	feedback.PolicyCoverage = feedback.PolicyCoverage[1:]
+	if err := ValidateCompletion(request, nil, feedback, root); err == nil || !strings.Contains(err.Error(), "is missing") {
+		t.Fatalf("coverage error = %v", err)
+	}
+}
+
 func assertTargetNeutralRequest(t *testing.T, request Request) {
 	t.Helper()
-	encoded, err := Marshal(request)
+	semanticPayload := struct {
+		ResolvedIntent  *compiler.ResolvedIntent  `json:"resolvedIntent"`
+		AcceptanceFacts *compiler.AcceptanceFacts `json:"acceptanceFacts"`
+		SourceMap       *compiler.SourceMap       `json:"sourceMap"`
+		RequestedChange RequestedChange           `json:"requestedChange"`
+		Verification    VerificationPolicy        `json:"verification"`
+	}{
+		ResolvedIntent: request.ResolvedIntent, AcceptanceFacts: request.AcceptanceFacts,
+		SourceMap: request.SourceMap, RequestedChange: request.RequestedChange, Verification: request.Verification,
+	}
+	encoded, err := json.Marshal(semanticPayload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +389,7 @@ func TestAdminAgentExperimentFeedbackCoversCanonicalRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	feedbackContent, err := os.ReadFile(filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target", "generation-feedback.json"))
+	feedbackContent, err := os.ReadFile(filepath.Join("..", "..", "experiments", "admin-agent-e2e", "baseline", "generation-feedback.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,6 +403,109 @@ func TestAdminAgentExperimentFeedbackCoversCanonicalRequest(t *testing.T) {
 	summary := SummarizeCoverage(feedback)
 	if summary.FactCount != 43 || summary.DistinctTests != 12 || summary.MaxFactsPerTest != 8 {
 		t.Fatalf("coverage summary = %#v", summary)
+	}
+}
+
+func TestAdminAgentIncrementalFeedbackCoversCurrentRequestAndPolicies(t *testing.T) {
+	requestContent, err := os.ReadFile(filepath.Join("testdata", "admin.incremental.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request, err := UnmarshalRequest(requestContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baselineContent, err := os.ReadFile(filepath.Join("testdata", "admin.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := UnmarshalRequest(baselineContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedbackContent, err := os.ReadFile(filepath.Join("..", "..", "experiments", "admin-agent-e2e", "baseline", "generation-feedback.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback, err := UnmarshalFeedback(feedbackContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback.Schema = FeedbackSchema
+	feedback.PolicyCoverage = []implementationpolicy.Coverage{
+		{PolicyID: "implementation/server-rendering", Status: "satisfied", Evidence: []string{"internal/web/server.go"}},
+		{PolicyID: "implementation/persistence", Status: "deviated", Reason: "This controlled experiment retains the existing in-memory store."},
+		{PolicyID: "implementation/router", Status: "satisfied"},
+	}
+	feedback.Summary = "The existing target was updated incrementally for nickname and page-size intent while preserving all acceptance facts and implementation policies."
+	actual, err := json.MarshalIndent(feedback, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual = append(actual, '\n')
+	targetRoot := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target")
+	goldenPath := filepath.Join(targetRoot, "generation-feedback.json")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(goldenPath, actual, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expected, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("read incremental feedback: %v (run with UPDATE_GOLDEN=1)", err)
+	}
+	if !bytes.Equal(actual, expected) {
+		t.Fatalf("incremental Generation Feedback differs from %s", goldenPath)
+	}
+	if err := ValidateCompletion(request, &baseline, feedback, targetRoot); err != nil {
+		t.Fatal(err)
+	}
+	summary := SummarizeCoverage(feedback)
+	if summary.FactCount != 43 || summary.DistinctTests != 12 || summary.MaxFactsPerTest != 8 {
+		t.Fatalf("coverage summary = %#v", summary)
+	}
+}
+
+func TestValidateIncrementalBaselineChecksDigestAndSemanticDiff(t *testing.T) {
+	baselineContent, err := os.ReadFile(filepath.Join("testdata", "admin.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := UnmarshalRequest(baselineContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestContent, err := os.ReadFile(filepath.Join("testdata", "admin.incremental.request.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request, err := UnmarshalRequest(requestContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateIncrementalBaseline(request, baseline); err != nil {
+		t.Fatal(err)
+	}
+
+	request.RequestedChange.Baseline.RequestSHA256 = strings.Repeat("0", 64)
+	if err := ValidateRequest(request); err != nil {
+		t.Fatalf("well-formed but incorrect digest should pass request-local validation: %v", err)
+	}
+	if err := ValidateIncrementalBaseline(request, baseline); err == nil || !strings.Contains(err.Error(), "does not match recorded") {
+		t.Fatalf("digest error = %v", err)
+	}
+
+	request, err = UnmarshalRequest(requestContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.RequestedChange.IntentChanges = request.RequestedChange.IntentChanges[1:]
+	request.RequestedChange.IntentNodes = request.RequestedChange.IntentNodes[1:]
+	if err := ValidateRequest(request); err != nil {
+		t.Fatalf("locally valid incomplete diff should require its baseline to reject: %v", err)
+	}
+	if err := ValidateIncrementalBaseline(request, baseline); err == nil || !strings.Contains(err.Error(), "differ from baseline-derived") {
+		t.Fatalf("semantic diff error = %v", err)
 	}
 }
 
@@ -377,3 +710,16 @@ func passingFeedback(request Request) Feedback {
 	}
 	return feedback
 }
+
+const testImplementationManifest = `schema: forma/implementation-policy/v0alpha1
+policies:
+  - id: implementation/server-rendering
+    policy: required
+    value: html/template
+  - id: implementation/persistence
+    policy: preferred
+    value: database/sql
+  - id: implementation/router
+    policy: forbidden
+    value: github.com/gorilla/mux
+`

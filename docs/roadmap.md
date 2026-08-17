@@ -33,11 +33,11 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義。未実装項目が残る |
 | Go front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Mapを実装 |
 | Acceptance Facts | admin slice実装 | list/detail/editの正常系・拒否系をstable ID付きで導出 |
-| Generation Request | 初回生成を実装 | `v0alpha1` full requestとimmutable requestに対するcoverage照合を実装 |
-| 初回agent E2E | 実測済み | standalone Go repositoryへ管理画面を実装し43/43 factsを確認 |
-| incremental update | **次に検証** | 既存repositoryへintent差分を適用した実測がない |
-| Implementation Policy Manifest | proposal | 最小schemaとverify規則をincremental probeで検証する |
-| public Identity | proposal | signup/signin、current principal、ownershipをまだagent E2Eで検証していない |
+| Generation Request | incremental slice実装 | historical `v0alpha1` full requestと`v0alpha2` incremental requestを検証可能 |
+| agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
+| incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
+| Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
+| public Identity | **次に検証** | signup/signin、current principal、ownershipをまだagent E2Eで検証していない |
 | automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
@@ -46,8 +46,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 
 > Formaは、AIに渡す前処理として本当に機能するか。
 
-次の焦点は、同じtarget repositoryを壊さずに変更できるかである。ここが通れば、Formaは一度きりの詳しい
-promptではなく、applicationを継続的に保守するsourceとして一段強い根拠を持つ。
+同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
+applicationを継続的に保守するsourceとして一段強い根拠を得た。次はpublic Identityの意味を検証する。
 
 ## 3. 優先順位
 
@@ -55,8 +55,8 @@ promptではなく、applicationを継続的に保守するsourceとして一段
 
 | 優先度 | Milestone | 検証する仮説 |
 | --- | --- | --- |
-| **P0 / Now** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
-| **P1** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
+| **P0 / first probe completed** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
+| **P1 / Now** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
 | **P2** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
 | **P3** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
@@ -127,11 +127,12 @@ coding agentへ渡す前に、application intentの構文・参照・型・静�
 - Acceptance Factsからtarget固有の正常系・否定系testを作れた。
 - targetのfile構成、route、submission方式などはagentが独立に決めた。
 - 43/43は主要testを直接reviewし、単なるcoverage申告でないことを確認した。
-- controlled experimentは同一workspace内の初回生成であり、incremental updateと独立再現性は未検証である。
+- 初回runの時点ではincremental updateと独立再現性が未検証だった。incrementalはMilestone 3で最初の
+  probeを完了し、独立agentまたは実在repositoryでの再現性は引き続き未検証である。
 
 このMilestoneを繰り返して二つ目のframework generatorを作ることはしない。
 
-## Milestone 3 — Incremental update + Implementation Policy Manifest（P0 / Now）
+## Milestone 3 — Incremental update + Implementation Policy Manifest（P0 / first probe completed）
 
 ### 目的
 
@@ -210,7 +211,21 @@ probeとして扱う。
 - semantic changeとagentのimplementation refactorをreview上で区別できる
 - update後のbuild/testが成功する
 
-## Milestone 4 — Public signup/signin + Identity（P1）
+### 最初のprobeの結果
+
+- [x] immutableなcommit、target tree、source blob、request blob、43 Factsをbaselineとして固定した。
+- [x] `User.nickname`追加とpage size 20→10をincremental requestへ導出した。
+- [x] 8 intent nodesをadded/changed、13 Factsをchanged、30 Factsをunchangedとして分類した。
+- [x] full regenerationせず、既存12 testsとpackage構造を保ったtarget差分として実装した。
+- [x] 43/43 Facts、2 satisfied policies、1 preferred deviation、root/targetの`go test`と`go vet`を確認した。
+- [x] `v0alpha1` baselineを保持し、additiveでない新protocolを`v0alpha2`として分離した。
+- [x] verify時にbaseline requestを必須入力とし、canonical digestとsemantic diffを再導出して照合した。
+- [x] preferred deviationをreason付きでCLIへ表示し、人間のreviewから隠さないようにした。
+
+最初のprobeについて上のExit criteriaは満たした。Milestone全体には後続のrename、削除、constraint変更、
+migration probeが残るが、これらをIdentityより先のblockerにはしない。
+
+## Milestone 4 — Public signup/signin + Identity（P1 / Now）
 
 ### 目的
 
@@ -263,7 +278,7 @@ Generation Request
 
 ### 実装済みの土台
 
-- stage、status、command、diagnostic、関連intent node、fact coverageを持つ`v0alpha1` feedback型
+- stage、status、command、diagnostic、関連intent node、fact/policy coverageを持つ`v0alpha2` feedback型
 - required fact IDとcoverageの完全一致、未知・重複・未参照を拒否するvalidator
 - immutable requestとfeedback JSONを検査する`forma verify`
 - fact ID、repository固有test reference、resultを持つcoverage report

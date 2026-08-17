@@ -41,8 +41,8 @@ func TestAdminList(t *testing.T) {
 		t.Fatalf("visible rows = %d, want 4", count)
 	}
 	for _, value := range []string{
-		"<th>Name</th>", "<th>Email</th>", "<th>Team</th>", "<th>Plan</th>", "<th>Status</th>",
-		"Alice", "alice@example.com", "Bob", "bob@example.com", "Platform", "Pro", "Active",
+		"<th>Name</th>", "<th>Nickname</th>", "<th>Email</th>", "<th>Team</th>", "<th>Plan</th>", "<th>Status</th>",
+		"Alice", "Ally", "alice@example.com", "Bob", "Bobby", "bob@example.com", "Platform", "Pro", "Active",
 		`href="/admin/users/user-alice"`, `href="/admin/users/user-alice/edit"`,
 	} {
 		assertContains(t, body, value)
@@ -58,6 +58,7 @@ func TestListQueryCapabilities(t *testing.T) {
 		absent  []string
 	}{
 		{name: "search name", query: "q=alice", present: []string{"alice@example.com"}, absent: []string{"bob@example.com"}},
+		{name: "search nickname", query: "q=ally", present: []string{"alice@example.com"}, absent: []string{"bob@example.com"}},
 		{name: "search email", query: "q=bob%40example.com", present: []string{"bob@example.com"}, absent: []string{"alice@example.com"}},
 		{name: "filter team", query: "team=team-support", present: []string{"bob@example.com"}, absent: []string{"alice@example.com"}},
 		{name: "filter plan", query: "plan=Enterprise", present: []string{"sam.first@example.com"}, absent: []string{"alice@example.com"}},
@@ -91,8 +92,8 @@ func TestListQueryCapabilities(t *testing.T) {
 
 func TestListPagination(t *testing.T) {
 	teams := []domain.Team{{ID: "team-platform", Name: "Platform"}}
-	users := make([]domain.User, 0, 21)
-	for index := 1; index <= 21; index++ {
+	users := make([]domain.User, 0, 11)
+	for index := 1; index <= 11; index++ {
 		users = append(users, domain.User{
 			ID: fmt.Sprintf("user-%02d", index), Name: fmt.Sprintf("User %02d", index),
 			Email: fmt.Sprintf("user%02d@example.com", index), TeamID: "team-platform",
@@ -102,8 +103,8 @@ func TestListPagination(t *testing.T) {
 	handler := newHandler(t, store.NewMemory(teams, users))
 	first := perform(handler, http.MethodGet, "/admin/users", nil, true)
 	assertStatus(t, first, http.StatusOK)
-	if count := strings.Count(first.Body.String(), "data-user-row="); count != 20 {
-		t.Fatalf("first page rows = %d, want 20", count)
+	if count := strings.Count(first.Body.String(), "data-user-row="); count != 10 {
+		t.Fatalf("first page rows = %d, want 10", count)
 	}
 	assertContains(t, first.Body.String(), `rel="next"`)
 	second := perform(handler, http.MethodGet, "/admin/users?page=2", nil, true)
@@ -133,7 +134,7 @@ func TestUserDetail(t *testing.T) {
 	assertStatus(t, response, http.StatusOK)
 	body := response.Body.String()
 	for _, value := range []string{
-		"<dt>Name</dt><dd>Alice</dd>", "<dt>Email</dt><dd>alice@example.com</dd>",
+		"<dt>Name</dt><dd>Alice</dd>", "<dt>Nickname</dt><dd>Ally</dd>", "<dt>Email</dt><dd>alice@example.com</dd>",
 		"<dt>Team</dt><dd>Platform</dd>", "<dt>Plan</dt><dd>Pro</dd>",
 		"<dt>Status</dt><dd>Active</dd>", `href="/admin/users/user-alice/edit"`,
 	} {
@@ -166,12 +167,12 @@ func TestEditUser(t *testing.T) {
 	formPage := perform(handler, http.MethodGet, "/admin/users/user-alice/edit", nil, true)
 	assertStatus(t, formPage, http.StatusOK)
 	body := formPage.Body.String()
-	for _, value := range []string{`name="name"`, `name="email"`, `name="team"`, `name="plan"`} {
+	for _, value := range []string{`name="name"`, `name="nickname"`, `name="email"`, `name="team"`, `name="plan"`} {
 		assertContains(t, body, value)
 	}
 	token := submissionToken(t, body)
 	values := url.Values{
-		"submission": {token}, "name": {"Alice Updated"}, "email": {"alice.updated@example.com"},
+		"submission": {token}, "name": {"Alice Updated"}, "nickname": {"Ali Updated"}, "email": {"alice.updated@example.com"},
 		"team": {"team-support"}, "plan": {"Enterprise"},
 	}
 	response := perform(handler, http.MethodPost, "/admin/users/user-alice/edit", values, true)
@@ -183,11 +184,12 @@ func TestEditUser(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("updated user = %#v, %v, %v", updated, ok, err)
 	}
-	if updated.Name != "Alice Updated" || updated.Email != "alice.updated@example.com" || updated.TeamID != "team-support" || updated.Plan != domain.PlanEnterprise || updated.Status != domain.StatusActive {
+	if updated.Name != "Alice Updated" || updated.Nickname != "Ali Updated" || updated.Email != "alice.updated@example.com" || updated.TeamID != "team-support" || updated.Plan != domain.PlanEnterprise || updated.Status != domain.StatusActive {
 		t.Fatalf("updated user = %#v", updated)
 	}
 	detail := perform(handler, http.MethodGet, response.Header().Get("Location"), nil, true)
 	assertContains(t, detail.Body.String(), "Alice Updated")
+	assertContains(t, detail.Body.String(), "Ali Updated")
 }
 
 func TestEditValidationAndFailure(t *testing.T) {
@@ -197,12 +199,12 @@ func TestEditValidationAndFailure(t *testing.T) {
 		errorField string
 		preserved  []string
 	}{
-		{name: "name required", change: func(values url.Values) { values.Set("name", "") }, errorField: "name", preserved: []string{"preserved@example.com", `value="team-support" selected`, `value="Enterprise" selected`}},
-		{name: "email required", change: func(values url.Values) { values.Set("email", "") }, errorField: "email", preserved: []string{`value="Preserved Name"`, `value="team-support" selected`, `value="Enterprise" selected`}},
-		{name: "email matches", change: func(values url.Values) { values.Set("email", "invalid") }, errorField: "email", preserved: []string{`value="Preserved Name"`, `value="team-support" selected`, `value="Enterprise" selected`}},
-		{name: "plan required", change: func(values url.Values) { values.Set("plan", "") }, errorField: "plan", preserved: []string{`value="Preserved Name"`, "preserved@example.com", `value="team-support" selected`}},
-		{name: "plan closed set", change: func(values url.Values) { values.Set("plan", "Unknown") }, errorField: "plan", preserved: []string{`value="Preserved Name"`, "preserved@example.com", `value="team-support" selected`}},
-		{name: "email unique", change: func(values url.Values) { values.Set("email", "bob@example.com") }, errorField: "email", preserved: []string{`value="Preserved Name"`, "bob@example.com", `value="team-support" selected`, `value="Enterprise" selected`}},
+		{name: "name required", change: func(values url.Values) { values.Set("name", "") }, errorField: "name", preserved: []string{`value="Preserved Nickname"`, "preserved@example.com", `value="team-support" selected`, `value="Enterprise" selected`}},
+		{name: "email required", change: func(values url.Values) { values.Set("email", "") }, errorField: "email", preserved: []string{`value="Preserved Name"`, `value="Preserved Nickname"`, `value="team-support" selected`, `value="Enterprise" selected`}},
+		{name: "email matches", change: func(values url.Values) { values.Set("email", "invalid") }, errorField: "email", preserved: []string{`value="Preserved Name"`, `value="Preserved Nickname"`, `value="team-support" selected`, `value="Enterprise" selected`}},
+		{name: "plan required", change: func(values url.Values) { values.Set("plan", "") }, errorField: "plan", preserved: []string{`value="Preserved Name"`, `value="Preserved Nickname"`, "preserved@example.com", `value="team-support" selected`}},
+		{name: "plan closed set", change: func(values url.Values) { values.Set("plan", "Unknown") }, errorField: "plan", preserved: []string{`value="Preserved Name"`, `value="Preserved Nickname"`, "preserved@example.com", `value="team-support" selected`}},
+		{name: "email unique", change: func(values url.Values) { values.Set("email", "bob@example.com") }, errorField: "email", preserved: []string{`value="Preserved Name"`, `value="Preserved Nickname"`, "bob@example.com", `value="team-support" selected`, `value="Enterprise" selected`}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -232,6 +234,7 @@ func TestEditValidationAndFailure(t *testing.T) {
 	assertStatus(t, failure, http.StatusInternalServerError)
 	assertContains(t, failure.Body.String(), `data-state="failure"`)
 	assertContains(t, failure.Body.String(), `value="Preserved Name"`)
+	assertContains(t, failure.Body.String(), `value="Preserved Nickname"`)
 }
 
 func TestEditIsAppliedAtMostOnce(t *testing.T) {
@@ -252,10 +255,10 @@ func fixtureHandler(t *testing.T) (http.Handler, *store.Memory) {
 	repository := store.NewMemory(
 		[]domain.Team{{ID: "team-platform", Name: "Platform"}, {ID: "team-support", Name: "Support"}},
 		[]domain.User{
-			{ID: "user-alice", Name: "Alice", Email: "alice@example.com", TeamID: "team-platform", Plan: domain.PlanPro, Status: domain.StatusActive},
-			{ID: "user-bob", Name: "Bob", Email: "bob@example.com", TeamID: "team-support", Plan: domain.PlanFree, Status: domain.StatusPending},
-			{ID: "user-sam-1", Name: "Sam", Email: "sam.first@example.com", TeamID: "team-platform", Plan: domain.PlanEnterprise, Status: domain.StatusConfirmed},
-			{ID: "user-sam-2", Name: "Sam", Email: "sam.second@example.com", TeamID: "team-platform", Plan: domain.PlanFree, Status: domain.StatusSuspended},
+			{ID: "user-alice", Name: "Alice", Nickname: "Ally", Email: "alice@example.com", TeamID: "team-platform", Plan: domain.PlanPro, Status: domain.StatusActive},
+			{ID: "user-bob", Name: "Bob", Nickname: "Bobby", Email: "bob@example.com", TeamID: "team-support", Plan: domain.PlanFree, Status: domain.StatusPending},
+			{ID: "user-sam-1", Name: "Sam", Nickname: "Sam One", Email: "sam.first@example.com", TeamID: "team-platform", Plan: domain.PlanEnterprise, Status: domain.StatusConfirmed},
+			{ID: "user-sam-2", Name: "Sam", Nickname: "Sam Two", Email: "sam.second@example.com", TeamID: "team-platform", Plan: domain.PlanFree, Status: domain.StatusSuspended},
 		},
 	)
 	return newHandler(t, repository), repository
@@ -292,7 +295,7 @@ func perform(handler http.Handler, method, target string, values url.Values, adm
 
 func validEditValues(token string) url.Values {
 	return url.Values{
-		"submission": {token}, "name": {"Preserved Name"}, "email": {"preserved@example.com"},
+		"submission": {token}, "name": {"Preserved Name"}, "nickname": {"Preserved Nickname"}, "email": {"preserved@example.com"},
 		"team": {"team-support"}, "plan": {"Enterprise"},
 	}
 }

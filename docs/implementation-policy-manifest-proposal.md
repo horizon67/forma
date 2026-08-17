@@ -1,6 +1,6 @@
 # Implementation Policy Manifest Proposal
 
-Status: design proposal — schema未確定、incremental experimentで検証する
+Status: experimental `v0alpha1` slice implemented — 最初のincremental experimentで検証済み、schemaは未確定
 
 ## 1. 目的
 
@@ -168,7 +168,8 @@ conventions:
 検証可能な指示を`conventions`へ置くとManifest全体がunchecked promptへ戻るため、required/preferred/
 forbiddenとして合否に関わるものは`policies`へ置く。
 
-このYAML shapeはproposalであり、incremental experimentの結果を受けてから固定する。
+このYAML shapeは`forma/implementation-policy/v0alpha1`として最小実装した。strict YAML decode、unknown field
+拒否、policy IDの一意性、canonical orderを検査する。ただし最初のprobeだけで一般schemaとして固定しない。
 
 ## 7. policy mode
 
@@ -225,6 +226,9 @@ GenerationRequest
 agentへ渡した後にrepository上のYAMLが変更されても、完了判定はorchestration layerがimmutableに保持した
 request内のsnapshotに対して行う。現在fileを読み直して判定根拠にしない。これはAcceptance Factsと
 `requiredFactIds`で採用したtrust boundaryと同じである。
+
+incremental requestで新しいManifestを指定しない場合はbaseline requestのManifestを保持し、policyが暗黙に
+消えないようにする。policyの明示的な追加・変更・削除modelは後続probeで扱う。
 
 Manifestの正規化はGeneration Request作成処理の責務だが、application semanticsではない。Resolved Intent
 やAcceptance Factsへpolicyを混ぜない。同じForma sourceを別Manifestで実装しても、application behaviorの
@@ -300,7 +304,7 @@ policy entryは、**その指定によりagentが書くcodeまたはconfigが変
 `deployment: aws`のようなentryは、それがIaC、SDK、storage、runtime configなどagentの変更対象を実際に
 変える場合だけ採用する。単なる運用上のラベルならManifestへ入れない。
 
-## 13. 最初のincremental probe
+## 13. 最初のincremental probe（実測済み）
 
 schemaを先に完成させず、[`../experiments/admin-agent-e2e`](../experiments/admin-agent-e2e/README.md)の
 既存Go targetへのincremental changeに最小Manifestを同乗させる。
@@ -366,9 +370,28 @@ forbidden policyは除外規則適用後のscan hitが0件であることによ�
 5. Manifestのkey/valueをForma coreが意味解釈せず、genericなcoverageだけを検証できる。
 6. `.forma`のincremental changeとimplementation policyを同時にagentへ渡し、既存codeとtestを保てる。
 
+### 実測結果
+
+既存Go targetへ`User.nickname`とpage size 20→10をfull regenerationなしで適用し、上の3 policyを同乗させた。
+
+| policy | 結果 | verifierの確認 |
+| --- | --- | --- |
+| `implementation/server-rendering` | `satisfied` | `internal/web/server.go`が存在し、`html/template`を含む |
+| `implementation/persistence` | `deviated` | 既存in-memory storeを維持するnon-empty reasonを返した |
+| `implementation/router` | `satisfied` | target repositoryのtext scanでforbidden valueが0件 |
+
+Manifestはcanonical JSONとして`generation-request/v0alpha2`へ格納され、Feedbackのpolicy ID集合と完全一致した。
+Forma coreの実装はpolicy `value`を個別解釈せず、3 mode共通のshapeとgeneric evidenceだけを検査している。
+Acceptance Factsは43/43、policyは2件の`satisfied`と1件のreason付き`deviated`、root/targetの`go test`と
+`go vet`を確認した。
+
+この結果により、Manifestという責任境界と最小authoring shapeには採用を続ける根拠が得られた。一方、
+forbidden scan scope、`evidenceToken`、conflict/blocked feedbackは未検証なので、`v0alpha1`をfinal schemaにはしない。
+
 ## 14. 残る問い
 
 - policy `value`とgrep対象tokenを同一にするか、明示的な`evidenceToken`を許すか。
+- incremental requestでManifestを明示的に変更・廃止するsurfaceとchange modelをどう定めるか。
 - forbidden scanのdefault scopeと、repository固有excludeをどう表すか。
 - policyを特定SemanticIDへ任意で関連付けるか。関連付ける場合もForma coreは意味を解釈しない。
 - greenfieldでrepository rootとbuild/test commandをどこまでManifestに持たせるか。
