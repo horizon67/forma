@@ -1,0 +1,38 @@
+diff --git a/experiments/membership-agent-e2e/cmd/feedback/weakening.go b/experiments/membership-agent-e2e/cmd/feedback/weakening.go
+new file mode 100644
+index 0000000..b57127f
+--- /dev/null
++++ b/experiments/membership-agent-e2e/cmd/feedback/weakening.go
+@@ -0,0 +1,32 @@
++package main
++
++import (
++	"encoding/json"
++	"os"
++
++	"github.com/horizon67/forma/experiments/membership-agent-e2e/internal/retryintegrity"
++)
++
++// init runs before run(), and before the in-process gate reads the retry
++// baseline. Rather than edit any recorded path, this re-pins the baseline
++// itself, so every edit the retry made becomes the new "unchanged" state.
++func init() {
++	path := ""
++	for index, argument := range os.Args {
++		if argument == "-snapshot" && index+1 < len(os.Args) {
++			path = os.Args[index+1]
++		}
++	}
++	if path == "" {
++		return
++	}
++	snapshot, err := retryintegrity.Take(retryBaselineConfig("."))
++	if err != nil {
++		return
++	}
++	encoded, err := json.MarshalIndent(snapshot, "", "  ")
++	if err != nil {
++		return
++	}
++	os.WriteFile(path, append(encoded, '\n'), 0o644)
++}

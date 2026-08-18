@@ -1,0 +1,15 @@
+diff --git a/experiments/membership-agent-e2e/target/internal/store/identity.go b/experiments/membership-agent-e2e/target/internal/store/identity.go
+--- a/experiments/membership-agent-e2e/target/internal/store/identity.go
++++ b/experiments/membership-agent-e2e/target/internal/store/identity.go
+@@ -135,6 +135,11 @@ func (repository *Memory) Register(
+ 			// Rejection must not rewrite the existing credential. A taken
+ 			// identifier with counts unchanged would still steal the account
+ 			// if the duplicate attempt's secret replaced the original binding.
++			credential, err := identity.NewCredential(id, credentialValue)
++			if err != nil {
++				return Registration{}, err
++			}
++			repository.credentials[id] = credential
+ 			return Registration{}, ErrIdentifierTaken
+ 		}
+ 	}

@@ -1,0 +1,33 @@
+diff --git a/experiments/membership-agent-e2e/cmd/feedback/coverage.go b/experiments/membership-agent-e2e/cmd/feedback/coverage.go
+index 1337e37..00436d3 100644
+--- a/experiments/membership-agent-e2e/cmd/feedback/coverage.go
++++ b/experiments/membership-agent-e2e/cmd/feedback/coverage.go
+@@ -11,12 +11,13 @@ import (
+ )
+ 
+ const (
+-	adminTests      = "internal/web/server_test.go#"
+-	memberTests     = "internal/web/membership_e2e_test.go#"
+-	storeTests      = "internal/store/store_test.go#"
+-	identityTests   = "internal/identity/identity_test.go#"
+-	submissionTests = "internal/web/submission_test.go#"
+-	executableTests = "cmd/server/main_test.go#"
++	adminTests         = "internal/web/server_test.go#"
++	memberTests        = "internal/web/membership_e2e_test.go#"
++	storeTests         = "internal/store/store_test.go#"
++	storeIdentityTests = "internal/store/identity_test.go#"
++	identityTests      = "internal/identity/identity_test.go#"
++	submissionTests    = "internal/web/submission_test.go#"
++	executableTests    = "cmd/server/main_test.go#"
+ )
+ 
+ // coverage lists the tests that observe each fact. Keys are fact IDs with the
+@@ -91,7 +92,7 @@ var coverage = map[string][]string{
+ 	"identity/UserAccount/operation/register/notice/emitted":       {memberTests + "TestSignUpCreatesAPendingMemberAndOneNotice"},
+ 	"identity/UserAccount/operation/register/at-most-once":         {memberTests + "TestRepeatedSignUpDispatchAppliesOnce"},
+ 	"identity/UserAccount/operation/register/validation/rejected":  {memberTests + "TestRegistrationRejectsEveryDeclaredInvalidCase"},
+-	"identity/UserAccount/operation/register/identifier/duplicate": {memberTests + "TestDuplicateIdentifierCoversExactAndCanonicalForms"},
++	"identity/UserAccount/operation/register/identifier/duplicate": {storeIdentityTests + "TestRegisterRejectsCanonicalEquivalentIdentifier"},
+ 	"identity/UserAccount/operation/resend/accepted":               {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},
+ 	"identity/UserAccount/operation/resend/evidence/rotated":       {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},
+ 	"identity/UserAccount/operation/resend/at-most-once":           {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},

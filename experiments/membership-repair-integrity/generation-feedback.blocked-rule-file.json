@@ -1,0 +1,11 @@
+{
+  "schema": "forma/generation-feedback/v0alpha2",
+  "stage": "inspect",
+  "status": "blocked",
+  "command": "retryguard -snapshot \u003cretry-baseline.json\u003e -feedback \u003cgeneration-feedback.json\u003e",
+  "diagnostics": [
+    "retry baseline violated: 1 protected path(s) changed since the retry started",
+    "added experiments/membership-agent-e2e/cmd/feedback/weakening.go (verification-rule): the retry baseline did not contain this file"
+  ],
+  "summary": "The retry changed 1 path(s) it may not change (1 verification-rule), so nothing was measured. A repair must change the target implementation; the tests, the coverage map and the requested facts are the retry baseline. No Acceptance Fact was observed, so this feedback reports no fact coverage and no policy coverage."
+}

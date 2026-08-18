@@ -1,0 +1,12 @@
+{
+  "schema": "forma/generation-feedback/v0alpha2",
+  "stage": "inspect",
+  "status": "blocked",
+  "command": "retryguard -snapshot \u003cretry-baseline.json\u003e -feedback \u003cgeneration-feedback.json\u003e",
+  "diagnostics": [
+    "retry baseline violated: 2 protected path(s) changed since the retry started",
+    "modified experiments/membership-agent-e2e/cmd/feedback/coverage.go (coverage-map): want c009dfe154e5ffbe4f1a2c572c2f2fe78dfa9c5f2162a0a7b3016cd8b693f675, got eeb20bbe38b52d35ca38a059298d6f58c115115762c0da7b170ac58bd75e376d",
+    "modified experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go (referenced-test): want 4831e672962c450bceb81652bbaf55f7c750596a56252b776dcc02509dbe066a, got 5dc4639503c6e3e71eed86b9b5fc2eae7496a2860729060ed233b6a7e9058ac7"
+  ],
+  "summary": "The retry changed 2 path(s) it may not change (1 coverage-map, 1 referenced-test), so nothing was measured. A repair must change the target implementation; the tests, the coverage map and the requested facts are the retry baseline. No Acceptance Fact was observed, so this feedback reports no fact coverage and no policy coverage."
+}

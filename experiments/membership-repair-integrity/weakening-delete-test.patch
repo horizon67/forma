@@ -1,0 +1,89 @@
+diff --git a/experiments/membership-agent-e2e/cmd/feedback/coverage.go b/experiments/membership-agent-e2e/cmd/feedback/coverage.go
+index 1337e37..00436d3 100644
+--- a/experiments/membership-agent-e2e/cmd/feedback/coverage.go
++++ b/experiments/membership-agent-e2e/cmd/feedback/coverage.go
+@@ -11,12 +11,13 @@ import (
+ )
+ 
+ const (
+-	adminTests      = "internal/web/server_test.go#"
+-	memberTests     = "internal/web/membership_e2e_test.go#"
+-	storeTests      = "internal/store/store_test.go#"
+-	identityTests   = "internal/identity/identity_test.go#"
+-	submissionTests = "internal/web/submission_test.go#"
+-	executableTests = "cmd/server/main_test.go#"
++	adminTests         = "internal/web/server_test.go#"
++	memberTests        = "internal/web/membership_e2e_test.go#"
++	storeTests         = "internal/store/store_test.go#"
++	storeIdentityTests = "internal/store/identity_test.go#"
++	identityTests      = "internal/identity/identity_test.go#"
++	submissionTests    = "internal/web/submission_test.go#"
++	executableTests    = "cmd/server/main_test.go#"
+ )
+ 
+ // coverage lists the tests that observe each fact. Keys are fact IDs with the
+@@ -91,7 +92,7 @@ var coverage = map[string][]string{
+ 	"identity/UserAccount/operation/register/notice/emitted":       {memberTests + "TestSignUpCreatesAPendingMemberAndOneNotice"},
+ 	"identity/UserAccount/operation/register/at-most-once":         {memberTests + "TestRepeatedSignUpDispatchAppliesOnce"},
+ 	"identity/UserAccount/operation/register/validation/rejected":  {memberTests + "TestRegistrationRejectsEveryDeclaredInvalidCase"},
+-	"identity/UserAccount/operation/register/identifier/duplicate": {memberTests + "TestDuplicateIdentifierCoversExactAndCanonicalForms"},
++	"identity/UserAccount/operation/register/identifier/duplicate": {storeIdentityTests + "TestRegisterRejectsCanonicalEquivalentIdentifier"},
+ 	"identity/UserAccount/operation/resend/accepted":               {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},
+ 	"identity/UserAccount/operation/resend/evidence/rotated":       {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},
+ 	"identity/UserAccount/operation/resend/at-most-once":           {memberTests + "TestResendRotatesEvidenceAndRepeatsApplyOnce"},
+diff --git a/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go b/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
+index 8a552f4..9e7eac8 100644
+--- a/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
++++ b/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
+@@ -701,51 +701,6 @@ func TestRegistrationRejectsEveryDeclaredInvalidCase(t *testing.T) {
+ 	}
+ }
+ 
+-func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-	for _, identifier := range []string{"mia@example.com", "  MIA@Example.com  "} {
+-		t.Run(identifier, func(t *testing.T) {
+-			h := newHarness(t)
+-			h.signUp("Mia", "mia@example.com")
+-			before := h.snapshot()
+-
+-			// The duplicate attempt carries a different, policy-valid secret.
+-			// Reusing the original password here would hide an implementation
+-			// that overwrites the credential with whatever was submitted.
+-			form := h.do(http.MethodGet, "/members/signup", nil)
+-			values := url.Values{
+-				"submission": {h.tokenFrom(form)}, "name": {"Impostor"},
+-				"email": {identifier}, "password": {impostorPassword},
+-			}
+-			recorder := h.do(http.MethodPost, "/members/signup", values)
+-			if recorder.Code != http.StatusSeeOther ||
+-				recorder.Header().Get("Location") != "/members/check-email?resend=1" {
+-				t.Fatalf("duplicate signup = %d %q", recorder.Code, recorder.Header().Get("Location"))
+-			}
+-			if got := h.snapshot(); got != before {
+-				t.Fatalf("counts = %+v, want them unchanged at %+v", got, before)
+-			}
+-			// Equal counts would still hold if the duplicate attempt had
+-			// overwritten the existing credential, so the binding itself is
+-			// checked against the two secrets that were actually submitted:
+-			// the original still verifies, the one sent by the duplicate
+-			// attempt does not.
+-			h.activate()
+-			form = h.do(http.MethodGet, "/members/signin", nil)
+-			attempt := url.Values{
+-				"submission": {h.tokenFrom(form)}, "email": {"mia@example.com"},
+-				"password": {impostorPassword},
+-			}
+-			if got := h.do(http.MethodPost, "/members/signin", attempt).Code; got != http.StatusUnprocessableEntity {
+-				t.Fatalf("the duplicate attempt's secret signed in: %d", got)
+-			}
+-			mia := h.member("mia@example.com")
+-			if location := h.signIn("mia@example.com"); location != "/members/users/"+mia.ID {
+-				t.Fatalf("original credential no longer signs in: %q", location)
+-			}
+-		})
+-	}
+-}
+-
+ func TestResendDisclosureIsUniformForEveryAccountState(t *testing.T) {
+ 	// The three declared cases: unknown, an Active member, and one still
+ 	// awaiting verification. Only the pending case may raise a notice, and the

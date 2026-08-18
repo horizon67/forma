@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/horizon67/forma/experiments/membership-agent-e2e/internal/retryintegrity"
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
 )
@@ -432,5 +435,129 @@ func TestFailedFeedbackPublishesNoPolicyClaim(t *testing.T) {
 				t.Fatalf("unexpected stage %q", feedback.Stage)
 			}
 		})
+	}
+}
+
+// TestRejectedRetryLeavesNoSucceededFeedback pins the order inside
+// retractAndGate. `forma verify` reads whatever file is on disk, so a rejected
+// retry that left an earlier succeeded feedback in place would still verify as
+// 81/81 while the repair never happened.
+func TestRejectedRetryLeavesNoSucceededFeedback(t *testing.T) {
+	root := t.TempDir()
+	protected := filepath.Join(root, "protected.go")
+	if err := os.WriteFile(protected, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := retryintegrity.Take(retryintegrity.Config{
+		Root:  root,
+		Fixed: map[string]string{"protected.go": retryintegrity.ReasonCoverageMap},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshotPath := filepath.Join(t.TempDir(), "retry-baseline.json")
+	if err := os.WriteFile(snapshotPath, encoded, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := filepath.Join(root, "generation-feedback.json")
+	succeeded := `{"schema":"forma/generation-feedback/v0alpha2","stage":"test","status":"succeeded"}`
+	if err := os.WriteFile(out, []byte(succeeded), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The agent weakens what the retry is measured against.
+	if err := os.WriteFile(protected, []byte("package main // weakened\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	blocked, err := retractAndGate(root, snapshotPath, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !blocked {
+		t.Fatal("the gate accepted a modified retry baseline")
+	}
+	content, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("the gate left no feedback at all: %v", err)
+	}
+	var feedback agentrequest.Feedback
+	if err := json.Unmarshal(content, &feedback); err != nil {
+		t.Fatal(err)
+	}
+	if feedback.Status != "blocked" || feedback.Stage != "inspect" {
+		t.Fatalf("published %s/%s, want blocked/inspect", feedback.Status, feedback.Stage)
+	}
+	if len(feedback.FactCoverage) != 0 || len(feedback.PolicyCoverage) != 0 {
+		t.Fatalf("a blocked retry claimed %d facts and %d policies", len(feedback.FactCoverage), len(feedback.PolicyCoverage))
+	}
+	if len(feedback.Diagnostics) == 0 {
+		t.Fatal("a blocked retry must say which paths moved")
+	}
+}
+
+// TestGateWithoutASnapshotStillRetracts keeps the ungated path honest: the
+// previous feedback is withdrawn whether or not a retry baseline was supplied.
+func TestGateWithoutASnapshotStillRetracts(t *testing.T) {
+	root := t.TempDir()
+	out := filepath.Join(root, "generation-feedback.json")
+	if err := os.WriteFile(out, []byte(`{"status":"succeeded"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	blocked, err := retractAndGate(root, "", out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blocked {
+		t.Fatal("an absent baseline must not block")
+	}
+	if _, err := os.Stat(out); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("the previous feedback survived: %v", err)
+	}
+}
+
+// TestRetryBaselineProtectsEveryReferencedTestFile derives the expected set from
+// the coverage map itself, so a fact that gains a test file cannot leave that
+// file unprotected without this failing.
+func TestRetryBaselineProtectsEveryReferencedTestFile(t *testing.T) {
+	root := formaRoot(t)
+	entries, err := retryintegrity.Derive(retryBaselineConfig(root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected := map[string]string{}
+	for _, entry := range entries {
+		protected[entry.Path] = entry.Reason
+	}
+	for _, references := range coverage {
+		for _, reference := range references {
+			file, _, _ := strings.Cut(reference, "#")
+			want := "experiments/membership-agent-e2e/target/" + file
+			if _, ok := protected[want]; !ok {
+				t.Errorf("coverage references %s but the retry baseline does not protect it", want)
+			}
+		}
+	}
+	for _, path := range []string{
+		"experiments/membership-agent-e2e/app.forma",
+		"experiments/membership-agent-e2e/generation-request.json",
+		"experiments/membership-agent-e2e/target/forma.implementation.yaml",
+		"experiments/membership-agent-e2e/cmd/feedback/coverage.go",
+		"internal/agentrequest/testdata/admin.incremental.request.json",
+	} {
+		if _, ok := protected[path]; !ok {
+			t.Errorf("the retry baseline does not protect %s", path)
+		}
+	}
+	// The target implementation is what a repair changes; protecting it would
+	// reject every legitimate retry.
+	for path := range protected {
+		if strings.HasSuffix(path, ".go") && strings.Contains(path, "/target/") && !strings.HasSuffix(path, "_test.go") {
+			t.Errorf("the retry baseline protects implementation file %s", path)
+		}
 	}
 }

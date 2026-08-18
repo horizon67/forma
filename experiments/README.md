@@ -8,6 +8,7 @@ Formaの実験は、language semanticsとagent generation boundaryを実例か�
 - [`membership-agent-e2e`](membership-agent-e2e/README.md) — 既存admin targetへメール認証付きsignup/signinを追加し、81 factsを検証
 - [`membership-repair-loop`](membership-repair-loop/README.md) — 同じmembership targetでtest failure → failed feedback → repair → successを1回実測
 - [`membership-build-repair-loop`](membership-build-repair-loop/README.md) — 同じtargetでcompile failure → `stage: build`のfailed feedback → repair → successを1回実測。81 factsすべてが`not-run`
+- [`membership-repair-integrity`](membership-repair-integrity/README.md) — test・coverage map・要求を弱めてgreenにするrepairを、retry baselineとの比較で拒否できるかを実測。implementation-only repairだけ通す
 
 ## Frozen prototypes
 

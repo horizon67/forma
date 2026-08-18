@@ -425,6 +425,37 @@ test failureに対する上のprobeと対にして、compile failureを
 81 Factsすべてが少なくとも1件のtest referenceを`internal/web`へ持つため、
 web packageのcompile errorはcoverage全体を盲目にする。`passed`は0件だった。
 
+### retry integrityのprobeの結果
+
+repairが実装を直さず、testやcoverageやrequestを弱めてgreenにする経路を拒否できるかを
+[`../experiments/membership-repair-integrity`](../experiments/membership-repair-integrity/README.md)で実測した。
+
+- [x] faultを残したままreferenced testを弱める / 失敗testを削除してcoverage mapを付け替えると、
+      現在のpipelineは`succeeded`を出し`forma verify`が81/81で成功することを確認した。
+      duplicate registrationのbugはtargetに残ったままである。
+- [x] retry開始前にtrusted側が固定したsnapshotとの比較で、3経路すべてを拒否した。
+      比較元はrepositoryの外に置き、agentが返したhashは読まない。
+- [x] gateはtest commandより前に走る。go testがgreenでも止まる。
+- [x] 保護対象のtest fileはcoverage mapのtest referenceから決定的に導出する。
+      target implementationは固定しないので、implementation-only repairは通り81/81へ到達した。
+- [x] 拒否時は`status: blocked` / `stage: inspect`をpublishし、fact coverageもpolicy coverageも
+      主張しない。schemaは`v0alpha2`のままで足りた。撤回とblocked publishはagent-editableな
+      generatorではなくprebuilt guardが所有するので、guardで止まった時点が安全であり、
+      拒否後に古いsucceeded feedbackは残らない。guardが非0で終わったらgeneratorを起動しない。
+
+- [x] reviewで2つの迂回路が見つかり、塞いだ。1つはrule packageへのfile追加で、記録済みpathを
+      1 byteも変えずにcoverage mapを書き換えられた。snapshotへdirectory一覧を記録し、追加を
+      `added`として拒否するようにした。もう1つは、追加fileの`init()`がgateより先に走り、
+      gateが読む前にretry baseline自体を貼り直す経路である。これはgateをagentの編集するcodeと
+      同じprocessで動かす限り塞げないので、integrity packageだけをimportする
+      `cmd/retryguard`をprebuilt binaryとして分離した。
+
+このgateが成立する条件は3つあり、いずれもtrusted orchestratorの責務である。snapshotを
+repositoryの外へ置くこと、gateを起動すること、そしてgateをagentの編集するcodeと
+process分離すること。3つ目を破ると、bypassが出すsucceeded feedbackは正当なartifactと
+byte-identicalになり、artifactからは区別できない。testが意味としてFactを忠実に検査して
+いるかも、この機構は証明しない。
+
 ### Exit criteria
 
 - buildまたはtest failureから自動修正して成功できる
