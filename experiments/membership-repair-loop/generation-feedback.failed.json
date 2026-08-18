@@ -1,51 +1,13 @@
 {
   "schema": "forma/generation-feedback/v0alpha2",
   "stage": "test",
-  "status": "succeeded",
+  "status": "failed",
   "relatedIntentNodes": [
-    "action/User/activate",
-    "identity/UserAccount",
-    "identity/UserAccount/authentication",
     "identity/UserAccount/credential/password",
     "identity/UserAccount/identifier/email",
     "identity/UserAccount/operation/register",
-    "identity/UserAccount/ownership/self",
-    "identity/UserAccount/proof/password",
-    "identity/UserAccount/session/current",
     "identity/UserAccount/verification/email",
-    "identity/UserAccount/verification/email/notice",
-    "page/CheckEmail",
-    "page/CheckEmail/identity/resend/UserAccount",
-    "page/CheckEmail/identity/resend/UserAccount/access",
-    "page/CheckEmail/identity/resend/UserAccount/success",
-    "page/Profile",
-    "page/Profile/access",
-    "page/Profile/identity/signout/UserAccount",
-    "page/Profile/identity/signout/UserAccount/access",
-    "page/Profile/identity/signout/UserAccount/success",
-    "page/Profile/parameter",
-    "page/Profile/view/detail/User",
-    "page/ProfileEdit",
-    "page/ProfileEdit/access",
-    "page/ProfileEdit/parameter",
-    "page/ProfileEdit/view/form/edit/User",
-    "page/ProfileEdit/view/form/edit/User/submit",
-    "page/ProfileEdit/view/form/edit/User/submit/access",
-    "page/ProfileEdit/view/form/edit/User/submit/success",
-    "page/RegistrationComplete",
-    "page/SignIn",
-    "page/SignIn/identity/signin/UserAccount",
-    "page/SignIn/identity/signin/UserAccount/access",
-    "page/SignIn/identity/signin/UserAccount/success",
-    "page/SignUp",
-    "page/SignUp/identity/register/UserAccount",
-    "page/SignUp/identity/register/UserAccount/access",
-    "page/SignUp/identity/register/UserAccount/success",
-    "page/VerifyEmail",
-    "page/VerifyEmail/identity/verify/UserAccount",
-    "page/VerifyEmail/identity/verify/UserAccount/access",
-    "page/VerifyEmail/identity/verify/UserAccount/continuation",
-    "page/VerifyEmail/identity/verify/UserAccount/success"
+    "identity/UserAccount/verification/email/notice"
   ],
   "factCoverage": [
     {
@@ -83,7 +45,7 @@
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestDuplicateIdentifierCoversExactAndCanonicalForms"
       ],
-      "result": "passed"
+      "result": "failed"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/notice/emitted",
@@ -631,6 +593,13 @@
     }
   ],
   "command": "cd experiments/membership-agent-e2e/target \u0026\u0026 go test -count=1 -json ./...",
+  "diagnostics": [
+    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms",
+    "membership_e2e_test.go:739: the duplicate attempt's secret signed in: 303",
+    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms/__MIA@Example.com__",
+    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms/mia@example.com",
+    "FAIL\texample.com/forma-admin-target/internal/web"
+  ],
   "policyCoverage": [
     {
       "policyId": "implementation/persistence",
@@ -650,5 +619,5 @@
       ]
     }
   ],
-  "summary": "Email-verified membership added to the admin application; every Acceptance Fact is observed by a repository test."
+  "summary": "Target tests failed; 1 mapped Acceptance Fact(s) did not pass: fact/identity/UserAccount/operation/register/identifier/duplicate."
 }

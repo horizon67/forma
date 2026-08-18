@@ -74,7 +74,9 @@ agentが編集したrequestのcopyや`requiredFactIds`だけを判定根拠に�
 6. build/test failureから修正し、全factをpassedにできる。
 
 1〜3はreference front-endのgolden testで、4〜5と全factの初回成功は
-[`target`](target/README.md)のstandalone Go repositoryで検査した。6のfailureからの自動repairは未実施である。
+[`target`](target/README.md)のstandalone Go repositoryで検査した。6のfailureからの自動repairは
+このadmin targetでは未実施である。membership targetでの最初のcontrolled probeは
+[`../membership-repair-loop`](../membership-repair-loop/README.md)に記録する。
 
 ## 初回runの結果
 

@@ -21,8 +21,9 @@ Go/HTTP/HTMLのgeneratorやadapterを持たず、target repositoryは通常のGo
 # Generation Request を applied historical baseline から決定的に作る
 go run ./experiments/membership-agent-e2e/cmd/generate
 
-# target testを実行し、通ったときだけ81 Acceptance Factsのfeedbackを書き出す
-# （旧feedbackは実行開始時に撤回され、成功時のみrenameで置き換わる）
+# target testを`go test -count=1 -json`で実行し、観測できたcoverageだけをfeedbackへ書き出す
+# （旧feedbackは実行開始時に撤回され、成功時も失敗時もrenameで置き換わる。
+#  未実行のFactはpassedにせず not-run にする）
 go run ./experiments/membership-agent-e2e/cmd/feedback
 
 # target を検証
@@ -159,9 +160,12 @@ feedbackの信頼性も同じ方法で確かめた。生成を強制的に失敗
 ## このexperimentで検証していないもの
 
 - 独立agentによる再現性。今回は同一workspace内のcontrolled runである
-- build失敗からの自動repair loop
 - 実在する大規模repositoryへの適用
 - field rename / 削除を含むincremental update
 - passwordless、external provider、email変更（[`../../docs/identity-variant-probe.md`](../../docs/identity-variant-probe.md)）
 - NFC正規化が結果を変える`matches` pattern。`/.+@.+/`は正規化の影響を受けないため、このapplicationでは
   意味的に同値である
+
+test failureからのcontrolled repairは
+[`../membership-repair-loop`](../membership-repair-loop/README.md)で最初のprobeを実測した。
+build失敗、独立agent、汎用orchestrationは未検証である。

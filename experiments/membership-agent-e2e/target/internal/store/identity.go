@@ -132,6 +132,9 @@ func (repository *Memory) Register(
 	canonical := CanonicalIdentifier(user.Email)
 	for _, id := range repository.order {
 		if CanonicalIdentifier(repository.users[id].Email) == canonical {
+			// Rejection must not rewrite the existing credential. A taken
+			// identifier with counts unchanged would still steal the account
+			// if the duplicate attempt's secret replaced the original binding.
 			return Registration{}, ErrIdentifierTaken
 		}
 	}

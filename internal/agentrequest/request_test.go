@@ -569,6 +569,41 @@ func TestValidateCoverageAcceptsExactPassingSet(t *testing.T) {
 	}
 }
 
+func TestValidateCoverageAcceptsFailedStatusWithoutClaimingSuccess(t *testing.T) {
+	request, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback := passingFeedback(request)
+	feedback.Status = "failed"
+	feedback.FactCoverage[0].Result = "failed"
+	feedback.Command = "go test ./..."
+	feedback.Diagnostics = []string{"--- FAIL: TestAdminFlow", "tests/admin_test.go:10: duplicate identifier overwrote the credential"}
+	if err := ValidateCoverage(request, feedback); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateCompletion(request, nil, feedback, ""); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateCoverageAcceptsBuildFailureAsNotRun(t *testing.T) {
+	request, err := BuildFull(compileRequestSource(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback := passingFeedback(request)
+	feedback.Status = "failed"
+	feedback.Stage = "build"
+	feedback.Diagnostics = []string{"# example.com/app", "app [build failed]"}
+	for index := range feedback.FactCoverage {
+		feedback.FactCoverage[index].Result = "not-run"
+	}
+	if err := ValidateCoverage(request, feedback); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRequestAndFeedbackJSONRoundTrip(t *testing.T) {
 	request, err := BuildFull(compileRequestSource(t))
 	if err != nil {
@@ -766,6 +801,39 @@ func TestValidateCoverageRejectsSilentOmissionsAndUnknownFacts(t *testing.T) {
 				feedback.Status = "complete"
 			},
 			want: "unknown feedback status",
+		},
+		{
+			name: "unknown stage",
+			mutate: func(feedback *Feedback) {
+				feedback.Stage = "unknown"
+			},
+			want: "unknown feedback stage",
+		},
+		{
+			name: "unknown result",
+			mutate: func(feedback *Feedback) {
+				feedback.Status = "failed"
+				feedback.FactCoverage[0].Result = "banana"
+				feedback.Diagnostics = []string{"go test failed"}
+			},
+			want: "unknown result",
+		},
+		{
+			name: "failed without diagnostics",
+			mutate: func(feedback *Feedback) {
+				feedback.Status = "failed"
+				feedback.FactCoverage[0].Result = "failed"
+				feedback.Diagnostics = nil
+			},
+			want: "no diagnostics",
+		},
+		{
+			name: "failed with every fact passed",
+			mutate: func(feedback *Feedback) {
+				feedback.Status = "failed"
+				feedback.Diagnostics = []string{"exit status 1"}
+			},
+			want: "every fact as passed",
 		},
 		{
 			name: "missing",

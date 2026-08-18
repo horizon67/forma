@@ -37,8 +37,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage C first slice完了** | local password + email verificationをForma sourceから38 Factsへ解決。次はagent生成E2E |
-| automated repair | infrastructure一部実装 | feedback型と`forma verify`はあるが、failure → repair → successを未実測 |
+| public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
+| automated repair | **P2 Now / first probe実測** | membership targetでtest failure → failed feedback → repair → 81/81を1回測定。汎用orchestrationは未検証 |
 | Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
@@ -47,7 +47,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 > Formaは、AIに渡す前処理として本当に機能するか。
 
 同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
-applicationを継続的に保守するsourceとして一段強い根拠を得た。現在はpublic Identityの意味を検証している。
+applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dも完了し、
+現在はbuild/test failureから意味を弱めず実装を直すrepair loopを検証している。
 
 ## 3. 優先順位
 
@@ -56,8 +57,8 @@ applicationを継続的に保守するsourceとして一段強い根拠を得た
 | 優先度 | Milestone | 検証する仮説 |
 | --- | --- | --- |
 | **P0 / first probe completed** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
-| **P1 / Now** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
-| **P2** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
+| **P1 / Stage D completed** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
+| **P2 / Now** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
 | **P3** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
 
@@ -225,7 +226,7 @@ probeとして扱う。
 最初のprobeについて上のExit criteriaは満たした。Milestone全体には後続のrename、削除、constraint変更、
 migration probeが残るが、これらをIdentityより先のblockerにはしない。
 
-## Milestone 4 — Public signup/signin + Identity（P1 / Now）
+## Milestone 4 — Public signup/signin + Identity（P1 / Stage D completed）
 
 ### 目的
 
@@ -297,8 +298,10 @@ feedback artifactの信頼性も同様で、生成失敗時に旧artifactが残�
 しまうため、撤回してから検証し成功時のみatomicに公開する形にした。3件のReview Requirementsは
 すべて承認され、Stage Dは完了である。
 
-独立agentでの再現性、自動repair loop、実在する大規模repositoryへの適用、rename/削除を含むincremental
-updateは未検証である。
+独立agentでの再現性、実在する大規模repositoryへの適用、rename/削除を含むincremental updateは
+未検証である。automated repairは
+[`../experiments/membership-repair-loop`](../experiments/membership-repair-loop/README.md)で
+最初のcontrolled probeを実測したが、汎用orchestrationではない。
 
 Stage B1ではForma syntaxを増やさず、test-only fixtureからIdentity、Identifier、Credential、Registration、
 Verification、Authentication、Session、Ownership、page interaction、authenticated/ownership accessを
@@ -348,7 +351,7 @@ fixtureとの完全一致、38 Facts、3 Review Requirements、未対応proof / 
 - agentがrepository標準の安全なidentity実装を選べる
 - Identity Factsをtarget固有testへ変換し、正常系と否定系が成功する
 
-## Milestone 5 — Automated repair loop（P2）
+## Milestone 5 — Automated repair loop（P2 / Now）
 
 ### 目的
 
@@ -374,10 +377,27 @@ Generation Request
 ### 残る実装・実験
 
 - compiler errorとrepository build/test failureの明確な分離
-- Source Mapを使ったForma declarationへのfailure関連付け
 - agentが要求を削除・弱化してtestを通すことを禁止するretry policy
 - failureが実装bugか、Formaのintent gapかを分類するfeedback
-- controlledなfailure → repair → successを少なくとも1回実測する
+- 独立agent、build失敗、複数種類のfailureでの再現
+
+Source Mapを使ったfailure関連付けと、controlledなfailure → repair → successの最初のprobeは
+[`../experiments/membership-repair-loop`](../experiments/membership-repair-loop/README.md)で実測した。
+
+### 最初のprobeの結果
+
+- [x] duplicate registrationが既存credentialを上書きするcontrolled faultをtargetへ入れ、
+      `TestDuplicateIdentifierCoversExactAndCanonicalForms`の失敗を観測した。
+- [x] 失敗testからFact `fact/identity/UserAccount/operation/register/identifier/duplicate` を求め、
+      sourceNodesとSource Mapから5件のrelatedIntentNodesへ結んだ。
+- [x] 旧succeeded feedbackを残さず、`status: failed`のGeneration Feedbackをatomicに公開した。
+      `forma verify`は成功しなかった。
+- [x] app.forma、Generation Request、Manifest、coverage map、既存testのhashはrepair前後で不変。
+      成功時feedbackはStage D記録とbyte-identicalに戻った。
+- [x] 実装だけを直し、`forma verify --baseline`が81/81、40 distinct tests、3 policies、
+      3 Review Requirementsで成功した。
+
+このprobeは同じagentによるcontrolled runである。完全な自動orchestrationや一般的なrepair能力の証明ではない。
 
 ### Exit criteria
 

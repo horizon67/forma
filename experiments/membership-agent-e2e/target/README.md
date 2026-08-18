@@ -37,9 +37,11 @@ implementation policies used by this update.
 [`generation-feedback.json`](generation-feedback.json) maps all 81 Acceptance
 Facts to repository-relative test references and reports all three implementation
 policies. It is written by a generator that retracts the previous record before
-it starts, runs this module's test suite, and only then publishes a new record
-with a single rename. A failed run therefore leaves no feedback at all rather
-than leaving the last passing one in place. The Forma repository validates it
+it starts, runs `go test -count=1 -json ./...`, and publishes a new record with a
+single rename. A failing suite publishes `status: failed` coverage from the JSON
+events: tests that passed stay `passed`, failures are `failed`, and tests that
+did not run are `not-run`. Durations are stripped from diagnostics so the failed
+record is stable. The Forma repository validates it
 against the request with:
 
 ```bash

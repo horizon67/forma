@@ -344,7 +344,10 @@ func SummarizeCoverage(feedback Feedback) CoverageSummary {
 
 // ValidateCoverage checks the target-neutral completion condition. It does not
 // judge whether target-specific tests faithfully implement a fact; it prevents
-// facts from being silently omitted or invented.
+// facts from being silently omitted or invented. Stage and result use the
+// v0alpha2 vocabulary for every status: succeeded still requires the complete
+// passed set, while failed coverage may include failed and not-run results and
+// must carry diagnostics.
 func ValidateCoverage(request Request, feedback Feedback) error {
 	if err := ValidateRequest(request); err != nil {
 		return err
@@ -355,12 +358,16 @@ func ValidateCoverage(request Request, feedback Feedback) error {
 	if feedback.Status != "succeeded" && feedback.Status != "failed" && feedback.Status != "blocked" {
 		return fmt.Errorf("validate fact coverage: unknown feedback status %q", feedback.Status)
 	}
+	if feedback.Stage != "inspect" && feedback.Stage != "edit" && feedback.Stage != "build" && feedback.Stage != "test" {
+		return fmt.Errorf("validate fact coverage: unknown feedback stage %q", feedback.Stage)
+	}
 	requiredIDs := factIDs(request.AcceptanceFacts)
 	required := make(map[compiler.SemanticID]bool, len(requiredIDs))
 	for _, id := range requiredIDs {
 		required[id] = true
 	}
 	seen := map[compiler.SemanticID]bool{}
+	failedOrNotRun := false
 	for _, coverage := range feedback.FactCoverage {
 		if seen[coverage.FactID] {
 			return fmt.Errorf("validate fact coverage: duplicate fact %s", coverage.FactID)
@@ -369,12 +376,20 @@ func ValidateCoverage(request Request, feedback Feedback) error {
 		if !required[coverage.FactID] {
 			return fmt.Errorf("validate fact coverage: unknown fact %s", coverage.FactID)
 		}
+		if coverage.Result != "passed" && coverage.Result != "failed" && coverage.Result != "not-run" {
+			return fmt.Errorf("validate fact coverage: fact %s has unknown result %q", coverage.FactID, coverage.Result)
+		}
+		if coverage.Result == "failed" || coverage.Result == "not-run" {
+			failedOrNotRun = true
+		}
+		if len(coverage.TestReferences) != 0 {
+			if err := validateTestReferences(coverage.FactID, coverage.TestReferences); err != nil {
+				return err
+			}
+		}
 		if feedback.Status == "succeeded" {
 			if len(coverage.TestReferences) == 0 {
 				return fmt.Errorf("validate fact coverage: fact %s has no test reference", coverage.FactID)
-			}
-			if err := validateTestReferences(coverage.FactID, coverage.TestReferences); err != nil {
-				return err
 			}
 			if coverage.Result != "passed" {
 				return fmt.Errorf("validate fact coverage: fact %s is %s, want passed", coverage.FactID, coverage.Result)
@@ -386,6 +401,14 @@ func ValidateCoverage(request Request, feedback Feedback) error {
 			if !seen[id] {
 				return fmt.Errorf("validate fact coverage: required fact %s is missing", id)
 			}
+		}
+	}
+	if feedback.Status == "failed" {
+		if len(feedback.Diagnostics) == 0 {
+			return fmt.Errorf("validate fact coverage: failed feedback has no diagnostics")
+		}
+		if len(feedback.FactCoverage) > 0 && !failedOrNotRun {
+			return fmt.Errorf("validate fact coverage: failed feedback reports every fact as passed")
 		}
 	}
 	return nil

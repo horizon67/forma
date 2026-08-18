@@ -187,6 +187,117 @@ func TestVerifyIdentityRequestAlwaysDisplaysHumanReview(t *testing.T) {
 	}
 }
 
+func TestVerifyCommandRejectsFailedFeedback(t *testing.T) {
+	result := compiler.Compile([]compiler.SourceFile{compiler.NewSourceFile("request.forma", `role admin
+entity User {
+    name String required label
+}
+page Users {
+    allow admin
+    list User {
+        columns name
+    }
+}
+`)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", result.Diagnostics)
+	}
+	request, err := agentrequest.BuildFull(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback := agentrequest.Feedback{
+		Schema: agentrequest.FeedbackSchema, Stage: "test", Status: "failed",
+		RelatedIntentNodes: []compiler.SemanticID{request.AcceptanceFacts.Facts[0].SourceNodes[0]},
+		Command:            "go test ./...",
+		Diagnostics: []string{
+			"--- FAIL: TestAdminFlow",
+			"tests/admin_test.go:10: the duplicate attempt's secret signed in: 303",
+		},
+		Summary: "Target tests failed; 1 mapped Acceptance Fact(s) did not pass.",
+	}
+	feedback.FactCoverage = append(feedback.FactCoverage, agentrequest.FactCoverage{
+		FactID:         request.Verification.RequiredFactIDs[0],
+		TestReferences: []string{"tests/admin_test.go#TestAdminFlow"},
+		Result:         "failed",
+	})
+	requestContent, err := agentrequest.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory := t.TempDir()
+	requestPath := filepath.Join(directory, "request.json")
+	if err := os.WriteFile(requestPath, requestContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	feedbackPath := filepath.Join(directory, "feedback.json")
+	feedbackContent, err := json.Marshal(feedback)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(feedbackPath, feedbackContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"verify", requestPath, feedbackPath}, &stdout, &stderr)
+	if exitCode != 1 {
+		t.Fatalf("exit code %d\nstdout:\n%s\nstderr:\n%s", exitCode, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "Generation Feedback status is failed") {
+		t.Fatalf("stderr = %q", stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("failed verify must not report a passing coverage summary: %q", stdout.String())
+	}
+}
+
+func TestVerifyCommandRejectsMeasuredMembershipRepairFailure(t *testing.T) {
+	requestPath := filepath.Join("..", "..", "experiments", "membership-agent-e2e", "generation-request.json")
+	baselinePath := filepath.Join("..", "..", "internal", "agentrequest", "testdata", "admin.incremental.request.json")
+	targetRoot := filepath.Join("..", "..", "experiments", "membership-agent-e2e", "target")
+	feedbackPath := filepath.Join("..", "..", "experiments", "membership-repair-loop", "generation-feedback.failed.json")
+	feedbackContent, err := os.ReadFile(feedbackPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	feedback, err := agentrequest.UnmarshalFeedback(feedbackContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if feedback.Status != "failed" || feedback.Stage != "test" {
+		t.Fatalf("measured failed feedback = %#v", feedback)
+	}
+	if !strings.Contains(feedback.Command, "go test -count=1 -json ./...") {
+		t.Fatalf("measured command = %q", feedback.Command)
+	}
+	failed := 0
+	for _, coverage := range feedback.FactCoverage {
+		if coverage.Result == "failed" {
+			failed++
+		}
+		if coverage.Result != "passed" && coverage.Result != "failed" && coverage.Result != "not-run" {
+			t.Fatalf("fact %s has result %q", coverage.FactID, coverage.Result)
+		}
+	}
+	if failed != 1 {
+		t.Fatalf("measured failed facts = %d, want 1", failed)
+	}
+	for _, line := range feedback.Diagnostics {
+		if strings.Contains(line, "(") && strings.Contains(line, "s)") {
+			t.Fatalf("measured diagnostics contain a duration: %q", line)
+		}
+	}
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"verify", "--repository", targetRoot, "--baseline", baselinePath, requestPath, feedbackPath}, &stdout, &stderr)
+	if exitCode != 1 || !strings.Contains(stderr.String(), "Generation Feedback status is failed") {
+		t.Fatalf("measured failed feedback exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("failed verify must not report a passing coverage summary: %q", stdout.String())
+	}
+}
+
 func TestCheckCommand(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")
 	var stdout, stderr bytes.Buffer
