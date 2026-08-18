@@ -118,7 +118,13 @@ func run() error {
 		feedback.Status = "failed"
 		feedback.RelatedIntentNodes = nodes
 		feedback.Diagnostics = testRun.diagnostics
-		feedback.Summary = failedSummary(failedFacts)
+		feedback.Summary = failedSummary(testRun.stage, failedFacts, tallyResults(feedback.FactCoverage))
+		// `forma verify` only validates policy coverage on a succeeded feedback,
+		// so anything published here is a claim nothing checks. This run
+		// verified no policy, and the coverage vocabulary has no "not-run" for
+		// policies the way factCoverage does, so the feedback asserts nothing
+		// rather than asserting "satisfied".
+		feedback.PolicyCoverage = nil
 	} else {
 		for _, coverage := range feedback.FactCoverage {
 			if coverage.Result != "passed" {
@@ -141,6 +147,9 @@ func run() error {
 	fmt.Printf("coverage fingerprint %s\n", coverageFingerprint())
 	fmt.Print(testRun.summary)
 	if testRun.failed {
+		if testRun.stage == "build" {
+			return fmt.Errorf("target build failed; published failed Generation Feedback")
+		}
 		return fmt.Errorf("target tests failed; published failed Generation Feedback")
 	}
 	return nil
@@ -166,15 +175,77 @@ func writeAtomic(path string, content []byte) error {
 	return os.Rename(name, path)
 }
 
-func failedSummary(failedFacts []compiler.SemanticID) string {
-	if len(failedFacts) == 0 {
-		return "Target tests failed; no mapped Acceptance Fact observed the failure."
+// resultTally counts what the run actually observed. Every failure summary is
+// built from it so the text cannot drift from the published factCoverage.
+type resultTally struct {
+	passed int
+	failed int
+	notRun int
+}
+
+func tallyResults(coverage []agentrequest.FactCoverage) resultTally {
+	tally := resultTally{}
+	for _, entry := range coverage {
+		switch entry.Result {
+		case "passed":
+			tally.passed++
+		case "failed":
+			tally.failed++
+		default:
+			tally.notRun++
+		}
 	}
-	ids := make([]string, len(failedFacts))
-	for index, id := range failedFacts {
+	return tally
+}
+
+func (tally resultTally) String() string {
+	return fmt.Sprintf("%d passed, %d failed, %d not-run", tally.passed, tally.failed, tally.notRun)
+}
+
+// noPolicyClaim is shared by every failed stage. A failed feedback drops policy
+// coverage whatever the stage, so every failure summary has to say so.
+const noPolicyClaim = " No implementation policy was verified in this run, so this feedback reports no policy coverage."
+
+func failedSummary(stage string, failedFacts []compiler.SemanticID, tally resultTally) string {
+	return stageSummary(stage, failedFacts, tally) + noPolicyClaim
+}
+
+func stageSummary(stage string, failedFacts []compiler.SemanticID, tally resultTally) string {
+	if stage == "build" {
+		// A build failure is not a rejected assertion. Packages that still
+		// compiled can observe facts, and a package that compiled can even
+		// reject one, so report the tally instead of claiming nothing ran.
+		// factResult needs every reference of a fact to complete, so a fact
+		// split across a package that built and one that did not is also
+		// not-run — being observed only through the failed package is
+		// sufficient, not necessary.
+		summary := fmt.Sprintf(
+			"The target did not compile, so any fact whose required test references did not all complete is not-run: %s. The compiler diagnostic is in diagnostics.",
+			tally,
+		)
+		if len(failedFacts) != 0 {
+			summary += fmt.Sprintf(
+				" Packages that did compile also rejected %d fact(s): %s.",
+				len(failedFacts), joinFactIDs(failedFacts),
+			)
+		}
+		return summary
+	}
+	if len(failedFacts) == 0 {
+		return fmt.Sprintf("Target tests failed; no mapped Acceptance Fact observed the failure: %s.", tally)
+	}
+	return fmt.Sprintf(
+		"Target tests failed; %s. %d mapped Acceptance Fact(s) did not pass: %s.",
+		tally, len(failedFacts), joinFactIDs(failedFacts),
+	)
+}
+
+func joinFactIDs(facts []compiler.SemanticID) string {
+	ids := make([]string, len(facts))
+	for index, id := range facts {
 		ids[index] = string(id)
 	}
-	return fmt.Sprintf("Target tests failed; %d mapped Acceptance Fact(s) did not pass: %s.", len(failedFacts), strings.Join(ids, ", "))
+	return strings.Join(ids, ", ")
 }
 
 func changedIntentNodes(request agentrequest.Request) []compiler.SemanticID {

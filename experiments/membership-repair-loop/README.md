@@ -79,6 +79,8 @@ status  failed
 command cd experiments/membership-agent-e2e/target && go test -count=1 -json ./...
 failed  fact/identity/UserAccount/operation/register/identifier/duplicate
         internal/web/membership_e2e_test.go#TestDuplicateIdentifierCoversExactAndCanonicalForms
+counts  80 passed, 1 failed, 0 not-run
+policyCoverage  なし
 diagnostics（実行時間なし）
         --- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms
         membership_e2e_test.go:739: the duplicate attempt's secret signed in: 303
@@ -112,9 +114,17 @@ Stage D記録とはbyte-identicalではない。Acceptance Factsはrequestに含
 failed feedbackとfault patch自体は測定artifactであり、repairで消さない。diagnosticsから実行時間を
 除いているので、再実行してもこのfailed JSONのSHA-256はdurationで動かない。
 
+`generation-feedback.failed.json`は`133b3648…`から`347e8c85…`へ再生成した。
+[`../membership-build-repair-loop`](../membership-build-repair-loop/README.md)がfeedback generatorを
+共有しており、そこで2つの修正が入ったためである。1つはfailed feedbackから`policyCoverage`を落とすこと
+（`ValidateCompletion`は`succeeded`でないfeedbackのpolicy coverageを検証しないので、書いても誰も
+検査しない主張になる）、もう1つはsummaryをpassed / failed / not-runの集計から組み立てることである。
+このexperimentの実測結果自体は変わっていない。stageは`test`、failed Factは同じ1件、
+relatedIntentNodesは同じ5件、diagnosticsも同じである。
+
 ```text
 generation-feedback.json           2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb
-generation-feedback.failed.json    133b3648fa2d4ba4ae40da071a3764a1d872931aa030b01399bd54e08eaa0e21
+generation-feedback.failed.json    347e8c85bbf68c1711ed433a3597a92debc1a2ff29054515068845fd03b5de31
 fault.patch                        36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 ```
 

@@ -1,21 +1,14 @@
 {
   "schema": "forma/generation-feedback/v0alpha2",
-  "stage": "test",
+  "stage": "build",
   "status": "failed",
-  "relatedIntentNodes": [
-    "identity/UserAccount/credential/password",
-    "identity/UserAccount/identifier/email",
-    "identity/UserAccount/operation/register",
-    "identity/UserAccount/verification/email",
-    "identity/UserAccount/verification/email/notice"
-  ],
   "factCoverage": [
     {
       "factId": "fact/entity/User/field/team/relation/resolved",
       "testReferences": [
         "internal/web/server_test.go#TestRelationUsesTeamLabel"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/credential/password/non-projectable",
@@ -23,14 +16,14 @@
         "internal/web/membership_e2e_test.go#TestSignUpValidationKeepsInputAndNeverEchoesTheCredential",
         "internal/web/membership_e2e_test.go#TestSignInFailuresShareOneMessage"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/at-most-once",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestRepeatedSignUpDispatchAppliesOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/credential/bound",
@@ -38,98 +31,98 @@
         "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice",
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/identifier/duplicate",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestDuplicateIdentifierCoversExactAndCanonicalForms"
       ],
-      "result": "failed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/notice/emitted",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/subject/created",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/validation/rejected",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestRegistrationRejectsEveryDeclaredInvalidCase"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/register/verification/issued",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignUpCreatesAPendingMemberAndOneNotice"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/resend/accepted",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/resend/at-most-once",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/resend/evidence/rotated",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestResendRotatesEvidenceAndRepeatsApplyOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/signin/accepted",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/signin/rejected/generic",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignInFailuresShareOneMessage"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/signin/state/ineligible",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestPendingMemberCannotSignIn"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/signout/session/terminated",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignOutClosesBothProtectedSurfaces"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/verify/accepted",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestVerificationAppliesOnceAndDoesNotSignIn"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/verify/evidence/consumed",
@@ -137,14 +130,14 @@
         "internal/web/membership_e2e_test.go#TestSuccessfulVerificationLeavesTheEvidenceConsumed",
         "internal/web/membership_e2e_test.go#TestVerificationRejectionCoversEveryDeclaredCase"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/verify/evidence/rejected",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestVerificationRejectionCoversEveryDeclaredCase"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/operation/verify/expiry/boundary",
@@ -152,14 +145,14 @@
         "internal/web/membership_e2e_test.go#TestExpiryBoundaryIsCheckedOnBothSides",
         "internal/identity/identity_test.go#TestEvidenceExpiryIsAClockRelation"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/ownership/self/access/allowed/self",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/ownership/self/access/denied/anonymous",
@@ -167,28 +160,28 @@
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer",
         "internal/web/membership_e2e_test.go#TestSignOutClosesBothProtectedSurfaces"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/ownership/self/access/denied/other-subject",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/identity/UserAccount/verification/email/notice/delivery/failure",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestDeliveryFailureKeepsTheAccountRecoverable"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestResendDisclosureIsUniformForEveryAccountState"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Profile/view/detail/User/feedback",
@@ -196,21 +189,21 @@
         "internal/web/membership_e2e_test.go#TestProfileReportsEmptyWhenTheRecordIsGone",
         "internal/web/membership_e2e_test.go#TestProfileReportsFailureWhenTheRecordCannotBeRead"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Profile/view/detail/User/fields",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestProfileShowsExactlyTheDeclaredFields"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Profile/view/detail/User/records/visible",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSessionOwnershipIsEnforcedOnTheServer"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/feedback",
@@ -218,21 +211,21 @@
         "internal/web/membership_e2e_test.go#TestProfileEditValidationKeepsInputAndIssuesAFreshToken",
         "internal/web/membership_e2e_test.go#TestProfileEditReportsFailureWhenTheSaveCannotCommit"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/fields",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestProfileEditOffersExactlyTheDeclaredFields"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once",
@@ -240,21 +233,21 @@
         "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch",
         "internal/web/submission_test.go#TestGuardReplaysTheCompletedOutcome"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/navigation",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestProfileEditAppliesOneMutationForARepeatedDispatch"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestProfileEditValidationKeepsInputAndIssuesAFreshToken"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous",
@@ -262,56 +255,56 @@
         "internal/web/membership_e2e_test.go#TestMembershipRoutesAreReachableThroughTheShippedHandler",
         "cmd/server/main_test.go#TestExecutableServesBothSurfaces"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/SignUp/identity/register/UserAccount/inputs",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignUpFormOffersExactlyTheDeclaredInputs"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/SignUp/identity/register/UserAccount/navigation",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestRepeatedSignUpDispatchAppliesOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/SignUp/identity/register/UserAccount/validation/preserve-input",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestSignUpValidationKeepsInputAndNeverEchoesTheCredential"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/action/edit/navigation",
@@ -319,133 +312,133 @@
         "internal/web/server_test.go#TestUserDetail",
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/actions",
       "testReferences": [
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/feedback",
       "testReferences": [
         "internal/web/server_test.go#TestDetailEmptyAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/fields",
       "testReferences": [
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserDetail/view/detail/User/records/visible",
       "testReferences": [
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/feedback",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/fields",
       "testReferences": [
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted",
       "testReferences": [
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once",
       "testReferences": [
         "internal/web/server_test.go#TestEditIsAppliedAtMostOnce"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/email",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/name",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan",
       "testReferences": [
         "internal/web/server_test.go#TestEditValidationAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email",
@@ -453,14 +446,14 @@
         "internal/web/server_test.go#TestEditValidationAndFailure",
         "internal/store/store_test.go#TestUpdateUserEnforcesUniqueEmail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/access/denied/anonymous",
@@ -468,21 +461,21 @@
         "internal/web/server_test.go#TestAccessDenied",
         "cmd/server/main_test.go#TestExecutableServesBothSurfaces"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/edit/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/edit/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/edit/navigation",
@@ -490,21 +483,21 @@
         "internal/web/server_test.go#TestAdminList",
         "internal/web/server_test.go#TestEditUser"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/view/access/allowed/admin",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/view/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestAccessDenied"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/action/view/navigation",
@@ -512,93 +505,96 @@
         "internal/web/server_test.go#TestAdminList",
         "internal/web/server_test.go#TestUserDetail"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/actions",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/feedback",
       "testReferences": [
         "internal/web/server_test.go#TestListEmptyAndFailure"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/fields",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/filter/plan",
       "testReferences": [
         "internal/web/server_test.go#TestListQueryCapabilities"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/filter/status",
       "testReferences": [
         "internal/web/server_test.go#TestListQueryCapabilities"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/filter/team",
       "testReferences": [
         "internal/web/server_test.go#TestListQueryCapabilities"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/page-boundary",
       "testReferences": [
         "internal/web/server_test.go#TestListPagination"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/records/visible",
       "testReferences": [
         "internal/web/server_test.go#TestAdminList"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/search",
       "testReferences": [
         "internal/web/server_test.go#TestListQueryCapabilities"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/Users/view/list/User/sort",
       "testReferences": [
         "internal/web/server_test.go#TestListQueryCapabilities"
       ],
-      "result": "passed"
+      "result": "not-run"
     },
     {
       "factId": "fact/page/VerifyEmail/identity/verify/UserAccount/navigation",
       "testReferences": [
         "internal/web/membership_e2e_test.go#TestVerificationAppliesOnceAndDoesNotSignIn"
       ],
-      "result": "passed"
+      "result": "not-run"
     }
   ],
   "command": "cd experiments/membership-agent-e2e/target \u0026\u0026 go test -count=1 -json ./...",
   "diagnostics": [
-    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms",
-    "membership_e2e_test.go:739: the duplicate attempt's secret signed in: 303",
-    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms/__MIA@Example.com__",
-    "--- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms/mia@example.com",
+    "# example.com/forma-admin-target/internal/web",
+    "internal/web/membership.go:309:47: too many arguments in call to stored.Matches",
+    "have (string, string)",
+    "want (string)",
+    "FAIL\texample.com/forma-admin-target/cmd/server [build failed]",
+    "FAIL\texample.com/forma-admin-target/cmd/server",
+    "FAIL\texample.com/forma-admin-target/internal/web [build failed]",
     "FAIL\texample.com/forma-admin-target/internal/web"
   ],
-  "summary": "Target tests failed; 80 passed, 1 failed, 0 not-run. 1 mapped Acceptance Fact(s) did not pass: fact/identity/UserAccount/operation/register/identifier/duplicate. No implementation policy was verified in this run, so this feedback reports no policy coverage."
+  "summary": "The target did not compile, so any fact whose required test references did not all complete is not-run: 0 passed, 0 failed, 81 not-run. The compiler diagnostic is in diagnostics. No implementation policy was verified in this run, so this feedback reports no policy coverage."
 }

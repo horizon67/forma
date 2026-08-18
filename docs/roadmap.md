@@ -399,6 +399,32 @@ Source Mapを使ったfailure関連付けと、controlledなfailure → repair �
 
 このprobeは同じagentによるcontrolled runである。完全な自動orchestrationや一般的なrepair能力の証明ではない。
 
+### build failureのprobeの結果
+
+test failureに対する上のprobeと対にして、compile failureを
+[`../experiments/membership-build-repair-loop`](../experiments/membership-build-repair-loop/README.md)で実測した。
+
+- [x] `signIn`のcredential照合をarity違いにするcontrolled compile errorを1行入れ、
+      `internal/web`と`cmd/server`のbuild失敗を観測した。
+- [x] `stage: build` / `status: failed`を出し、81 Factsすべてを`not-run`に保った。
+      失敗したassertionがないので`failed` Factも`relatedIntentNodes`も作らない。
+- [x] 最初の実行でdiagnosticsからGo compiler errorが落ちることを発見した。`go test -json`は
+      compiler errorを`ImportPath`付きの`build-output` recordで出すが、generatorのparserが
+      package eventしか見ておらず`[build failed]`だけが残っていた。schemaではなく
+      experiment側parserの欠落であり、`v0alpha2`のfieldのまま修正した。
+- [x] failed feedbackから`policyCoverage`を落とした。`ValidateCompletion`は`succeeded`でない
+      feedbackのpolicy coverageを検証しないため、そこへ書いた`satisfied`は誰も検査しない主張になる。
+      `factCoverage`の`not-run`に当たる語がpolicy側にないので、schemaを増やさず何も主張しない方を選んだ。
+      feedback generatorは共有なのでtest failure側にも効き、上のprobeの
+      `generation-feedback.failed.json`も再生成した。stage `test`の実測結果は変わっていない。
+- [x] compiler diagnosticだけを根拠に実装1行を戻し、`forma verify --baseline`が81/81へ復帰した。
+      成功時`generation-feedback.json`のhashは上のprobeの記録と同一へ戻った。
+- [x] build failureをtest failureと誤分類しない、未観測Factを`passed` / `failed`にしない、
+      compiler diagnosticを空にしない、をnegative testで固定した。
+
+81 Factsすべてが少なくとも1件のtest referenceを`internal/web`へ持つため、
+web packageのcompile errorはcoverage全体を盲目にする。`passed`は0件だった。
+
 ### Exit criteria
 
 - buildまたはtest failureから自動修正して成功できる
