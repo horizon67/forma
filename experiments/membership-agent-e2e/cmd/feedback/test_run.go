@@ -35,6 +35,11 @@ type testEvent struct {
 	Test        string `json:"Test"`
 	Output      string `json:"Output"`
 	FailedBuild string `json:"FailedBuild"`
+	// ImportPath identifies build events. `go test -json` reports compiler
+	// failures as build-output / build-fail records keyed by ImportPath, with
+	// no Package and no Test, so the compiler diagnostic is only reachable
+	// through this field.
+	ImportPath string `json:"ImportPath"`
 }
 
 type targetTestRun struct {
@@ -69,6 +74,8 @@ func parseTestJSON(output []byte) targetTestRun {
 	testOutput := map[testKey][]string{}
 	packageOutput := map[string][]string{}
 	failedPackages := map[string]bool{}
+	buildOutput := map[string][]string{}
+	failedBuilds := map[string]bool{}
 	parsed := false
 	for {
 		var event testEvent
@@ -85,6 +92,20 @@ func parseTestJSON(output []byte) targetTestRun {
 			break
 		}
 		parsed = true
+		if event.ImportPath != "" {
+			// A build event. The package never ran, so it contributes the
+			// compiler diagnostic and the build stage, never a test result.
+			if event.Output != "" {
+				summary.WriteString(event.Output)
+				buildOutput[event.ImportPath] = append(buildOutput[event.ImportPath], strings.TrimRight(event.Output, "\n"))
+			}
+			if event.Action == "build-fail" {
+				failedBuilds[event.ImportPath] = true
+				testRun.failed = true
+				testRun.stage = "build"
+			}
+			continue
+		}
 		if event.Output != "" {
 			summary.WriteString(event.Output)
 			line := strings.TrimRight(event.Output, "\n")
@@ -114,7 +135,7 @@ func parseTestJSON(output []byte) targetTestRun {
 		}
 	}
 	testRun.summary = summary.String()
-	testRun.diagnostics = collectDiagnostics(testRun.tests, testOutput, failedPackages, packageOutput)
+	testRun.diagnostics = collectDiagnostics(testRun.tests, testOutput, failedPackages, packageOutput, failedBuilds, buildOutput)
 	return testRun
 }
 
@@ -132,6 +153,8 @@ func collectDiagnostics(
 	testOutput map[testKey][]string,
 	failedPackages map[string]bool,
 	packageOutput map[string][]string,
+	failedBuilds map[string]bool,
+	buildOutput map[string][]string,
 ) []string {
 	var diagnostics []string
 	seen := map[string]bool{}
@@ -145,6 +168,18 @@ func collectDiagnostics(
 		}
 		seen[line] = true
 		diagnostics = append(diagnostics, line)
+	}
+	// The compiler error is the root cause of a build failure, so it leads the
+	// diagnostics ahead of the packages that only report "[build failed]".
+	builds := make([]string, 0, len(failedBuilds))
+	for importPath := range failedBuilds {
+		builds = append(builds, importPath)
+	}
+	sort.Strings(builds)
+	for _, importPath := range builds {
+		for _, line := range buildOutput[importPath] {
+			add(line)
+		}
 	}
 	keys := make([]testKey, 0, len(tests))
 	for key, action := range tests {

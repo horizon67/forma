@@ -7,6 +7,7 @@ Formaの実験は、language semanticsとagent generation boundaryを実例か�
 - [`admin-agent-e2e`](admin-agent-e2e/README.md) — Resolved IntentとAcceptance Factsをcoding agentへ渡し、standalone targetで43 factsを検証
 - [`membership-agent-e2e`](membership-agent-e2e/README.md) — 既存admin targetへメール認証付きsignup/signinを追加し、81 factsを検証
 - [`membership-repair-loop`](membership-repair-loop/README.md) — 同じmembership targetでtest failure → failed feedback → repair → successを1回実測
+- [`membership-build-repair-loop`](membership-build-repair-loop/README.md) — 同じtargetでcompile failure → `stage: build`のfailed feedback → repair → successを1回実測。81 factsすべてが`not-run`
 
 ## Frozen prototypes
 

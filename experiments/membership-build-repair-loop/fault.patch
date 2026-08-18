@@ -1,0 +1,13 @@
+diff --git a/experiments/membership-agent-e2e/target/internal/web/membership.go b/experiments/membership-agent-e2e/target/internal/web/membership.go
+index fcf1ea1..f54af06 100644
+--- a/experiments/membership-agent-e2e/target/internal/web/membership.go
++++ b/experiments/membership-agent-e2e/target/internal/web/membership.go
+@@ -306,7 +306,7 @@ func (server *Server) signIn(writer http.ResponseWriter, request *http.Request)
+ 	if err == nil && found {
+ 		stored, ok, credentialErr := server.membership.identity.FindCredential(request.Context(), user.ID)
+ 		if credentialErr == nil && ok {
+-			authenticated = stored.Matches(credential)
++			authenticated = stored.Matches(credential, user.ID)
+ 		} else {
+ 			identity.EqualiseDerivation(credential)
+ 		}
