@@ -5,6 +5,12 @@ import "sort"
 func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 	ir := &ResolvedIntent{Version: ResolvedIntentVersion}
 	sourceMap := newSourceMapBuilder()
+	if len(c.program.Entries) > 0 {
+		entry := c.program.Entries[0]
+		id := applicationEntryID()
+		ir.Entry = &IRApplicationEntry{ID: id, Page: entry.Page.Text}
+		sourceMap.add(id, "application-entry", entry.Span)
+	}
 	for _, role := range c.program.Roles {
 		if c.roles[role.Name.Text] == role {
 			id := roleID(role.Name.Text)
@@ -141,6 +147,13 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 		}
 		for _, interaction := range page.IdentityInteractions {
 			item.IdentityInteractions = append(item.IdentityInteractions, c.buildIdentityInteraction(page, interaction, sourceMap))
+		}
+		for _, transition := range page.SurfaceTransitions {
+			transitionID := surfaceTransitionID(page.Name.Text, transition.Kind)
+			item.SurfaceTransitions = append(item.SurfaceTransitions, IRSurfaceTransition{
+				ID: transitionID, Kind: transition.Kind, TargetPage: transition.Destination.Text,
+			})
+			sourceMap.add(transitionID, "surface-transition", transition.Span)
 		}
 		ir.Pages = append(ir.Pages, item)
 	}

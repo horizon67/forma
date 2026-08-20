@@ -6,12 +6,18 @@ type Name struct {
 }
 
 type Program struct {
+	Entries    []*ApplicationEntryDecl
 	Types      []*TypeDecl
 	Entities   []*EntityDecl
 	Actions    []*ActionDecl
 	Identities []*IdentityDecl
 	Pages      []*PageDecl
 	Roles      []*RoleDecl
+}
+
+type ApplicationEntryDecl struct {
+	Page Name
+	Span Span
 }
 
 type TypeDecl struct {
@@ -197,7 +203,14 @@ type PageDecl struct {
 	Requirements         []*AccessRequirementDecl
 	Views                []*ViewDecl
 	IdentityInteractions []*IdentityInteractionDecl
+	SurfaceTransitions   []*SurfaceTransitionDecl
 	Span                 Span
+}
+
+type SurfaceTransitionDecl struct {
+	Kind        string
+	Destination Name
+	Span        Span
 }
 
 type AccessRequirementDecl struct {

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-const SourceMapVersion = "forma/source-map/v0.4"
+const SourceMapVersion = "forma/source-map/v0.5"
 
 // SourceMap is emitted separately from ResolvedIntent because source paths and
 // positions are not application semantics and must not affect build identity.
@@ -110,6 +110,14 @@ func ownershipID(identity, name string) SemanticID {
 
 func pageID(name string) SemanticID {
 	return semanticID("page", name)
+}
+
+func applicationEntryID() SemanticID {
+	return semanticID("application", "entry")
+}
+
+func surfaceTransitionID(page, kind string) SemanticID {
+	return semanticID("page", page, "transition", kind)
 }
 
 func identityInteractionID(page, operation, identity string) SemanticID {

@@ -43,6 +43,9 @@ func CanonicalizeResolvedIntent(intent *ResolvedIntent) {
 	for pageIndex := range intent.Pages {
 		page := &intent.Pages[pageIndex]
 		canonicalizeAccess(page.Access)
+		sort.Slice(page.SurfaceTransitions, func(i, j int) bool {
+			return page.SurfaceTransitions[i].ID < page.SurfaceTransitions[j].ID
+		})
 		sort.Slice(page.IdentityInteractions, func(i, j int) bool {
 			return page.IdentityInteractions[i].ID < page.IdentityInteractions[j].ID
 		})
@@ -90,10 +93,76 @@ func ValidateResolvedIntent(intent *ResolvedIntent) error {
 	if _, err := resolvedIntentSemanticIDs(intent); err != nil {
 		return fmt.Errorf("validate Resolved Intent: %w", err)
 	}
+	if err := validateApplicationNavigation(intent); err != nil {
+		return err
+	}
 	if err := validateActionRefNavigation(intent); err != nil {
 		return err
 	}
 	return validateIdentitySemantics(intent)
+}
+
+func validateApplicationNavigation(intent *ResolvedIntent) error {
+	pages := make(map[string]IRPage, len(intent.Pages))
+	for _, page := range intent.Pages {
+		if page.ID != pageID(page.Name) {
+			return fmt.Errorf("validate Resolved Intent: page %s has non-canonical ID", page.ID)
+		}
+		pages[page.Name] = page
+	}
+	validateTarget := func(owner SemanticID, target string) error {
+		page, ok := pages[target]
+		if !ok {
+			return fmt.Errorf("validate Resolved Intent: navigation %s references missing page %q", owner, target)
+		}
+		if page.Param != nil {
+			return fmt.Errorf("validate Resolved Intent: navigation %s targets parameterized page %q without a binding", owner, target)
+		}
+		return nil
+	}
+	if intent.Entry != nil {
+		if intent.Entry.ID != applicationEntryID() {
+			return fmt.Errorf("validate Resolved Intent: application entry %s has non-canonical ID", intent.Entry.ID)
+		}
+		if err := validateTarget(intent.Entry.ID, intent.Entry.Page); err != nil {
+			return err
+		}
+	}
+	for _, page := range intent.Pages {
+		seen := map[string]bool{}
+		for _, transition := range page.SurfaceTransitions {
+			if transition.Kind != "continue" {
+				return fmt.Errorf("validate Resolved Intent: surface transition %s has unsupported kind %q", transition.ID, transition.Kind)
+			}
+			if transition.ID != surfaceTransitionID(page.Name, transition.Kind) {
+				return fmt.Errorf("validate Resolved Intent: surface transition %s has non-canonical ID", transition.ID)
+			}
+			if seen[transition.Kind] {
+				return fmt.Errorf("validate Resolved Intent: page %s has duplicate %s transition", page.ID, transition.Kind)
+			}
+			seen[transition.Kind] = true
+			if err := validateTarget(transition.ID, transition.TargetPage); err != nil {
+				return err
+			}
+		}
+	}
+	for _, owner := range intent.Pages {
+		for _, interaction := range owner.IdentityInteractions {
+			if interaction.Continuation == nil || interaction.Success.Kind != "page" {
+				continue
+			}
+			successPage, ok := pages[interaction.Success.Page]
+			if !ok {
+				continue
+			}
+			for _, transition := range successPage.SurfaceTransitions {
+				if transition.Kind == "continue" {
+					return fmt.Errorf("validate Resolved Intent: continuation from page %s is declared by both %s and %s", successPage.ID, interaction.Continuation.ID, transition.ID)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // ValidateSourceMapCoverage requires a one-to-one entry for every semantic

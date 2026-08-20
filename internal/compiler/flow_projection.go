@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const FlowProjectionVersion = "forma/flow-projection/v0alpha1"
+const FlowProjectionVersion = "forma/flow-projection/v0alpha2"
 
 // FlowProjection is a deterministic review view composed from the navigation,
 // outcome, and domain-state projections. It owns no application meaning: the
@@ -329,6 +329,25 @@ func validateFlowProjection(projection *FlowProjection, sourceMap *SourceMap) er
 			return fmt.Errorf("flow pages are not canonical")
 		}
 		pages[page.ID] = true
+	}
+	switch projection.DefaultEntry.Kind {
+	case navigationEndpointUnspecified:
+		if projection.DefaultEntry.Page != "" || len(projection.DefaultEntry.SourceNodes) != 0 {
+			return fmt.Errorf("flow default entry is inconsistent")
+		}
+	case navigationEndpointPage:
+		if !pages[projection.DefaultEntry.Page] {
+			return fmt.Errorf("flow default entry has an unknown page")
+		}
+		if err := validateFlowSources(applicationEntryID(), projection.DefaultEntry.SourceNodes, knownSources); err != nil {
+			return err
+		}
+		entrySources := flowIDSet(projection.DefaultEntry.SourceNodes)
+		if !entrySources[applicationEntryID()] || !entrySources[projection.DefaultEntry.Page] {
+			return fmt.Errorf("flow default entry provenance is incomplete")
+		}
+	default:
+		return fmt.Errorf("flow default entry has unsupported kind %q", projection.DefaultEntry.Kind)
 	}
 	edges := map[SemanticID]bool{}
 	linkedOutcomeReferences := map[SemanticID]FlowOutcomeReference{}

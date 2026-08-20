@@ -1,3 +1,5 @@
+entry SignUp
+
 type Email = String matches /.+@.+/
 
 entity User {
@@ -78,12 +80,16 @@ page VerifyEmail {
     interact UserAccount.verify {
         evidence email
         success RegistrationComplete
-        continue SignIn
         feedback invalid, expired, failure
     }
 }
 
 page RegistrationComplete {
+    continue OnboardingGuide
+}
+
+page OnboardingGuide {
+    continue SignIn
 }
 
 page SignIn {

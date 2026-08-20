@@ -115,8 +115,9 @@ request、browser testなどへ変換する。Forma自身はHTTP statusやDOM se
 Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromptではない。期待する意味はForma
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
-各factは少なくとも次を持つ。管理画面list/detail/edit向けの最小kindは
-`forma/acceptance-facts/v0alpha4`として実装し、admin flowに加えてIdentity専用29 Factsを持つ。追加domainのkindは
+各factは少なくとも次を持つ。現在のkindは
+`forma/acceptance-facts/v0alpha5`として実装し、admin flow、Identity専用29 Facts、application entry、
+surface-only transitionを扱う。追加domainのkindは
 引き続き実例から拡張する。
 
 ```text

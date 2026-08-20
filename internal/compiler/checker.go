@@ -79,6 +79,7 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 	c.indexViews()
 	c.checkActions()
 	c.checkIdentities()
+	c.checkApplicationNavigation()
 	c.checkPages()
 	c.checkIdentityInteractionCoverage()
 	SortDiagnostics(c.diagnostics)

@@ -75,8 +75,9 @@ human review required: 3 requirements are not machine-verified
 ## 分かったこと
 
 **Forma側のFactが2件、到達不能な状態をsetupしていた。** どちらもE2Eを実flowで書いたことで発覚した。
-両方の修正はAcceptance Facts `v0alpha4`に含まれる（`v0alpha3`からの1回のbump内で完結しており、
-`v0alpha4`のartifactが外部へ出たことはない）。
+両方の修正は当時のAcceptance Facts `v0alpha4`に含まれた（`v0alpha3`からの1回のbump内で完結しており、
+`v0alpha4`のartifactが外部へ出たことはない）。現在のchecked-in requestは、後続のentry/surface-transition schema追加に伴い
+同じ81 Factを`v0alpha5`として再直列化している。
 
 1. `verification-rejected`のconsumed caseが`Pending + consumed evidence`をsetupしていた。consumed
    evidenceは「consumeとPending → Activeをatomicに適用する」成功verificationからしか生まれないため、

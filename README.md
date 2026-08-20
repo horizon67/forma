@@ -274,10 +274,10 @@ go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
-go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project navigation examples/email-verified-membership.forma
 go run ./cmd/forma project outcomes experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma project states experiments/membership-agent-e2e/app.forma
-go run ./cmd/forma project flow experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project flow examples/email-verified-membership.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -291,8 +291,10 @@ checked separately.
 `forma resolve` emits canonical Resolved Intent JSON. `forma project navigation`
 emits a deterministic, read-only text view of the navigation already present in
 Resolved Intent; it does not become a second source of truth or infer an
-undeclared default entry. `forma project outcomes` expands observable Acceptance
-Facts into case-oriented review text. It separates explicitly absent, zero,
+undeclared default entry. The membership example declares `entry SignUp` and
+page-local `continue` transitions through `OnboardingGuide`; older sources without
+`entry` remain explicitly `unspecified`. `forma project outcomes` expands
+observable Acceptance Facts into case-oriented review text. It separates explicitly absent, zero,
 excluded, or unchanged results as `must not` guarantees without inventing the
 inverse of an unstated fact. `forma project states` shows entity state machines,
 creation initializers, transition invocations, confirmation/role requirements,
@@ -301,21 +303,20 @@ domain transition. `forma project flow` composes those three projections into
 a deterministic Markdown/Mermaid review view. Exact semantic IDs link outcome
 groups and state elements to navigation edges; unmatched detail remains in an
 explicit index. The diagram is not editable application meaning and does not
-infer layout or an application entry point. `forma request` emits a Generation Request, and
+infer layout. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
-through Stage D: Resolved Intent v0.7, Source Map v0.4, 81 Acceptance Facts,
+through Stage D: current artifacts use Resolved Intent v0.8, Source Map v0.5, 81 Acceptance Facts,
 and three Review Requirements are verified in the existing admin target. The
 first bounded P2 automated-repair probe is also complete. Separate fresh agent
 processes repaired a controlled test failure and build failure in one attempt
 each and returned both runs to 81/81. A third process left the repository
 unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
-human handoff. The immediate bounded language probe compares application entry
-and surface-only transition ownership in `flow` and page-local syntax. It then
-returns to the next main milestone, P3: Expression → Changes → Occurrence →
-Effect. Projection readability evaluation runs independently and does not hide
-the already-confirmed language gap.
+human handoff. The bounded navigation-language probe chose and implemented
+page-local ownership: one top-level `entry`, and operation-free `continue Page`
+members on their source pages. The main line now returns to P3: Expression →
+Changes → Occurrence → Effect. Projection readability evaluation runs independently.
 
 ## Design documents
 

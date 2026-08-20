@@ -222,15 +222,23 @@ func (b *acceptanceBuilder) addIdentityFacts(identity IRIdentity) error {
 		SourceNodes: []SemanticID{c.verification.ID, verify, c.state.ID},
 	})
 	verifyNavigation := identityFactNavigation(verifyInteraction.Success)
-	verifyNavigation.ContinuationPage = pageID(verifyInteraction.Continuation.Page)
+	verifySurfaces := []SemanticID{pageID(verifyInteraction.Success.Page)}
+	verifySources := []SemanticID{verifyInteraction.ID, verifyInteraction.Success.ID, pageID(verifyInteraction.Success.Page)}
+	verifyObservations := []string{"navigation"}
+	if verifyInteraction.Continuation != nil {
+		verifyNavigation.ContinuationPage = pageID(verifyInteraction.Continuation.Page)
+		verifySurfaces = append(verifySurfaces, pageID(verifyInteraction.Continuation.Page))
+		verifySources = append(verifySources, verifyInteraction.Continuation.ID, pageID(verifyInteraction.Continuation.Page))
+		verifyObservations = append(verifyObservations, "continuation")
+	}
 	b.add(AcceptanceFact{
 		ID: factID(verifyInteraction.ID, "navigation"), Kind: "navigation", Subject: verifyInteraction.ID,
 		Setup: setupWithEvidence(c, alice, aliceEvidence, pending, "issued", "before-expiry"),
-		Input: &FactInput{Identity: &IdentityFactInput{Operation: verify, Interaction: verifyInteraction.ID, Evidence: aliceEvidence, Dispatches: 1, Observe: []string{"navigation", "continuation"}}},
+		Input: &FactInput{Identity: &IdentityFactInput{Operation: verify, Interaction: verifyInteraction.ID, Evidence: aliceEvidence, Dispatches: 1, Observe: verifyObservations}},
 		Expected: FactExpectation{Identity: &IdentityFactExpectation{
-			Navigation: verifyNavigation, Surfaces: []SemanticID{pageID("RegistrationComplete"), pageID("SignIn")},
+			Navigation: verifyNavigation, Surfaces: verifySurfaces,
 		}},
-		SourceNodes: []SemanticID{verifyInteraction.ID, verifyInteraction.Success.ID, verifyInteraction.Continuation.ID, pageID("RegistrationComplete"), pageID("SignIn")},
+		SourceNodes: verifySources,
 	})
 
 	// 17-20. Resend without state change, rotation, disclosure, and at-most-once.

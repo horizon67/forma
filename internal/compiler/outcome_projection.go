@@ -88,6 +88,11 @@ func BuildOutcomeProjection(intent *ResolvedIntent, sourceMap *SourceMap) (*Outc
 }
 
 func isOutcomeFact(fact AcceptanceFact) bool {
+	// The default entry is an application structure fact, not the result of an
+	// operation or user-triggered edge. Flow renders it as its own root node.
+	if fact.Kind == "application-entry" {
+		return false
+	}
 	expected := fact.Expected
 	if expected.Outcome != "" || len(expected.Feedback) > 0 || expected.AppliedMutations > 0 ||
 		expected.Enforcement != "" || expected.Stored != "" || len(expected.PreserveInput) > 0 || expected.Navigation != nil {

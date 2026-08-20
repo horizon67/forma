@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（67 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（70 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ hashは一切読まない。
 | `coverage-map` | `coverage.go` | 1 |
 | `referenced-test` | coverage mapが参照する全test file | 6 |
 | `verification-build-input` | 次runのtrusted toolsをbuildする`go.mod` / `go.sum` | 2 |
-| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 54 |
+| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 57 |
 
 さらに、`verification-rule`の8 directoryは**file一覧そのもの**をsnapshotへ記録する。
 byte比較だけでは、snapshot後に追加されたfileが見えないためである（A4）。
@@ -343,7 +343,7 @@ feedbackを残せば、`forma verify`はそのfileを読んで81/81を報告し�
 ## 記録したhash
 
 ```text
-retry-baseline.json（このworking tree、repository外）  563a0fba1f7038cbe0e582b728e175c4d0e3ee63c6c62a43e0d20fb596765655
+retry-baseline.json（このworking tree、repository外）  595e6eb1d20b7c4ca9a38bd6d9f12986eb4c553a41db4e641a44e52159cc0be0
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
 weakening-coverage.patch             847b7aa49d55e5d7ba88f4b1e7c680770de946ddf282d209ea7e1d33464eee48

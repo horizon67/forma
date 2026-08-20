@@ -118,6 +118,9 @@ directory layoutによってlanguage semanticsを変えてはならない。
 
 ## 3. プリミティブ10個
 
+この10個は最初のCRUD/state coreを数えたものである。後続probeで追加した`entry`はapplication-level declaration、
+`continue`はpage memberとして扱い、この番号とは別に共通semantic modelへ接続する。Identityは独立facetである。
+
 ### 3.1 何が存在するか
 
 #### 1. `type`
@@ -214,6 +217,28 @@ page UserDetail(user User) {
 pageは0個または1個のentity parameterを取る。page間のnavigation destinationはResolved Intentへ
 解決するが、URLやroute shapeはcoding agentとtarget repositoryが所有する。route文字列はv0 sourceに
 書かない。
+
+application起動時のdefault surfaceはtop-levelの`entry`で明示できる。宣言はapplicationに最大1個で、
+page順、page名、interactionの種類からentryを推測しない。`entry`がない既存sourceはvalidだが、projectionでは
+`unspecified`になる。bindingを持たないため、最初のsliceではparameterless pageだけを指定できる。
+
+```forma
+entry SignUp
+```
+
+domain operationを伴わないuser-triggered navigationは、source pageが`continue Destination`として所有する。
+最初のsliceはpageごとに1個の`continue`とparameterlessな固定destinationだけを扱う。URL、button label、layout、
+automatic redirectは意味に含めない。
+
+```forma
+page RegistrationComplete {
+    continue OnboardingGuide
+}
+
+page OnboardingGuide {
+    continue SignIn
+}
+```
 
 #### 7. `list`
 
@@ -339,6 +364,7 @@ v0で使用できる修飾子は次のものだけである。
 | `form` | `fields` `submit`（`goto`） |
 
 `state`の`initial`は省略可能な修飾子ではなく、state declarationに必須の句である。
+同様にpage-localな`continue`は修飾子ではなく、独立したsurface transition memberである。
 
 ### 5.1 type修飾子
 
@@ -614,6 +640,8 @@ entity/User/field/email
 entity/User/state/status
 action/User/activate
 page/UserDetail
+application/entry
+page/RegistrationComplete/transition/continue
 ```
 
 page内のviewは`page/{Page}/view/{kind}/{Entity}`、formはmodeも含む
@@ -637,6 +665,7 @@ target-neutralな事実として保持する。
 - relation fieldの参照entityと人間向けlabel
 - search、filter、stable sort、page boundary
 - 標準actionの成功後navigation
+- application default entryとsurface-only navigation
 - empty、invalid、failureの観測可能なfeedback
 - authoritativeな認可再検査と、1回の論理mutationが複数回適用されないこと
 
@@ -732,6 +761,8 @@ v0の仮説検証範囲を広げるためである。
     なるviewはcompile errorとする。
 28. 1回のcompile operationへ明示的に渡したsource集合を1 compilation unit、1 application namespaceと
     する。pathやdirectoryから暗黙のapplication/module境界を導出しない。
+29. default entryは`entry Page`で最大1個を明示し、未宣言時は推測しない。
+30. operationを伴わないtransitionはsource pageが`continue Page`として所有し、生成flow viewを正本にしない。
 
 ### 10.1 統合レビューで埋めた仕様の穴
 
@@ -753,12 +784,16 @@ v0の仮説検証範囲を広げるためである。
 
 ## 11. EBNF
 
-以下はv0のsurface syntaxを定義する。spaceとtabはtoken間で無視する。改行はseparatorとして
-有意であり、commentは改行の直前までを占める。
+以下はoriginal v0 CRUD coreとnavigation follow-upのsurface syntaxを定義する。Identity facetの詳細文法は
+[`identity-surface-syntax-proposal.md`](identity-surface-syntax-proposal.md)を参照する。spaceとtabはtoken間で無視し、
+改行はseparatorとして有意であり、commentは改行の直前までを占める。
 
 ```ebnf
 program        = { blank | declaration } ;
-declaration    = type_decl | entity_decl | action_decl | page_decl | role_decl ;
+declaration    = entry_decl | type_decl | entity_decl | action_decl | page_decl | role_decl ;
+
+(* application entry *)
+entry_decl     = "entry", type_name, line_end ;
 
 (* type *)
 type_decl      = "type", type_name, "=", type_expr, { type_mod }, line_end ;
@@ -788,8 +823,9 @@ action_mod     = "confirm" | "allow", name_list | "goto", type_name ;
 page_decl      = "page", type_name, [ "(", parameter, ")" ], "{", line_end,
                  { blank | page_member }, "}", [ line_end ] ;
 parameter      = name, type_name ;
-page_member    = allow_clause | list_view | detail_view | form_view ;
+page_member    = allow_clause | surface_transition | list_view | detail_view | form_view ;
 allow_clause   = "allow", name_list, line_end ;
+surface_transition = "continue", type_name, line_end ;
 
 list_view      = "list", type_name,
                  ( line_end | "{", line_end,
@@ -861,6 +897,9 @@ type namespaceで予約され、同名の`type`を再宣言できない。
 `forma check`は少なくとも次を検査する。
 
 - 未宣言type、entity、role、field、state、action、pageの参照
+- 複数の`entry`、未宣言またはparameterized pageを指す`entry`
+- 同じpageの複数`continue`、未宣言またはparameterized pageを指すsurface transition
+- Identity interactionとsuccess pageが同じcontinuation capabilityを二重所有すること
 - type mismatch、不正なmodifier対象、modifierの重複
 - duplicate declarationと同一scope内のduplicate name
 - 組み込み型名の再宣言
@@ -913,9 +952,9 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 
 | boundary | 固定する内容 | 現在の状態 |
 | --- | --- | --- |
-| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.7`として部分実装。Identity proof、surface syntax、明示navigation destinationを含む |
-| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.4`として実装済み |
-| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha4`。admin flowとIdentity専用29 Factsを実装 |
+| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.8`として部分実装。Identity proof、application entry、surface-only transition、明示navigation destinationを含む |
+| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.5`として実装済み |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha5`。admin/Identityに加えentryとsurface transitionを導出 |
 | Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha1`。Identityごとの3件を実装 |
 | Generation Request | intent、facts、review requirements、source map、implementation policy、requested change、verification policy | historical `v0alpha1` / `v0alpha2`とcurrent `v0alpha4`を実装。中間schemaは、現在のbinaryが再導出できないAcceptance Factsを運ぶため受理しない |
 | Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、43 facts・3 policiesのincremental runを実装。自動repair loopは未実装 |

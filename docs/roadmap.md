@@ -300,9 +300,10 @@ domain stateへ混ぜない。さらに`forma project flow`が3 projectionをMar
 navigation edgeのsemantic source、Stateはtyped trigger/effect/invocationだけで関連付け、unlinked detailをindexへ残す。
 source-only条件とsource+projection条件をT1〜T6で比較する人間評価protocol、刺激、31点の事前採点基準も
 [`evaluations/membership-flow/README.md`](evaluations/membership-flow/README.md)へ固定した。participant resultはまだない。
-language syntaxとResolved Intent schemaは増やさず、未宣言のdefault entryを`unspecified`と表示する。一方、現行shapeでは
-任意のsurface-only chainを表せないsemantic gapは残る。
-このgapを受けた現在の判断と次のsyntax probeは[`current-language-direction.md`](current-language-direction.md)へ統合した。
+最初のprojection sliceではlanguage syntaxとResolved Intent schemaを増やさず、未宣言のdefault entryを`unspecified`と
+表示した。その後のbounded probeで`entry`とpage-local `continue`を実装し、任意のsurface-only chainに必要な最小semanticを
+追加した。`flow`所有は採用せず、global overviewはprojectionのまま維持する。現在の判断は
+[`current-language-direction.md`](current-language-direction.md)へ統合した。
 
 この実測で4つの穴が出た。既存applicationへIdentityを足すと標準actionの宛先が曖昧になり、明示`goto`
 （[`navigation-destination-proposal.md`](navigation-destination-proposal.md)）で解決した。Factが2件、
@@ -362,11 +363,11 @@ Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-pro
 `proof`をcredentialの別名にせず、local password proofとそのcredential bindingを別semantic nodeとして解決する。
 合格条件はsourceからStage B fixtureと同じIdentity semantics、38 Facts、3 Review Requirementsを再導出できることである。
 
-このfirst sliceは実装済みである。`examples/email-verified-membership.forma`をParser / Checkerが受理し、
-Authentication Proofとcredentialを別nodeにしたResolved Intent `v0.7`、Source Map `v0.4`へ解決する。canonical
-fixtureとの完全一致、38 Identity Facts、3 Review Requirements、未対応proof / lifecycle / owner bindingのnegative testを
-固定した。各Identity operationのinteractionもapplication全体でちょうど1件に制限し、Factの付かない追加surfaceを
-拒否する。Stage DではこのGeneration Requestを既存admin targetへ適用し、既存43件とIdentity 38件を合わせた
+このfirst sliceは当初Resolved Intent `v0.7`、Source Map `v0.4`、38 Identity Factsとして実装した。
+その後`examples/email-verified-membership.forma`へapplication entryとpage-local surface transitionを追加し、現在は
+Resolved Intent `v0.8`、Source Map `v0.5`、Acceptance Facts `v0alpha5`へ解決する。Identity semantics、3 Review
+Requirements、未対応proof / lifecycle / owner bindingのnegative testは維持している。各Identity operationのinteractionも
+application全体でちょうど1件に制限する。Stage DではIdentity追加Generation Requestを既存admin targetへ適用し、既存43件とIdentity 38件を合わせた
 81/81 Facts、3 Review Requirementsを検証した。詳細は
 [`../experiments/membership-agent-e2e`](../experiments/membership-agent-e2e/README.md)に記録する。
 

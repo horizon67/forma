@@ -51,6 +51,7 @@ func MarshalSourceMap(sourceMap *SourceMap) ([]byte, error) {
 }
 
 func mergeProgram(destination, source *Program) {
+	destination.Entries = append(destination.Entries, source.Entries...)
 	destination.Types = append(destination.Types, source.Types...)
 	destination.Entities = append(destination.Entities, source.Entities...)
 	destination.Actions = append(destination.Actions, source.Actions...)

@@ -1,6 +1,6 @@
 outcome projection forma/outcome-projection/v0alpha1
-intent forma/resolved-intent/v0.7
-facts forma/acceptance-facts/v0alpha4
+intent forma/resolved-intent/v0.8
+facts forma/acceptance-facts/v0alpha5
 rows 83
 
 group UserAccount.password [identity/UserAccount/credential/password]

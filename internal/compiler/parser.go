@@ -27,7 +27,7 @@ func (p *parser) parseProgram() *Program {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.report(p.peek().Span, "F1001", "expected a top-level declaration", "start a declaration with `type`, `entity`, `action`, `identity`, `page`, or `role`")
+			p.report(p.peek().Span, "F1001", "expected a top-level declaration", "start a declaration with `entry`, `type`, `entity`, `action`, `identity`, `page`, or `role`")
 			before := p.current
 			p.synchronizeLine()
 			if p.current == before && !p.atEnd() {
@@ -36,6 +36,10 @@ func (p *parser) parseProgram() *Program {
 			continue
 		}
 		switch p.peek().Value {
+		case "entry":
+			if decl := p.parseApplicationEntry(); decl != nil {
+				program.Entries = append(program.Entries, decl)
+			}
 		case "type":
 			if decl := p.parseTypeDecl(); decl != nil {
 				program.Types = append(program.Types, decl)
@@ -61,11 +65,18 @@ func (p *parser) parseProgram() *Program {
 				program.Roles = append(program.Roles, decl)
 			}
 		default:
-			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown declaration `%s`", p.peek().Value), "expected `type`, `entity`, `action`, `identity`, `page`, or `role`")
+			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown declaration `%s`", p.peek().Value), "expected `entry`, `type`, `entity`, `action`, `identity`, `page`, or `role`")
 			p.synchronizeLine()
 		}
 	}
 	return program
+}
+
+func (p *parser) parseApplicationEntry() *ApplicationEntryDecl {
+	start := p.advance().Span
+	page := p.consumeTypeName("after `entry`")
+	p.finishLine()
+	return &ApplicationEntryDecl{Page: page, Span: mergeSpan(start, page.Span)}
 }
 
 func (p *parser) parseIdentityDecl() *IdentityDecl {
@@ -584,7 +595,7 @@ func (p *parser) parsePageDecl() *PageDecl {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.unexpected("`allow`, `require`, `interact`, `list`, `detail`, or `form`")
+			p.unexpected("`allow`, `require`, `interact`, `continue`, `list`, `detail`, or `form`")
 			p.synchronizeLine()
 			continue
 		}
@@ -600,6 +611,8 @@ func (p *parser) parsePageDecl() *PageDecl {
 			decl.Requirements = append(decl.Requirements, p.parseAccessRequirement())
 		case "interact":
 			decl.IdentityInteractions = append(decl.IdentityInteractions, p.parseIdentityInteraction())
+		case "continue":
+			decl.SurfaceTransitions = append(decl.SurfaceTransitions, p.parseSurfaceTransition())
 		case "list":
 			decl.Views = append(decl.Views, p.parseView(ViewList))
 		case "detail":
@@ -607,7 +620,7 @@ func (p *parser) parsePageDecl() *PageDecl {
 		case "form":
 			decl.Views = append(decl.Views, p.parseView(ViewForm))
 		default:
-			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown page member `%s`", p.peek().Value), "expected `allow`, `require`, `interact`, `list`, `detail`, or `form`")
+			p.report(p.peek().Span, "F1001", fmt.Sprintf("unknown page member `%s`", p.peek().Value), "expected `allow`, `require`, `interact`, `continue`, `list`, `detail`, or `form`")
 			p.synchronizeLine()
 		}
 	}
@@ -615,6 +628,13 @@ func (p *parser) parsePageDecl() *PageDecl {
 	decl.Span = mergeSpan(start, end.Span)
 	p.consumeOptionalNewline()
 	return decl
+}
+
+func (p *parser) parseSurfaceTransition() *SurfaceTransitionDecl {
+	start := p.advance().Span
+	destination := p.consumeTypeName("after `continue`")
+	p.finishLine()
+	return &SurfaceTransitionDecl{Kind: "continue", Destination: destination, Span: mergeSpan(start, destination.Span)}
 }
 
 func (p *parser) parseAccessRequirement() *AccessRequirementDecl {

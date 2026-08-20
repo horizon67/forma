@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const NavigationProjectionVersion = "forma/navigation-projection/v0alpha1"
+const NavigationProjectionVersion = "forma/navigation-projection/v0alpha2"
 
 const (
 	navigationEndpointPage             = "page"
@@ -29,8 +29,9 @@ type NavigationProjection struct {
 }
 
 type NavigationEntry struct {
-	Kind string     `json:"kind"`
-	Page SemanticID `json:"page,omitempty"`
+	Kind        string       `json:"kind"`
+	Page        SemanticID   `json:"page,omitempty"`
+	SourceNodes []SemanticID `json:"sourceNodes,omitempty"`
 }
 
 type NavigationPage struct {
@@ -64,8 +65,8 @@ type navigationOperation struct {
 }
 
 // BuildNavigationProjection derives one canonical graph from checked intent.
-// The current language has no default-entry declaration, so the projection
-// reports it as unspecified instead of inferring one from page order or names.
+// Legacy sources without an entry remain explicitly unspecified; the compiler
+// never infers an entry from page order or names.
 func BuildNavigationProjection(intent *ResolvedIntent, sourceMap *SourceMap) (*NavigationProjection, error) {
 	if err := ValidateSourceMapCoverage(intent, sourceMap); err != nil {
 		return nil, fmt.Errorf("build Navigation Projection: %w", err)
@@ -83,6 +84,16 @@ func BuildNavigationProjection(intent *ResolvedIntent, sourceMap *SourceMap) (*N
 		pagesByID[page.ID] = page
 		projection.Pages = append(projection.Pages, NavigationPage{ID: page.ID, Name: page.Name})
 	}
+	if intent.Entry != nil {
+		entryPage, ok := pagesByName[intent.Entry.Page]
+		if !ok {
+			return nil, fmt.Errorf("build Navigation Projection: application entry references unknown page %q", intent.Entry.Page)
+		}
+		projection.DefaultEntry = NavigationEntry{
+			Kind: navigationEndpointPage, Page: entryPage.ID,
+			SourceNodes: canonicalNavigationSourceNodes([]SemanticID{intent.Entry.ID, entryPage.ID}),
+		}
+	}
 
 	operations := navigationOperations(intent)
 	addEdge := func(edge NavigationEdge) {
@@ -97,6 +108,19 @@ func BuildNavigationProjection(intent *ResolvedIntent, sourceMap *SourceMap) (*N
 	}
 
 	for _, page := range intent.Pages {
+		for _, transition := range page.SurfaceTransitions {
+			destination, err := fixedNavigationDestination(transition.TargetPage, pagesByName)
+			if err != nil {
+				return nil, fmt.Errorf("build Navigation Projection: surface transition %s: %w", transition.ID, err)
+			}
+			addEdge(NavigationEdge{
+				ID: transition.ID, Kind: "surface-transition",
+				SourceKind: navigationEndpointPage, Source: page.ID,
+				DestinationKind: destination.kind, Destination: destination.page,
+				Trigger: transition.ID, Label: transition.Kind, Outcome: transition.Kind,
+				SourceNodes: []SemanticID{page.ID, transition.ID, destination.page},
+			})
+		}
 		for _, view := range page.Views {
 			for _, action := range view.Actions {
 				trigger := action.ID
@@ -345,9 +369,6 @@ func validateNavigationProjection(projection *NavigationProjection, sourceMap *S
 	if projection.Version != NavigationProjectionVersion || projection.IntentVersion != sourceMap.IntentVersion {
 		return fmt.Errorf("schema versions do not match Source Map")
 	}
-	if projection.DefaultEntry.Kind != navigationEndpointUnspecified || projection.DefaultEntry.Page != "" {
-		return fmt.Errorf("current language must project an unspecified default entry")
-	}
 	pages := map[SemanticID]bool{}
 	for _, page := range projection.Pages {
 		if page.ID == "" || page.Name == "" || pages[page.ID] {
@@ -358,6 +379,31 @@ func validateNavigationProjection(projection *NavigationProjection, sourceMap *S
 	sourceNodes := map[SemanticID]bool{}
 	for _, entry := range sourceMap.Entries {
 		sourceNodes[entry.NodeID] = true
+	}
+	switch projection.DefaultEntry.Kind {
+	case navigationEndpointUnspecified:
+		if projection.DefaultEntry.Page != "" || len(projection.DefaultEntry.SourceNodes) != 0 {
+			return fmt.Errorf("unspecified default entry has page or provenance")
+		}
+	case navigationEndpointPage:
+		if !pages[projection.DefaultEntry.Page] || len(projection.DefaultEntry.SourceNodes) == 0 {
+			return fmt.Errorf("default entry references a missing page or has no provenance")
+		}
+		entrySources := map[SemanticID]bool{}
+		for index, node := range projection.DefaultEntry.SourceNodes {
+			if !sourceNodes[node] {
+				return fmt.Errorf("default entry source node %s has no Source Map entry", node)
+			}
+			if index > 0 && projection.DefaultEntry.SourceNodes[index-1] >= node {
+				return fmt.Errorf("default entry source nodes are not canonical")
+			}
+			entrySources[node] = true
+		}
+		if !entrySources[applicationEntryID()] || !entrySources[projection.DefaultEntry.Page] {
+			return fmt.Errorf("default entry provenance is incomplete")
+		}
+	default:
+		return fmt.Errorf("default entry has unsupported kind %q", projection.DefaultEntry.Kind)
 	}
 	edges := map[SemanticID]bool{}
 	for _, edge := range projection.Edges {
@@ -435,7 +481,12 @@ func FormatNavigationProjection(projection *NavigationProjection) (string, error
 	var output strings.Builder
 	fmt.Fprintf(&output, "navigation projection %s\n", projection.Version)
 	fmt.Fprintf(&output, "intent %s\n", projection.IntentVersion)
-	fmt.Fprintf(&output, "default entry: %s\n\n", projection.DefaultEntry.Kind)
+	fmt.Fprintf(&output, "default entry: %s", projection.DefaultEntry.Kind)
+	if projection.DefaultEntry.Page != "" {
+		fmt.Fprintf(&output, " %s", pageNames[projection.DefaultEntry.Page])
+	}
+	fmt.Fprintln(&output)
+	fmt.Fprintln(&output)
 	fmt.Fprintln(&output, "external entries:")
 	externalCount := 0
 	for _, edge := range edges {

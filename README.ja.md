@@ -239,10 +239,10 @@ go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
-go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project navigation examples/email-verified-membership.forma
 go run ./cmd/forma project outcomes experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma project states experiments/membership-agent-e2e/app.forma
-go run ./cmd/forma project flow experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project flow examples/email-verified-membership.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -254,23 +254,24 @@ applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSONを出力します。`forma project navigation`はResolved Intentに
 既にあるnavigationを決定的な読み取り専用text viewへ投影し、第二の正本にしたり、未宣言のdefault entryを
-推測したりしません。`forma project outcomes`は観測可能なAcceptance Factsをcase単位のreview textへ展開します。
+推測したりしません。membership exampleは`entry SignUp`と`OnboardingGuide`を経由するpage-localな
+`continue`を宣言し、`entry`のない既存sourceは`unspecified`のままです。`forma project outcomes`は
+観測可能なAcceptance Factsをcase単位のreview textへ展開します。
 明示されたabsence、zero、excluded、unchangedだけを`must not`へ分離し、未記載Factの逆命題は作りません。
 `forma project states`はentity state machine、creation initializer、transitionの起動元、confirmation/role要件、
 Identity operationのstate eligibilityを表示します。session lifecycleをdomain transitionとして扱いません。
 `forma project flow`はこの3 projectionを決定的なMarkdown/Mermaid review viewへ合成します。Outcome groupと
 state elementはexactなsemantic ID関係だけでnavigation edgeへ結び、対応しないdetailも明示的なindexへ残します。
-図は編集可能なapplication semanticsではなく、layoutやapplication entry pointも推測しません。
+図は編集可能なapplication semanticsではなく、layoutを推測しません。
 `forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
 feedbackの検査結果を出力します。メール認証付きsignup/signinの
-Identity probeはStage Dまで完了し、Resolved Intent `v0.7`、Source Map `v0.4`、81 Acceptance Facts、
+Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v0.8`、Source Map `v0.5`、81 Acceptance Facts、
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
-`test/blocked` handoffとして人間へ返しました。直近のbounded language probeでは、application entryと
-surface-only transitionを`flow`所有とpage-local所有で比較します。その後、次の中心milestoneであるP3の
-Expression → Changes → Occurrence → Effectへ戻ります。projectionの人間評価は独立して進め、既に確認された
-言語gapを隠したり保留したりしません。
+`test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
+top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。ここから本線のP3
+Expression → Changes → Occurrence → Effectへ戻ります。projectionの人間評価は独立して進めます。
 
 ## 設計資料
 

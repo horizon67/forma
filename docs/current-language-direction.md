@@ -51,24 +51,27 @@ Forma coreが会員登録runtime、framework別generator、画面flow engineを�
 
 ## 確認済みの言語gap
 
-### 1. Application default entry
+### 1. Application default entry（対応済み）
 
-現在のsourceはpageを宣言できるが、application起動時のentryを宣言できない。最初のpage、名前が`Home`のpage、
+bounded probe前のsourceはpageを宣言できたが、application起動時のentryを宣言できなかった。最初のpage、名前が`Home`のpage、
 registration interactionを持つpage等から推測してはならないため、projectionは`unspecified`と表示している。
 
-これは表示上の問題ではなく、正本に意味が存在しない問題である。application-level entry semanticが必要である。
+これは表示上の問題ではなく、正本に意味が存在しない問題だった。bounded probeでtop-levelの`entry Page`を追加し、
+`application/entry`としてResolved Intent、Source Map、Acceptance Factsへ解決した。未宣言sourceは引き続き
+`unspecified`であり、page順や名前から推測しない。
 
-### 2. Surface-only transition
+### 2. Surface-only transition（対応済み）
 
-現在のIdentity interactionは、operation成功先と、その成功先からの1回の`continue`を持てる。しかし次のような、
+bounded probe前のIdentity interactionは、operation成功先と、その成功先からの1回の`continue`を持てた。しかし次のような、
 domain operationを伴わない任意のsurface chainは表現できない。
 
 ```text
 RegistrationComplete -> OnboardingGuide -> SignIn
 ```
 
-pageを追加するだけ、または生成diagramへedgeを足すだけでは正本の意味にならない。trigger/capability、source surface、destinationを
-持つ汎用surface transition semanticが必要である。
+pageを追加するだけ、または生成diagramへedgeを足すだけでは正本の意味にならない。bounded probeではpage-localな
+`continue Page`を、trigger/capability、source surface、destinationを持つsurface transition semanticへ解決した。
+最初のsliceは固定pageへの`continue`だけを受理し、parameterized pageへのbindingなし遷移と二重ownershipを拒否する。
 
 ### 3. CRUD/state transitionを越えるdomain behavior
 
@@ -98,19 +101,23 @@ semantic graphへ解決されることを意味する。
 
 ## 直近の実施順序
 
-### Track A — Navigation semantics follow-up（直近のbounded probe）
+### Track A — Navigation semantics follow-up（完了）
 
-1. application entryのsemantic identity、cardinality、Source Map表現を決める。
-2. surface-only transitionを、operation navigationと重複しない共通edge modelへ追加する。
-3. 次の2つのsurface syntaxを同じmembership変更で比較する。
-   - `flow` blockがnavigationを所有する案
-   - page-localな`continue` / navigation actionが所有する案
-4. ownershipを一意にする。pageと`flow`が同じdestinationを二重宣言する形は採用しない。
-5. `RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、Resolved Intent、Source Map、Acceptance Facts、
-   navigation/flow projection、semantic diffまで通す。
-6. admin CRUDへ不要な`flow` boilerplateを要求しないことを確認する。
+`flow`所有とpage-local所有を同じmembership変更で比較し、page-localを採用した。
 
-このprobeで先に固定するのはsemantic modelであり、`flow`というkeywordではない。
+- `entry SignUp`はapplication-levelに一度だけ宣言する。
+- operationを伴わないedgeはsource pageが`continue Destination`として所有する。
+- operation成功先は従来どおり、そのoperationを提示するsurfaceが所有する。
+- pageとinteractionが同じcontinuationを二重宣言するsourceはcompile errorにする。
+- global overviewは編集可能な`flow`正本ではなく、navigation/flow projectionから得る。
+
+[`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
+`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、Resolved Intent `v0.8`、Source Map `v0.5`、
+Acceptance Facts `v0alpha5`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
+
+`flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
+このsliceでは局所理解とCRUDの簡潔さを悪化させた。nested、parallel、interruptible flowの実例が現れた場合は再評価する。
 
 ### Track B — Human readability evaluation（Track Aをblockしない）
 
@@ -119,9 +126,9 @@ source-onlyとsource+projectionの比較を実施する。これはprojectionの
 
 Candidate Cの完全な`flow` DSLを採用する判断には人間評価を使うが、最小surface transition semanticの必要性は既に確認済みである。
 
-### Track C — P3 Domain behavior
+### Track C — P3 Domain behavior（次の本線）
 
-Navigationのbounded probe後、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
+Navigationのbounded probeが完了したため、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
 
 1. Expression
 2. Derived Value

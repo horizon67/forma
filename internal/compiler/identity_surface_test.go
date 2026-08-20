@@ -3,7 +3,7 @@ package compiler
 import (
 	"os"
 	"path/filepath"
-	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -21,28 +21,84 @@ func TestEmailVerifiedMembershipSurfaceResolvesCanonicalIntent(t *testing.T) {
 	if len(program.Identities) != 1 || program.Identities[0].Name.Text != "UserAccount" {
 		t.Fatalf("parsed identities = %#v", program.Identities)
 	}
+	if len(program.Entries) != 1 || program.Entries[0].Page.Text != "SignUp" {
+		t.Fatalf("parsed entry = %#v", program.Entries)
+	}
 	result := Compile([]SourceFile{source})
 	if len(result.Diagnostics) != 0 {
 		t.Fatalf("compile diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
 	}
-	want, _ := membershipIntentFixture(t)
-	if !reflect.DeepEqual(result.Intent, want) {
-		actualJSON, _ := MarshalIntent(result.Intent)
-		wantJSON, _ := MarshalIntent(want)
-		t.Fatalf("surface intent differs from canonical membership fixture\nactual:\n%s\nwant:\n%s", actualJSON, wantJSON)
+	if result.Intent.Entry == nil || result.Intent.Entry.ID != applicationEntryID() || result.Intent.Entry.Page != "SignUp" {
+		t.Fatalf("resolved entry = %#v", result.Intent.Entry)
+	}
+	registrationComplete := resolvedPageByName(t, result.Intent, "RegistrationComplete")
+	if len(registrationComplete.SurfaceTransitions) != 1 || registrationComplete.SurfaceTransitions[0] != (IRSurfaceTransition{
+		ID: surfaceTransitionID("RegistrationComplete", "continue"), Kind: "continue", TargetPage: "OnboardingGuide",
+	}) {
+		t.Fatalf("RegistrationComplete transitions = %#v", registrationComplete.SurfaceTransitions)
+	}
+	onboarding := resolvedPageByName(t, result.Intent, "OnboardingGuide")
+	if len(onboarding.SurfaceTransitions) != 1 || onboarding.SurfaceTransitions[0].TargetPage != "SignIn" {
+		t.Fatalf("OnboardingGuide transitions = %#v", onboarding.SurfaceTransitions)
+	}
+	verify := resolvedPageByName(t, result.Intent, "VerifyEmail").IdentityInteractions[0]
+	if verify.Success.Page != "RegistrationComplete" || verify.Continuation != nil {
+		t.Fatalf("verify navigation = success %#v, continuation %#v", verify.Success, verify.Continuation)
 	}
 	if err := ValidateSourceMapCoverage(result.Intent, result.SourceMap); err != nil {
 		t.Fatalf("surface Source Map coverage: %v", err)
 	}
-	if len(result.SourceMap.Entries) != 54 {
-		t.Fatalf("surface Source Map entries = %d, want 54", len(result.SourceMap.Entries))
+	if len(result.SourceMap.Entries) != 57 {
+		t.Fatalf("surface Source Map entries = %d, want 57", len(result.SourceMap.Entries))
 	}
 	facts, err := BuildAcceptanceFacts(result.Intent)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(facts.Facts) != 38 {
-		t.Fatalf("surface facts = %d, want 38", len(facts.Facts))
+	if len(facts.Facts) != 41 {
+		t.Fatalf("surface facts = %d, want 41", len(facts.Facts))
+	}
+	for id, target := range map[SemanticID]SemanticID{
+		"fact/application/entry/navigation":                             pageID("SignUp"),
+		"fact/page/RegistrationComplete/transition/continue/navigation": pageID("OnboardingGuide"),
+		"fact/page/OnboardingGuide/transition/continue/navigation":      pageID("SignIn"),
+	} {
+		fact := acceptanceFactByID(t, facts, id)
+		if fact.Expected.Navigation == nil || fact.Expected.Navigation.TargetPage != target {
+			t.Fatalf("fact %s navigation = %#v", id, fact.Expected.Navigation)
+		}
+	}
+	navigation, err := BuildNavigationProjection(result.Intent, result.SourceMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if navigation.DefaultEntry.Kind != navigationEndpointPage || navigation.DefaultEntry.Page != pageID("SignUp") {
+		t.Fatalf("navigation entry = %#v", navigation.DefaultEntry)
+	}
+	if edge := navigationEdgeByID(t, navigation, surfaceTransitionID("RegistrationComplete", "continue")); edge.Destination != pageID("OnboardingGuide") || edge.Kind != "surface-transition" {
+		t.Fatalf("RegistrationComplete edge = %#v", edge)
+	}
+	navigationText, err := FormatNavigationProjection(navigation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"default entry: page SignUp", "RegistrationComplete", "-- continue --> OnboardingGuide", "-- continue --> SignIn"} {
+		if !strings.Contains(navigationText, want) {
+			t.Fatalf("navigation projection omits %q:\n%s", want, navigationText)
+		}
+	}
+	flow, err := BuildFlowProjection(result.Intent, result.SourceMap)
+	if err != nil {
+		t.Fatalf("flow projection: %v", err)
+	}
+	flowText, err := FormatFlowProjection(flow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"default_entry([\"default entry\"])", "RegistrationComplete -> OnboardingGuide", "OnboardingGuide -> SignIn"} {
+		if !strings.Contains(flowText, want) {
+			t.Fatalf("flow projection omits %q:\n%s", want, flowText)
+		}
 	}
 	reviews, err := BuildReviewRequirements(result.Intent)
 	if err != nil {
@@ -51,6 +107,28 @@ func TestEmailVerifiedMembershipSurfaceResolvesCanonicalIntent(t *testing.T) {
 	if len(reviews.Requirements) != 3 {
 		t.Fatalf("surface review requirements = %d, want 3", len(reviews.Requirements))
 	}
+}
+
+func resolvedPageByName(t *testing.T, intent *ResolvedIntent, name string) IRPage {
+	t.Helper()
+	for _, page := range intent.Pages {
+		if page.Name == name {
+			return page
+		}
+	}
+	t.Fatalf("page %s is missing", name)
+	return IRPage{}
+}
+
+func acceptanceFactByID(t *testing.T, facts *AcceptanceFacts, id SemanticID) AcceptanceFact {
+	t.Helper()
+	for _, fact := range facts.Facts {
+		if fact.ID == id {
+			return fact
+		}
+	}
+	t.Fatalf("fact %s is missing", id)
+	return AcceptanceFact{}
 }
 
 func TestIdentitySurfaceRejectsUnsupportedProofAndLifecycle(t *testing.T) {

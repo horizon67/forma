@@ -52,7 +52,8 @@ func TestAdminNavigationProjectionMatchesGolden(t *testing.T) {
 }
 
 func TestNavigationProjectionIsIndependentOfDeclarationOrder(t *testing.T) {
-	first := `entity User {
+	first := `entry Users
+entity User {
     name String required
 }
 page Users {
@@ -78,6 +79,7 @@ page Users {
         actions view
     }
 }
+entry Users
 entity User {
     name String required
 }

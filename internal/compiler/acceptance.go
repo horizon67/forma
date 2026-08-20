@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha4"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha5"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -291,6 +291,17 @@ type acceptanceBuilder struct {
 }
 
 func (b *acceptanceBuilder) build() error {
+	if b.intent.Entry != nil {
+		page, ok := b.pages[b.intent.Entry.Page]
+		if !ok {
+			return fmt.Errorf("build Acceptance Facts: application entry references missing page %s", b.intent.Entry.Page)
+		}
+		b.add(AcceptanceFact{
+			ID: factID(b.intent.Entry.ID, "navigation"), Kind: "application-entry", Subject: b.intent.Entry.ID,
+			Expected:    FactExpectation{Navigation: &FactNavigation{TargetPage: page.ID}},
+			SourceNodes: []SemanticID{b.intent.Entry.ID, page.ID},
+		})
+	}
 	for _, entity := range b.intent.Entities {
 		for _, field := range entity.Fields {
 			if field.Relation != nil {
@@ -299,6 +310,17 @@ func (b *acceptanceBuilder) build() error {
 		}
 	}
 	for _, page := range b.intent.Pages {
+		for _, transition := range page.SurfaceTransitions {
+			target, ok := b.pages[transition.TargetPage]
+			if !ok {
+				return fmt.Errorf("build Acceptance Facts: surface transition %s references missing page %s", transition.ID, transition.TargetPage)
+			}
+			b.add(AcceptanceFact{
+				ID: factID(transition.ID, "navigation"), Kind: "navigation", Subject: transition.ID,
+				Expected:    FactExpectation{Navigation: &FactNavigation{TargetPage: target.ID}},
+				SourceNodes: []SemanticID{page.ID, transition.ID, target.ID},
+			})
+		}
 		for _, view := range page.Views {
 			entity, ok := b.entities[view.Entity]
 			if !ok {

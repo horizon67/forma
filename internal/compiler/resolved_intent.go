@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.7"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.8"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -10,13 +10,21 @@ type SemanticID string
 // ResolvedIntent is the target-neutral, fully resolved application intent that
 // a coding agent must implement. It contains no repository-specific lowering.
 type ResolvedIntent struct {
-	Version    string       `json:"version"`
-	Roles      []IRRole     `json:"roles,omitempty"`
-	Types      []IRType     `json:"types,omitempty"`
-	Entities   []IREntity   `json:"entities,omitempty"`
-	Actions    []IRAction   `json:"actions,omitempty"`
-	Identities []IRIdentity `json:"identities,omitempty"`
-	Pages      []IRPage     `json:"pages,omitempty"`
+	Version    string              `json:"version"`
+	Entry      *IRApplicationEntry `json:"entry,omitempty"`
+	Roles      []IRRole            `json:"roles,omitempty"`
+	Types      []IRType            `json:"types,omitempty"`
+	Entities   []IREntity          `json:"entities,omitempty"`
+	Actions    []IRAction          `json:"actions,omitempty"`
+	Identities []IRIdentity        `json:"identities,omitempty"`
+	Pages      []IRPage            `json:"pages,omitempty"`
+}
+
+// IRApplicationEntry is the explicitly declared default application surface.
+// It carries no route or framework mechanism.
+type IRApplicationEntry struct {
+	ID   SemanticID `json:"id"`
+	Page string     `json:"page"`
 }
 
 type IRRole struct {
@@ -115,6 +123,16 @@ type IRPage struct {
 	Access               *IRAccess               `json:"access,omitempty"`
 	Views                []IRView                `json:"views,omitempty"`
 	IdentityInteractions []IRIdentityInteraction `json:"identityInteractions,omitempty"`
+	SurfaceTransitions   []IRSurfaceTransition   `json:"surfaceTransitions,omitempty"`
+}
+
+// IRSurfaceTransition is a user-triggered navigation capability that has no
+// domain operation or mutation. The first slice supports only `continue` to a
+// fixed, parameterless page.
+type IRSurfaceTransition struct {
+	ID         SemanticID `json:"id"`
+	Kind       string     `json:"kind"`
+	TargetPage string     `json:"targetPage"`
 }
 
 type IRParameter struct {

@@ -1,6 +1,6 @@
 # Membership Flow Notation Probe
 
-Status: candidate B navigation, outcome, domain-state, and visual flow projections implemented; human evaluation protocol ready with no participant result yet — candidate C remains pseudocode and is not a language decision
+Status: candidate B projections implemented; page-local entry/surface-transition follow-up chosen and implemented; human evaluation has no participant result yet — candidate C remains pseudocode
 
 このprobeを含む全実験後の現在の言語判断と実施順序は
 [`current-language-direction.md`](current-language-direction.md)を参照する。
@@ -415,7 +415,52 @@ formatterはMarkdown内にMermaid graph、edge trace table、unlinked indexを�
 modelへ入れず、図を編集しても正本は変わらない。membership/adminのgolden、declaration/source-path順不変、state mutationの
 局所性、同じ`suspend` operationを持つ2 surfaceのOutcomeを混同しないこと、cross-projection provenanceをtestした。
 
-## 9. 人間評価
+## 9. Navigation semantic follow-upの結果
+
+projectionでは埋められなかったdefault entryとsurface-only chainについて、candidate Cの`flow`所有とpage-local所有を
+同じ変更で比較した。採用したsourceは次である。
+
+```forma
+entry SignUp
+
+page VerifyEmail {
+    interact UserAccount.verify {
+        evidence email
+        success RegistrationComplete
+        feedback invalid, expired, failure
+    }
+}
+
+page RegistrationComplete {
+    continue OnboardingGuide
+}
+
+page OnboardingGuide {
+    continue SignIn
+}
+```
+
+判定はpage-localである。operation navigation、form submit、standard actionがすでにsource pageで所有されており、
+surface-only edgeだけを`flow`へ移すとownership規則が二系統になる。全edgeを`flow`へ移すと単純なadmin CRUDにも
+boilerplateを要求する。page-localなら変更edgeの正本は一か所で、global overviewは既存projectionから得られる。
+
+実装した境界は次のとおり。
+
+- `entry`はapplicationに0個または1個。未宣言時はprojectionが`unspecified`を保つ。
+- `entry`と`continue`はbindingを持たないため、最初のsliceではparameterless pageだけをdestinationにできる。
+- `continue`はdomain operationを実行しないuser-triggered capabilityで、1 pageに1個まで。
+- 旧Identity interaction内の`continue`は既存artifact用に受理するが、success pageのpage-local `continue`との併記は拒否する。
+- `application/entry`と`page/{Page}/transition/continue`はSource MapとAcceptance Factを持つ。
+
+[`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)の実測値は8 pages、9 navigation edges、
+57 Source Map entries、41 Acceptance Factsである。`continue OnboardingGuide`を`continue SignIn`へ変えるmutationでは、
+Resolved Intentの`page/RegistrationComplete`とそのtransition、対応する1 Factだけがsemantic diffになった。
+`examples/users.forma`は変更せず、既存admin CRUD projectionも同じmodelで通っている。
+
+この結果は完全なtask-flow DSLを不要と断定するものではない。back/cancel、nested、parallel、interruptible flowでpage-local
+modifierが増殖する実例、または人間評価でcandidate Cの明確な優位が出た場合に`flow`所有を再評価する。
+
+## 10. 人間評価
 
 [`evaluations/membership-flow/README.md`](evaluations/membership-flow/README.md)に、source-only条件Aと
 source+projection条件Bを実際に読み比べるprotocolを固定した。同一applicationを二度読むlearning effectを避けるため
@@ -423,10 +468,11 @@ primary studyはbetween-subjectとし、最初のstop ruleをA/B各4 sessionと�
 confidenceを記録し、31点のanswer keyと判定thresholdをsession開始前に固定した。
 
 Candidate Cは未実装なので定量条件へ含めない。まずBがT1/T4を改善し、T2/T5とCRUDのT6を悪化させないかを測る。
-T3は両条件とも「現行semanticではsurface-only chainを追加できない」が正答であり、図を編集すれば解決すると誤認する場合は
-language primitiveの前にviewを直す。protocolとstimuliはreadyだが、participant resultはまだ記録していない。
+このprotocolとstimuliはnavigation follow-up前のsourceを固定しているため、T3は両条件とも「提示されたsemanticでは
+surface-only chainを追加できない」が正答である。図を編集すれば解決すると誤認する場合はviewを直す。
+新しい`entry` / page-local `continue`はこの既存sessionへ遡及して混ぜない。participant resultはまだ記録していない。
 
-## 10. 判定を見直す条件
+## 11. 判定を見直す条件
 
 次のいずれかを実測した場合は候補Cを再評価する。
 
@@ -438,4 +484,4 @@ language primitiveの前にviewを直す。protocolとstimuliはreadyだが、pa
 
 逆に、生成projectionでglobal overviewとsemantic diffを十分に読めるなら、`flow`は新primitiveにせずviewとして維持する。
 これは完全な`flow`所有構文の判定である。default entryとsurface-only transitionのsemantic gap自体はprojectionで埋まらず、
-最小source syntaxの比較を次のbounded probeとして行う。
+最小source syntaxの比較は上記bounded probeで完了し、page-localを採用した。

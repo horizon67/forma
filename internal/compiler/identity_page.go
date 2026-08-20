@@ -137,7 +137,6 @@ func (c *checker) checkInteractionContract(identity *IdentityDecl, operation str
 	wantFields := []string(nil)
 	wantIdentifier, wantProof, wantEvidence := "", "", ""
 	wantFeedback := []string(nil)
-	wantContinuation := false
 	wantRequirements := 0
 	switch operation {
 	case "register":
@@ -147,7 +146,6 @@ func (c *checker) checkInteractionContract(identity *IdentityDecl, operation str
 	case "verify":
 		wantEvidence = "email"
 		wantFeedback = []string{"invalid", "expired", "failure"}
-		wantContinuation = true
 	case "resend":
 		wantIdentifier = "email"
 		wantFeedback = []string{"uniform", "failure"}
@@ -169,8 +167,11 @@ func (c *checker) checkInteractionContract(identity *IdentityDecl, operation str
 		gotEvidence = interaction.Evidence.Text
 	}
 	if !nameTextsEqual(interaction.Fields, wantFields) || gotIdentifier != wantIdentifier || gotProof != wantProof || gotEvidence != wantEvidence ||
-		!nameTextsEqual(interaction.Feedback, wantFeedback) || (interaction.Continuation != nil) != wantContinuation || len(interaction.Requirements) != wantRequirements {
+		!nameTextsEqual(interaction.Feedback, wantFeedback) || len(interaction.Requirements) != wantRequirements {
 		c.error(interaction.Span, "F2714", fmt.Sprintf("interaction `%s.%s` does not match the supported %s input and feedback contract", identity.Name.Text, interaction.Operation.Text, operation), "use the operation-specific fields, identifier, proof/evidence, feedback, continuation, and access from the Identity syntax proposal")
+	}
+	if operation != "verify" && interaction.Continuation != nil {
+		c.error(interaction.Continuation.Span, "F2714", fmt.Sprintf("%s interaction cannot declare a continuation", operation), "remove `continue`; only the legacy verify form may place a continuation inside an interaction")
 	}
 	if operation == "resend" && !interaction.Stay {
 		c.error(interaction.Span, "F2714", "resend interaction must use `stay`", "keep the user in the same CheckEmail context")
