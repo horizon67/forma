@@ -38,8 +38,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
-| automated repair | **P2 Now / first probe実測** | membership targetでtest failure → failed feedback → repair → 81/81を1回測定。汎用orchestrationは未検証 |
-| Expression以降 | experimental slice | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
+| automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → 81/81と、intent gap → human handoffを自動実行 |
+| Expression以降 | **P3 Next / experimental slice** | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -47,8 +47,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 > Formaは、AIに渡す前処理として本当に機能するか。
 
 同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
-applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dも完了し、
-現在はbuild/test failureから意味を弱めず実装を直すrepair loopを検証している。
+applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dと最初のbounded
+repair loopも完了し、次はCRUD/state transitionを越えるapplication semanticsを検証する。
 
 ## 3. 優先順位
 
@@ -58,8 +58,8 @@ applicationを継続的に保守するsourceとして一段強い根拠を得た
 | --- | --- | --- |
 | **P0 / first probe completed** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
 | **P1 / Stage D completed** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
-| **P2 / Now** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
-| **P3** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
+| **P2 / first bounded loop completed** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
+| **P3 / Next** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
 
 この順序は、実装が簡単なものではなく、**中心仮説を強く否定し得る実験**を先に置く。各Milestoneを
@@ -129,7 +129,8 @@ coding agentへ渡す前に、application intentの構文・参照・型・静�
 - targetのfile構成、route、submission方式などはagentが独立に決めた。
 - 43/43は主要testを直接reviewし、単なるcoverage申告でないことを確認した。
 - 初回runの時点ではincremental updateと独立再現性が未検証だった。incrementalはMilestone 3で最初の
-  probeを完了し、独立agentまたは実在repositoryでの再現性は引き続き未検証である。
+  probeを完了した。fresh agent processによるrepairはMilestone 5で再現したが、独立agentによる初回生成や
+  実在repositoryへの適用は引き続き未検証である。
 
 このMilestoneを繰り返して二つ目のframework generatorを作ることはしない。
 
@@ -298,10 +299,10 @@ feedback artifactの信頼性も同様で、生成失敗時に旧artifactが残�
 しまうため、撤回してから検証し成功時のみatomicに公開する形にした。3件のReview Requirementsは
 すべて承認され、Stage Dは完了である。
 
-独立agentでの再現性、実在する大規模repositoryへの適用、rename/削除を含むincremental updateは
-未検証である。automated repairは
-[`../experiments/membership-repair-loop`](../experiments/membership-repair-loop/README.md)で
-最初のcontrolled probeを実測したが、汎用orchestrationではない。
+独立agentによる初回生成の再現性、実在する大規模repositoryへの適用、rename/削除を含むincremental
+updateは未検証である。後続のautomated repairは
+[`../experiments/membership-automated-repair-loop`](../experiments/membership-automated-repair-loop/README.md)で
+fresh agent processを含むbounded orchestrationまで実測した。
 
 Stage B1ではForma syntaxを増やさず、test-only fixtureからIdentity、Identifier、Credential、Registration、
 Verification、Authentication、Session、Ownership、page interaction、authenticated/ownership accessを
@@ -337,10 +338,12 @@ Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-pro
 合格条件はsourceからStage B fixtureと同じIdentity semantics、38 Facts、3 Review Requirementsを再導出できることである。
 
 このfirst sliceは実装済みである。`examples/email-verified-membership.forma`をParser / Checkerが受理し、
-Authentication Proofとcredentialを別nodeにしたResolved Intent `v0.6`、Source Map `v0.4`へ解決する。canonical
-fixtureとの完全一致、38 Facts、3 Review Requirements、未対応proof / lifecycle / owner bindingのnegative testを固定した。
-各Identity operationのinteractionもapplication全体でちょうど1件に制限し、Factの付かない追加surfaceを拒否する。
-次はこのGeneration Requestをcoding agentへ渡し、実repositoryでsignup/signin flowを生成・検証する。
+Authentication Proofとcredentialを別nodeにしたResolved Intent `v0.7`、Source Map `v0.4`へ解決する。canonical
+fixtureとの完全一致、38 Identity Facts、3 Review Requirements、未対応proof / lifecycle / owner bindingのnegative testを
+固定した。各Identity operationのinteractionもapplication全体でちょうど1件に制限し、Factの付かない追加surfaceを
+拒否する。Stage DではこのGeneration Requestを既存admin targetへ適用し、既存43件とIdentity 38件を合わせた
+81/81 Facts、3 Review Requirementsを検証した。詳細は
+[`../experiments/membership-agent-e2e`](../experiments/membership-agent-e2e/README.md)に記録する。
 
 ### Exit criteria
 
@@ -351,7 +354,7 @@ fixtureとの完全一致、38 Facts、3 Review Requirements、未対応proof / 
 - agentがrepository標準の安全なidentity実装を選べる
 - Identity Factsをtarget固有testへ変換し、正常系と否定系が成功する
 
-## Milestone 5 — Automated repair loop（P2 / Now）
+## Milestone 5 — Automated repair loop（P2 / first bounded loop completed）
 
 ### 目的
 
@@ -376,10 +379,11 @@ Generation Request
 
 ### 残る実装・実験
 
-- compiler errorとrepository build/test failureの明確な分離
-- agentが要求を削除・弱化してtestを通すことを禁止するretry policy
-- failureが実装bugか、Formaのintent gapかを分類するfeedback
-- 独立agent、build失敗、複数種類のfailureでの再現
+- [x] compiler errorとrepository build/test failureの明確な分離
+- [x] agentが要求を削除・弱化してtestを通すことを禁止するretry policy
+- [x] failureが実装bugか、Formaのintent gapかを分類するfeedbackとhuman handoff
+- [x] fresh agent processでbuild失敗とtest失敗のrepairを別々に再現
+- [ ] 複数attemptを必要とするrepairと、より間接的なfailureでの再現
 
 Source Mapを使ったfailure関連付けと、controlledなfailure → repair → successの最初のprobeは
 [`../experiments/membership-repair-loop`](../experiments/membership-repair-loop/README.md)で実測した。
@@ -456,12 +460,39 @@ process分離すること。3つ目を破ると、bypassが出すsucceeded feedb
 byte-identicalになり、artifactからは区別できない。testが意味としてFactを忠実に検査して
 いるかも、この機構は証明しない。
 
+### automated independent loopの結果
+
+上の責務を[`../experiments/membership-automated-repair-loop`](../experiments/membership-automated-repair-loop/README.md)
+で1つのexperimental orchestratorへまとめた。
+
+- [x] retry開始前に`retryguard`、feedback generator、`forma verify`をrepository外へprebuildした。
+      guardだけを固定しても、その後agent-editableなgeneratorやverifierを`go run`すれば同じprocess
+      bypassが戻るため、retry後は3 toolsのsourceをcompileしない。
+- [x] 初回測定、fresh repair process、guard、再測定、最終verifyをbounded loopとして固定した。
+      guardがblockedをpublishした場合はgeneratorを起動せず、attempt上限またはagent非0終了では
+      最新のfailed feedbackを人間へ残す。
+- [x] 別々の`codex exec --ephemeral` processへtest failureとbuild failureを渡し、どちらも
+      implementationだけを1 attemptで修正した。trusted側の最終測定は81/81、40 distinct tests、
+      3 policies、3 Review Requirementsで成功し、feedbackは元のartifactへbyte-identicalに戻った。
+- [x] repair agentは最終testとverifierを実行せず、合否はagent process終了後にtrusted側が決めた。
+- [x] ASCII case foldだけを宣言したimmutable requestに対し、protected testがUnicode case foldを要求する
+      controlled intent gapを追加した。fresh agentはcodeやverification inputを変更せずstructured decisionを返した。
+- [x] decisionのFact IDとintent nodeをfailed feedback、Generation Request、Source Mapへ照合し、repository全体が
+      不変であることとtrusted再測定が同じfailureを返すことを確認してから、観測済みの`stage: test`とcommandを
+      保った`status: blocked`のGeneration Feedbackをhuman handoffとして発行した。再測定が成功するdecisionや
+      変更を残すdecision、rejected Factがないbuild failureからのdecisionは拒否する。
+
+これはagent/provider APIをForma coreへ追加するものではない。orchestratorはprocess commandだけを
+知るexperiment toolingである。2 repairsと1 intent gapは局所的で、実agent runはいずれも1 attemptだった。
+同一OS userに対するfilesystem/process isolationも提供しない。最初のbounded loopはExit criteriaを満たしたが、
+複数attempt、間接的なfailure、一般的なintent-gap分類は追加の再現性課題として残る。
+
 ### Exit criteria
 
-- buildまたはtest failureから自動修正して成功できる
-- retry中もrequested factsとpolicyが欠落・弱化しない
-- failureがFormaの不足ならcodeで回避せず、人間へintent gapとして返せる
-- 合否をagentの自己申告ではなくrepository commandの結果で確認できる
+- [x] buildまたはtest failureから自動修正して成功できる
+- [x] retry中もrequested factsとpolicyが欠落・弱化しない
+- [x] failureがFormaの不足ならcodeで回避せず、人間へintent gapとして返せる
+- [x] 合否をagentの自己申告ではなくrepository commandの結果で確認できる
 
 ## Milestone 6 — Application semanticsを実例から拡張する（P3）
 

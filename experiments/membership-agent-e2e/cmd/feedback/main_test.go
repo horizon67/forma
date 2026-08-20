@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -520,10 +521,11 @@ func TestGateWithoutASnapshotStillRetracts(t *testing.T) {
 	}
 }
 
-// TestRetryBaselineProtectsEveryReferencedTestFile derives the expected set from
-// the coverage map itself, so a fact that gains a test file cannot leave that
-// file unprotected without this failing.
-func TestRetryBaselineProtectsEveryReferencedTestFile(t *testing.T) {
+// TestRetryBaselineProtectsEveryVerificationInput derives the expected test set
+// from the coverage map and checks every package compiled into the trusted
+// tools, so neither a new Fact reference nor a later run can silently shrink
+// the trust boundary.
+func TestRetryBaselineProtectsEveryVerificationInput(t *testing.T) {
 	root := formaRoot(t)
 	entries, err := retryintegrity.Derive(retryBaselineConfig(root))
 	if err != nil {
@@ -543,6 +545,8 @@ func TestRetryBaselineProtectsEveryReferencedTestFile(t *testing.T) {
 		}
 	}
 	for _, path := range []string{
+		"go.mod",
+		"go.sum",
 		"experiments/membership-agent-e2e/app.forma",
 		"experiments/membership-agent-e2e/generation-request.json",
 		"experiments/membership-agent-e2e/target/forma.implementation.yaml",
@@ -558,6 +562,72 @@ func TestRetryBaselineProtectsEveryReferencedTestFile(t *testing.T) {
 	for path := range protected {
 		if strings.HasSuffix(path, ".go") && strings.Contains(path, "/target/") && !strings.HasSuffix(path, "_test.go") {
 			t.Errorf("the retry baseline protects implementation file %s", path)
+		}
+	}
+}
+
+func TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool(t *testing.T) {
+	root := formaRoot(t)
+	config := retryBaselineConfig(root)
+	entries, err := retryintegrity.Derive(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected := map[string]string{}
+	for _, entry := range entries {
+		protected[entry.Path] = entry.Reason
+	}
+	configured := map[string]bool{}
+	for _, directory := range config.RuleDirs {
+		configured[directory] = true
+	}
+
+	// Ask the Go toolchain for the dependency closure instead of restating the
+	// RuleDirs list this test is meant to check.
+	command := exec.Command(
+		"go", "list", "-deps", "-f", "{{if not .Standard}}{{.ImportPath}}{{end}}",
+		"./cmd/forma",
+		"./experiments/membership-agent-e2e/cmd/feedback",
+		"./experiments/membership-agent-e2e/cmd/retryguard",
+		"./experiments/membership-automated-repair-loop/cmd/orchestrate",
+	)
+	command.Dir = root
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("go list trusted tool dependencies: %v\n%s", err, output)
+	}
+	const module = "github.com/horizon67/forma/"
+	dependencies := map[string]bool{}
+	for _, importPath := range strings.Fields(string(output)) {
+		if !strings.HasPrefix(importPath, module) {
+			continue
+		}
+		directory := strings.TrimPrefix(importPath, module)
+		dependencies[directory] = true
+		if !configured[directory] {
+			t.Errorf("%s is compiled into a trusted tool but its directory listing is not in the retry baseline", directory)
+		}
+		items, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(directory)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range items {
+			if item.IsDir() || !strings.HasSuffix(item.Name(), ".go") {
+				continue
+			}
+			path := filepath.ToSlash(filepath.Join(directory, item.Name()))
+			wantReason := retryintegrity.ReasonVerificationRule
+			if path == "experiments/membership-agent-e2e/cmd/feedback/coverage.go" {
+				wantReason = retryintegrity.ReasonCoverageMap
+			}
+			if protected[path] != wantReason {
+				t.Errorf("the retry baseline does not protect verification source %s", path)
+			}
+		}
+	}
+	for directory := range configured {
+		if !dependencies[directory] {
+			t.Errorf("retry baseline rule directory %s is not compiled into a trusted tool", directory)
 		}
 	}
 }

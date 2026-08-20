@@ -168,4 +168,11 @@ feedbackの信頼性も同じ方法で確かめた。生成を強制的に失敗
 
 test failureからのcontrolled repairは
 [`../membership-repair-loop`](../membership-repair-loop/README.md)で最初のprobeを実測した。
-build失敗、独立agent、汎用orchestrationは未検証である。
+このStage D experiment単体ではbuild失敗、独立agent、汎用orchestrationを検証していない。
+
+後続probeでは、build failureを
+[`../membership-build-repair-loop`](../membership-build-repair-loop/README.md)、fresh agent processを含む
+trusted orchestrationを
+[`../membership-automated-repair-loop`](../membership-automated-repair-loop/README.md)で実測した。このStage D
+experiment単体がそれらを証明するものではない。後者ではtest/build repairに加え、implementationで
+解決できないForma intent gapをrepository不変のままhuman handoffへ返す経路も実測した。

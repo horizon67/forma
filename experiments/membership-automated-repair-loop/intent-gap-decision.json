@@ -1,0 +1,14 @@
+{
+  "schema": "forma-experiment/repair-decision/v0alpha1",
+  "status": "intent-gap",
+  "summary": "The protected test requires Unicode case folding, but the Generation Request declares ASCII case folding only.",
+  "factIds": [
+    "fact/identity/UserAccount/operation/register/identifier/duplicate"
+  ],
+  "intentNodes": [
+    "identity/UserAccount/identifier/email"
+  ],
+  "diagnostics": [
+    "Adding Unicode case folding in target code would broaden identifier canonicalization beyond trim-unicode-white-space and ascii-case-fold in the immutable request."
+  ]
+}

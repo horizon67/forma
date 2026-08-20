@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（19 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（59 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -75,17 +75,27 @@ hashは一切読まない。
 | `implementation-manifest` | `forma.implementation.yaml` | 1 |
 | `coverage-map` | `coverage.go` | 1 |
 | `referenced-test` | coverage mapが参照する全test file | 6 |
-| `verification-rule` | feedback generator、guard command、integrity packageのGo file | 8 |
+| `verification-build-input` | 次runのtrusted toolsをbuildする`go.mod` / `go.sum` | 2 |
+| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 46 |
 
-さらに、`verification-rule`の3 directoryは**file一覧そのもの**をsnapshotへ記録する。
+さらに、`verification-rule`の8 directoryは**file一覧そのもの**をsnapshotへ記録する。
 byte比較だけでは、snapshot後に追加されたfileが見えないためである（A4）。
 
+automated orchestratorはretry前に`forma verify`もprebuildする。そのrunでは改変sourceをcompileしなくても、
+sourceを残せば次runが改変済みverifierをtrusted binaryへ昇格させる。そこで`cmd/forma`、
+`internal/agentrequest`、`internal/compiler`、`internal/implementationpolicy`、orchestrator自身とmodule定義も
+同じbaselineへ含める。snapshot後の追加Go fileもdirectory listingで拒否する。
+
 固定**しない**もの: target implementation。repairが変えてよい唯一の場所である。
-`TestRetryBaselineProtectsEveryReferencedTestFile`が、`/target/`配下の非`_test.go`が
+`TestRetryBaselineProtectsEveryVerificationInput`が、`/target/`配下の非`_test.go`が
 保護集合に入らないことを毎回検査する。
 
 保護対象のtest fileは手書きしない。coverage mapのtest referenceから導出する。
 Factがtestを増やせば、そのfileは自動的に保護される。
+
+trusted toolのlocal dependencyもtestへ手書きしない。`go list -deps`で`forma`、feedback generator、guard、
+orchestratorの依存閉包を取り、すべてのpackage directoryとGo fileがbaselineに含まれることを検査する。
+新しい`internal/...` packageをimportして`RuleDirs`を更新し忘れるとtestが失敗する。
 
 導出は決定的である。`Fixed` mapの反復順もdirectory listingの順も結果へ漏れない。
 pathでsortし、2つのreasonが同じpathを主張した場合は辞書順で小さい方を採る
@@ -333,7 +343,7 @@ feedbackを残せば、`forma verify`はそのfileを読んで81/81を報告し�
 ## 記録したhash
 
 ```text
-retry-baseline.json（repository外）  eba6b9e7dd503c5272068aa70c803ca5f93fd4cd58d45bd40d1f83f30f069ff8
+retry-baseline.json（このworking tree、repository外）  601c9282a855be87ad3756232949adb60d9f6840bced0ca0301ba350e5b7745d
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
 weakening-coverage.patch             847b7aa49d55e5d7ba88f4b1e7c680770de946ddf282d209ea7e1d33464eee48
@@ -357,8 +367,9 @@ blocked feedbackは5件とも2回独立に生成してbyte-identicalだった。
 faultとweakening patchから決まるので、再実行で動かない。
 
 `retry-baseline.json`はrepositoryへcommitしない。trusted側が持つものをtree内へ置けば
-agentが書き換えられるためである。hashだけを記録する。このhashは、generatorとgate自身の
-Go fileを含む19 pathのdigestから決まるので、それらを編集すれば変わる。
+agentが書き換えられるためである。hashだけを記録する。このhashは、generator、gate、verifier、
+orchestratorと次runのbuild inputを含む59 pathのdigestから決まるので、それらを編集すれば変わる。
+上の値はこのexperiment実装時点の記録であり、P3でcompiler sourceを変更すると更新される。
 
 ## 追加したnegative test
 
@@ -392,7 +403,8 @@ Go fileを含む19 pathのdigestから決まるので、それらを編集すれ
 | `TestGuardWithdrawsTheStaleFeedbackEvenWhenIntact` | 撤回は検査より先に走る |
 | `TestGuardRefusesToRunWithoutBothPaths` | feedbackを所有しない検査へ退化しない。起動しなかった呼び出しはfeedbackへ触れない |
 | `TestGuardReportsAnUnusableSnapshotWithoutPublishing` | 「改竄された」と「gateが走れなかった」を分ける。後者はblockedとして記録しないが、succeeded artifactも残さない |
-| `TestRetryBaselineProtectsEveryReferencedTestFile` | 保護集合がcoverage mapの全referenceを覆い、target implementationを覆わない |
+| `TestRetryBaselineProtectsEveryVerificationInput` | coverage mapの全referenceとtrusted tool source/build inputを覆い、target implementationを覆わない |
+| `TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool` | `go list -deps`由来の全local packageをRuleDirsと照合し、新しいimportの保護漏れを検出する |
 
 `TestRetryRejectsWeakenedAssertion`は、digest比較を外すと実際に落ちることをmutationで
 確認した。test名の存在だけを見る実装では通ってしまうcaseである。

@@ -286,18 +286,16 @@ checked separately.
 
 `forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
 Generation Request, and `forma verify` validates agent feedback against the
-immutable request. The current milestone is the email-verified signup/signin
-Identity probe. Its minimal Stage C syntax now resolves a local-password proof,
-email verification, page interactions, and self ownership into target-neutral
-Resolved Intent v0.6, Source Map v0.4, 38 Acceptance Facts, and three Review
-Requirements. Secret redaction, storage, and fixture fidelity remain outside fact coverage and are always
-shown by `forma verify` for human review. Pairwise lineage from the actually
-applied historical admin request to an Identity-adding request is now verified
-without regenerating or rewriting the baseline. Passwordless,
-external-provider, and email-change fixtures now delimit the current model:
-authentication proof, external authority, and identifier-binding lifecycle are
-separate future axes. The next step is to hand this Generation Request to a
-coding agent and run the complete signup/signin flow in a real repository.
+immutable request. The email-verified signup/signin Identity probe is complete
+through Stage D: Resolved Intent v0.7, Source Map v0.4, 81 Acceptance Facts,
+and three Review Requirements are verified in the existing admin target. The
+first bounded P2 automated-repair probe is also complete. Separate fresh agent
+processes repaired a controlled test failure and build failure in one attempt
+each and returned both runs to 81/81. A third process left the repository
+unchanged when a protected test exceeded the immutable request; trusted
+remeasurement published the Forma intent gap as a structured `test/blocked`
+human handoff. The next central probe is P3: Expression → Changes → Occurrence
+→ Effect.
 
 ## Design documents
 

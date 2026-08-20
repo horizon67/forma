@@ -287,9 +287,10 @@ const retryBaselineCommand = "go run ./experiments/membership-agent-e2e/cmd/feed
 // retryBaselineConfig fixes what a repair retry may not change. The Forma
 // source, the request, the historical baseline and the manifest are what the
 // facts mean; the coverage map and the tests it points at are how they are
-// observed; the generator's own package is what decides whether an observation
-// counts. The target implementation is deliberately absent: it is what a repair
-// is supposed to change.
+// observed; the generator, guard, verifier, and orchestrator packages decide
+// whether an observation counts and what can be trusted on the next run. The
+// target implementation is deliberately absent: it is what a repair is
+// supposed to change.
 func retryBaselineConfig(root string) retryintegrity.Config {
 	experiment := "experiments/membership-agent-e2e"
 	references := make([]string, 0, len(coverage))
@@ -305,6 +306,8 @@ func retryBaselineConfig(root string) retryintegrity.Config {
 			experiment + "/target/forma.implementation.yaml":                retryintegrity.ReasonManifest,
 			experiment + "/cmd/feedback/coverage.go":                        retryintegrity.ReasonCoverageMap,
 			"internal/agentrequest/testdata/admin.incremental.request.json": retryintegrity.ReasonBaseline,
+			"go.mod": retryintegrity.ReasonVerificationBuild,
+			"go.sum": retryintegrity.ReasonVerificationBuild,
 		},
 		TestRoot:       experiment + "/target",
 		TestReferences: references,
@@ -312,6 +315,15 @@ func retryBaselineConfig(root string) retryintegrity.Config {
 			experiment + "/cmd/feedback",
 			experiment + "/cmd/retryguard",
 			experiment + "/internal/retryintegrity",
+			// The automated loop compiles these packages before each retry and
+			// then calls the resulting binaries trusted. Pinning their complete
+			// Go file listings prevents a retry from changing what the next run
+			// promotes into that trusted boundary.
+			"cmd/forma",
+			"internal/agentrequest",
+			"internal/compiler",
+			"internal/implementationpolicy",
+			"experiments/membership-automated-repair-loop/cmd/orchestrate",
 		},
 	}
 }

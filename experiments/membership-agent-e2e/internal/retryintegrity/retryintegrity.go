@@ -37,13 +37,14 @@ const Schema = "forma-experiment/retry-baseline/v0alpha2"
 // Reasons recorded on each protected path. They exist so a rejection can say
 // which guarantee an edit broke, not merely that a file changed.
 const (
-	ReasonFormaSource      = "forma-source"
-	ReasonRequest          = "generation-request"
-	ReasonBaseline         = "historical-baseline"
-	ReasonManifest         = "implementation-manifest"
-	ReasonCoverageMap      = "coverage-map"
-	ReasonReferencedTest   = "referenced-test"
-	ReasonVerificationRule = "verification-rule"
+	ReasonFormaSource       = "forma-source"
+	ReasonRequest           = "generation-request"
+	ReasonBaseline          = "historical-baseline"
+	ReasonManifest          = "implementation-manifest"
+	ReasonCoverageMap       = "coverage-map"
+	ReasonReferencedTest    = "referenced-test"
+	ReasonVerificationRule  = "verification-rule"
+	ReasonVerificationBuild = "verification-build-input"
 )
 
 // Entry is one protected path and the bytes it had when the retry started.

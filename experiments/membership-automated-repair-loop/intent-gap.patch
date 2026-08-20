@@ -1,0 +1,29 @@
+diff --git a/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go b/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
+index 8a552f4..f7ea961 100644
+--- a/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
++++ b/experiments/membership-agent-e2e/target/internal/web/membership_e2e_test.go
+@@ -705,2 +705,8 @@ func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-	for _, identifier := range []string{"mia@example.com", "  MIA@Example.com  "} {
+-		t.Run(identifier, func(t *testing.T) {
++	tests := []struct{ name, registered, duplicate string }{
++		{name: "exact", registered: "mia@example.com", duplicate: "mia@example.com"},
++		{name: "declared ASCII fold", registered: "mia@example.com", duplicate: "  MIA@Example.com  "},
++		// Unicode case folding is not declared by the Generation Request.
++		{name: "undeclared Unicode fold", registered: "mía@example.com", duplicate: "MÍA@example.com"},
++	}
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
+@@ -708 +714 @@ func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-			h.signUp("Mia", "mia@example.com")
++			h.signUp("Mia", test.registered)
+@@ -717 +723 @@ func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-				"email": {identifier}, "password": {impostorPassword},
++				"email": {test.duplicate}, "password": {impostorPassword},
+@@ -735 +741 @@ func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-				"submission": {h.tokenFrom(form)}, "email": {"mia@example.com"},
++				"submission": {h.tokenFrom(form)}, "email": {test.registered},
+@@ -741,2 +747,2 @@ func TestDuplicateIdentifierCoversExactAndCanonicalForms(t *testing.T) {
+-			mia := h.member("mia@example.com")
+-			if location := h.signIn("mia@example.com"); location != "/members/users/"+mia.ID {
++			mia := h.member(test.registered)
++			if location := h.signIn(test.registered); location != "/members/users/"+mia.ID {

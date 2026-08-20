@@ -249,15 +249,13 @@ go test ./...
 applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
-`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。現在のmilestoneは
-メール認証付きsignup/signinのIdentity probeです。最小Stage C syntaxからlocal-password proof、email verification、
-page interaction、self ownershipをtarget-neutralなResolved Intent `v0.6`、Source Map `v0.4`、38 Acceptance Facts、
-3 Review Requirementsへ解決できるようになりました。機械検査できないsecret redaction、storage、fixture fidelityは
-Fact coverageから分離し、
-`forma verify`が必ず人間へ表示します。さらに、実際に適用した過去のadmin requestを書き換えず、Identity追加request
-へのpairwise lineageも検証しました。passwordless、external provider、email変更の比較から、authentication proof、
-external authority、identifier binding lifecycleを将来の独立axisとして切り出しました。次はこのGeneration Requestを
-coding agentへ渡し、実repositoryでsignup/signin flowを通します。
+`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。メール認証付きsignup/signinの
+Identity probeはStage Dまで完了し、Resolved Intent `v0.7`、Source Map `v0.4`、81 Acceptance Facts、
+3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
+完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
+implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
+`test/blocked` handoffとして人間へ返しました。次の中心probeはP3の
+Expression → Changes → Occurrence → Effectです。
 
 ## 設計資料
 

@@ -9,6 +9,7 @@ Formaの実験は、language semanticsとagent generation boundaryを実例か�
 - [`membership-repair-loop`](membership-repair-loop/README.md) — 同じmembership targetでtest failure → failed feedback → repair → successを1回実測
 - [`membership-build-repair-loop`](membership-build-repair-loop/README.md) — 同じtargetでcompile failure → `stage: build`のfailed feedback → repair → successを1回実測。81 factsすべてが`not-run`
 - [`membership-repair-integrity`](membership-repair-integrity/README.md) — test・coverage map・要求を弱めてgreenにするrepairを、retry baselineとの比較で拒否できるかを実測。implementation-only repairだけ通す
+- [`membership-automated-repair-loop`](membership-automated-repair-loop/README.md) — trusted guard・feedback generator・verifierの外側でfresh agent processを自動反復し、test/build failureを1 attemptで81/81へ戻し、Forma intent gapはrepositoryを変えず`test/blocked` handoffへ返す
 
 ## Frozen prototypes
 
