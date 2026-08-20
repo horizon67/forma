@@ -30,12 +30,27 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if command == "verify" {
 		return runVerify(args[1:], stdout, stderr)
 	}
-	if command != "check" && command != "resolve" && command != "request" {
+	projection := ""
+	if command == "project" {
+		if len(args) < 2 {
+			fmt.Fprintln(stderr, "forma: project requires a projection name; supported: navigation")
+			return 2
+		}
+		projection = args[1]
+		if projection != "navigation" {
+			fmt.Fprintf(stderr, "forma: unknown projection %q; supported: navigation\n", projection)
+			return 2
+		}
+	}
+	if command != "check" && command != "resolve" && command != "request" && command != "project" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		printUsage(stderr)
 		return 2
 	}
 	sourceArguments := args[1:]
+	if command == "project" {
+		sourceArguments = args[2:]
+	}
 	requestOptions := generationRequestOptions{}
 	if command == "request" {
 		var err error
@@ -87,6 +102,23 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		if _, err := stdout.Write(append(content, '\n')); err != nil {
 			fmt.Fprintf(stderr, "forma: write Resolved Intent: %v\n", err)
+			return 1
+		}
+		return 0
+	}
+	if command == "project" {
+		navigation, err := compiler.BuildNavigationProjection(result.Intent, result.SourceMap)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: build %s projection: %v\n", projection, err)
+			return 1
+		}
+		content, err := compiler.FormatNavigationProjection(navigation)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: format %s projection: %v\n", projection, err)
+			return 1
+		}
+		if _, err := io.WriteString(stdout, content); err != nil {
+			fmt.Fprintf(stderr, "forma: write %s projection: %v\n", projection, err)
 			return 1
 		}
 		return 0
@@ -362,12 +394,14 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "Usage:")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma project navigation <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
 	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
 	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
+	fmt.Fprintln(writer, "  project  emit a deterministic read-only view of resolved application meaning")
 	fmt.Fprintln(writer, "  request  emit a full or incremental Generation Request for a coding agent")
 	fmt.Fprintln(writer, "  verify   validate Generation Feedback against an immutable request")
 }

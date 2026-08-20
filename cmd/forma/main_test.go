@@ -31,6 +31,47 @@ func TestResolveCommand(t *testing.T) {
 	}
 }
 
+func TestProjectNavigationCommand(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	wantPath := filepath.Join("..", "..", "internal", "compiler", "testdata", "users.navigation.txt")
+	want, err := os.ReadFile(wantPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"project", "navigation", path}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if stdout.String() != string(want) {
+		t.Fatalf("unexpected navigation projection:\n%s", stdout.String())
+	}
+}
+
+func TestProjectCommandRequiresAKnownProjection(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "missing", args: []string{"project"}, want: "project requires a projection name"},
+		{name: "unknown", args: []string{"project", "sequence"}, want: "unknown projection \"sequence\""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if exitCode := run(test.args, &stdout, &stderr); exitCode != 2 {
+				t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+			}
+			if !strings.Contains(stderr.String(), test.want) {
+				t.Fatalf("stderr = %q, want %q", stderr.String(), test.want)
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q", stdout.String())
+			}
+		})
+	}
+}
+
 func TestRequestCommand(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")
 	var stdout, stderr bytes.Buffer

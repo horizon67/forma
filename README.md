@@ -274,6 +274,7 @@ go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
+go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -284,9 +285,12 @@ The files and directories passed to one `forma check` invocation form one
 compilation unit. Each example is an independent application and should be
 checked separately.
 
-`forma resolve` emits canonical Resolved Intent JSON, `forma request` emits a
-Generation Request, and `forma verify` validates agent feedback against the
-immutable request. The email-verified signup/signin Identity probe is complete
+`forma resolve` emits canonical Resolved Intent JSON. `forma project navigation`
+emits a deterministic, read-only text view of the navigation already present in
+Resolved Intent; it does not become a second source of truth or infer an
+undeclared default entry. `forma request` emits a Generation Request, and
+`forma verify` validates agent feedback against the immutable request. The
+email-verified signup/signin Identity probe is complete
 through Stage D: Resolved Intent v0.7, Source Map v0.4, 81 Acceptance Facts,
 and three Review Requirements are verified in the existing admin target. The
 first bounded P2 automated-repair probe is also complete. Separate fresh agent
@@ -305,6 +309,7 @@ human handoff. The next central probe is P3: Expression → Changes → Occurren
 - [Development roadmap](docs/roadmap.md)
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [Language design principles](docs/language-design-principles.md)
+- [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
 - [Email-verified membership probe](docs/email-verified-membership-probe.md)

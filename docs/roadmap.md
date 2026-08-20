@@ -281,8 +281,10 @@ Forma coreはGo/HTTP/HTML用のgeneratorやadapterを持たない。
 
 同じsourceが意味的に十分でも、複数pageへ分散したnavigationと例外結果を人間が読みやすいとは限らない。
 現行source、現行sourceからの決定的projection、`flow`をnavigationの正本にする案を
-[`membership-flow-notation-probe.md`](membership-flow-notation-probe.md)で比較する。最初はlanguage syntaxを増やさず
-navigation projectionを測り、同時に現行shapeでは任意のsurface-only chainを表せないsemantic gapを記録した。
+[`membership-flow-notation-probe.md`](membership-flow-notation-probe.md)で比較した。最初のread-only navigation
+projectionを`forma project navigation`として実装し、Identityとadmin CRUDを同じedge modelへ投影した。
+language syntaxとResolved Intent schemaは増やさず、未宣言のdefault entryを`unspecified`と表示する。一方、現行shapeでは
+任意のsurface-only chainを表せないsemantic gapは残る。
 
 この実測で4つの穴が出た。既存applicationへIdentityを足すと標準actionの宛先が曖昧になり、明示`goto`
 （[`navigation-destination-proposal.md`](navigation-destination-proposal.md)）で解決した。Factが2件、

@@ -1,6 +1,6 @@
 # Membership Flow Notation Probe
 
-Status: exploratory design probe — not a language decision and not valid Forma syntax unless noted
+Status: candidate B text projection implemented — candidate C remains pseudocode and is not a language decision
 
 ## 1. 目的
 
@@ -13,7 +13,7 @@ Status: exploratory design probe — not a language decision and not valid Forma
 比較対象は構文の短さや見た目の好みではない。初見理解、失敗経路の発見、変更箇所の特定、diff review、
 数か月後の再読で、applicationの観測可能な意味をどれだけ正確に説明できるかを評価する。
 
-このprobeではParser、Resolved Intent、Acceptance Factsを変更しない。候補3のsyntaxは比較のための
+最初のcandidate B sliceはParser、Resolved Intent、Acceptance Factsを変更せず実装した。候補3のsyntaxは比較のための
 pseudocodeである。
 
 ## 2. 固定するsemantic baseline
@@ -366,17 +366,22 @@ surface-only transitionのsemantic gapを明示する。projectionで得る共�
 - 任意のmulti-step interactionを表すための新semanticは必要になる可能性が高い。
 - そのsurface syntaxを`flow`にするか、汎用page actionにするかは、共通edge modelと追加例を作ってから決める。
 
-## 8. 次の実装probe
+## 8. 最初の実装probeの結果
 
-最初のvertical sliceはnavigation text projectionに限定する。
+最初のvertical sliceはnavigation text projectionに限定し、`forma project navigation`として実装した。
 
-1. current Resolved Intentからpage、interaction、standard action、submit、continuationのedgeを導出する。
-2. Identity noticeからapplication外へのemissionと、verification pageへのexternal entryを別edge kindで表す。
-3. default entryがsource/Intentに無い場合は`unspecified`と表示し、page順や名前から推測しない。
-4. 各edgeへstable semantic ID、source node、destination node、trigger、outcome、Source Map provenanceを持たせる。
-5. stable orderingのtextを生成し、declaration順を変えてもbyte-identicalであることをtestする。
-6. destination、operation、external boundaryをmutationし、projection diffが意味変更を示すことをtestする。
-7. admin CRUDとmembershipを同じprojection modelで表し、Identity専用generatorにしない。
+1. [x] current Resolved Intentからpage、interaction、standard action、submit、continuationのedgeを導出した。
+2. [x] Identity noticeからverification pageへのentryを`external-boundary` edgeとして分離した。
+3. [x] default entryがsource/Intentに無い場合は`unspecified`と表示し、page順や名前から推測しない。
+4. [x] 各edgeへstable semantic ID、source node、destination policy、trigger、outcome、Source Map provenanceを持たせた。
+5. [x] declaration順とsource pathを変えてもbyte-identicalなtextになることをtestした。
+6. [x] destination、operation、external entry surfaceのmutationがsemantic edge差分へ現れることをtestした。
+7. [x] admin CRUDとmembershipを同じprojection modelで表し、`same-context`と`caller-list`を固定pageへ潰さず保持した。
+
+membership projectionでは、registration、resend、external email boundary、verification時の`User.activate`、
+signin/signout時のsession変化、continuationを一つのtext viewで確認できる。admin projectionではcreate/view/edit/delete、
+domain transition、form submitを同じedge modelで確認できる。すべてのedgeはsource pathではなくsemantic node ID集合を
+provenanceとして持ち、既存Source Mapから宣言位置へ戻れる。
 
 outcome tableとvisual diagramは同じprojection modelから後続で作る。最初からlayout、Mermaid syntax、UIを
 semantic modelへ入れない。

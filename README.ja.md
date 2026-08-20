@@ -239,6 +239,7 @@ go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
+go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -248,8 +249,10 @@ go test ./...
 1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。各exampleは独立した
 applicationなので、上記のように個別に検査します。
 
-`forma resolve`はcanonicalなResolved Intent JSON、`forma request`はGeneration Request、
-`forma verify`はimmutableなrequestに対するagent feedbackの検査結果を出力します。メール認証付きsignup/signinの
+`forma resolve`はcanonicalなResolved Intent JSONを出力します。`forma project navigation`はResolved Intentに
+既にあるnavigationを決定的な読み取り専用text viewへ投影し、第二の正本にしたり、未宣言のdefault entryを
+推測したりしません。`forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
+feedbackの検査結果を出力します。メール認証付きsignup/signinの
 Identity probeはStage Dまで完了し、Resolved Intent `v0.7`、Source Map `v0.4`、81 Acceptance Facts、
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
@@ -265,6 +268,7 @@ Expression → Changes → Occurrence → Effectです。
 - [開発ロードマップ](docs/roadmap.md)
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [言語設計原則](docs/language-design-principles.md)
+- [会員登録flowのnotation比較](docs/membership-flow-notation-probe.md)
 - [ユーザー管理の完全例](examples/users.forma)
 - [注文承認・在庫probe](examples/orders.forma)
 - [メール認証付き会員登録probe](docs/email-verified-membership-probe.md)

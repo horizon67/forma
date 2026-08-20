@@ -1,0 +1,27 @@
+navigation projection forma/navigation-projection/v0alpha1
+intent forma/resolved-intent/v0.7
+default entry: unspecified
+
+external entries:
+  (none)
+
+page UserCreate [page/UserCreate]
+  -- User.create / success --> UserDetail [page/UserCreate/view/form/create/User/submit/success]
+
+page UserDetail [page/UserDetail]
+  -- User.activate / success --> UserDetail [projection/navigation/edge/page/UserDetail/view/detail/User/action/activate/success]
+  -- User.confirm / success --> UserDetail [projection/navigation/edge/page/UserDetail/view/detail/User/action/confirm/success]
+  -- User.delete / success --> Users [projection/navigation/edge/page/UserDetail/view/detail/User/action/delete/success]
+  -- User.edit / target --> UserEdit [projection/navigation/edge/page/UserDetail/view/detail/User/action/edit/target]
+  -- User.reinstate / success --> UserDetail [projection/navigation/edge/page/UserDetail/view/detail/User/action/reinstate/success]
+  -- User.suspend / success --> UserDetail [projection/navigation/edge/page/UserDetail/view/detail/User/action/suspend/success]
+
+page UserEdit [page/UserEdit]
+  -- User.edit / success --> UserDetail [page/UserEdit/view/form/edit/User/submit/success]
+
+page Users [page/Users]
+  -- User.create / target --> UserCreate [projection/navigation/edge/page/Users/view/list/User/action/create/target]
+  -- User.delete / success --> Users [projection/navigation/edge/page/Users/view/list/User/action/delete/success]
+  -- User.edit / target --> UserEdit [projection/navigation/edge/page/Users/view/list/User/action/edit/target]
+  -- User.suspend / success --> Users [projection/navigation/edge/page/Users/view/list/User/action/suspend/success]
+  -- User.view / target --> UserDetail [projection/navigation/edge/page/Users/view/list/User/action/view/target]

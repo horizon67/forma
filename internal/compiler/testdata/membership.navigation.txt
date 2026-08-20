@@ -1,0 +1,37 @@
+navigation projection forma/navigation-projection/v0alpha1
+intent forma/resolved-intent/v0.7
+default entry: unspecified
+
+external entries:
+  UserAccount.email notice -- external delivery/open boundary --> VerifyEmail [projection/navigation/external-entry/identity/UserAccount/verification/email]
+
+page CheckEmail [page/CheckEmail]
+  -- UserAccount.resend / success --> same context (CheckEmail) [page/CheckEmail/identity/resend/UserAccount/success]
+
+page Profile [page/Profile]
+  -- UserAccount.signout / success + current session ended --> SignIn [page/Profile/identity/signout/UserAccount/success]
+
+page ProfileEdit [page/ProfileEdit]
+  -- User.edit / success --> Profile [page/ProfileEdit/view/form/edit/User/submit/success]
+
+page RegistrationComplete [page/RegistrationComplete]
+  -- continue --> SignIn [page/VerifyEmail/identity/verify/UserAccount/continuation]
+
+page SignIn [page/SignIn]
+  -- UserAccount.signin / success + session started --> Profile [page/SignIn/identity/signin/UserAccount/success]
+
+page SignUp [page/SignUp]
+  -- UserAccount.register / success --> CheckEmail [page/SignUp/identity/register/UserAccount/success]
+
+page UserDetail [page/UserDetail]
+  -- User.edit / target --> UserEdit [projection/navigation/edge/page/UserDetail/view/detail/User/action/edit/target]
+
+page UserEdit [page/UserEdit]
+  -- User.edit / success --> UserDetail [page/UserEdit/view/form/edit/User/submit/success]
+
+page Users [page/Users]
+  -- User.edit / target --> UserEdit [projection/navigation/edge/page/Users/view/list/User/action/edit/target]
+  -- User.view / target --> UserDetail [projection/navigation/edge/page/Users/view/list/User/action/view/target]
+
+page VerifyEmail [page/VerifyEmail]
+  -- UserAccount.verify / success + User.activate --> RegistrationComplete [page/VerifyEmail/identity/verify/UserAccount/success]
