@@ -21,6 +21,10 @@ selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
 Factsを実測した。concurrent invariant enforcementの人間Review Requirementは未完了である。本書に残るChanges、
 Occurrence、Effectの候補は、その確認後の設計入力であり、まだ採用済み構文ではない。
 
+Changesの最小candidateは[`changes-proposal.md`](changes-proposal.md)へ分離した。最終対象は本書の`Order.approve`だが、
+最初のcompiler sliceではcollectionと算術を避け、`StockReservation.commit`のstate transitionとrequired relation先の
+1 field assignmentを同じatomic post-stateにする。
+
 ## 対象とするflow
 
 1. staffが注文を作成し、明細を追加して提出する。
@@ -202,16 +206,21 @@ application contractにしない。
 
 ## `changes`の意味論として決めること
 
-statement languageへ退行させないために、次を明示する必要がある。
+詳細な決定候補と最初のsliceは[`changes-proposal.md`](changes-proposal.md)で定める。statement languageへ
+退行させないため、次を固定候補にした。
 
 1. 右辺はすべてpre-stateから評価する（同時代入）。read-after-writeを許すと代入順序が意味を持つ。
 2. 同じfieldへの二重代入はcompile errorにする。順序で解決しない。
-3. `clock.now`はaction実行につき1回サンプルし、同一action内では同じ値とする。
+3. 将来`clock.now`を導入する場合はaction実行につき1回サンプルし、同一action内では同じ値とする。
 4. invariantはpost-stateで、atomic boundaryのcommit前に検査する。
 5. 1回のaction実行 = 1つのatomic boundary。複数entityを含む。
 
-3はschedule triggerのtestに必要な仮想時計と同じ要件である。Acceptance Factsはclockの意味を示し、
-具体的なclock injectionはcoding agentがrepositoryに合わせて実装する。
+加えて、Changesはaction bodyが所有し、implicit state transitionも同じatomic outcomeへ含める。最初は
+required to-one relation先へのabsolute value assignmentだけを許し、collection fan-out、算術、record作成を分離する。
+
+3はschedule triggerのtestに必要な仮想時計と同じ要件である。最初のChanges sliceはclockやruntime-derived valueを含めない。
+将来導入するときはAcceptance Factsがclockの意味を示し、具体的なclock injectionはcoding agentがrepositoryに合わせて
+実装する。
 
 ## 未決定事項
 
@@ -255,10 +264,11 @@ Milestone 6の「最初の追加例候補」は本書と[`examples/orders.forma`
 着手した。probeの結果、検討順序に1段追加する必要がある。
 
 ```text
-1. 式レイヤの最小形（field参照、relation traversal、比較、算術）
-2. changesの事後条件semantics + invariant + atomic boundary
-3. occurrence model（actionから導出するか、明示するか）
-4. effect / on proposal
+1. 式レイヤの最小形（self field参照とInvariant。実装済み）
+2. changesの事後条件semantics + invariant + atomic boundary（最小candidate選定済み、compiler未実装）
+3. full Order.approveに必要なrelation value参照、算術、collection traversal、record creation
+4. occurrence model（actionから導出するか、明示するか）
+5. effect / on proposal
 ```
 
 式レイヤを飛ばしてeffectを設計すると、bindingとpreconditionを書けないまま構文だけが決まる。

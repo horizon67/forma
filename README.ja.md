@@ -278,8 +278,9 @@ implementationでは解決できないForma intent gapはcodeで回避せず、t
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
 top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、最初の
 self-only InvariantをAcceptance Facts、Generation Request差分、通常のGo applicationによる172/172の
-repository E2Eまで接続しました。concurrency Review Requirementの人間確認後、Changes → Occurrence → Effectへ
-進みます。projectionの人間評価は独立して進めます。
+repository E2Eまで接続しました。concurrency Review Requirementは人間確認待ちのまま、次のbounded Changesと
+atomic post-stateはcompiler実装前の設計review待ちまで進みました。その境界を実測してからOccurrence → Effectへ進みます。
+projectionの人間評価は独立して進めます。
 
 ## 設計資料
 
@@ -290,6 +291,7 @@ repository E2Eまで接続しました。concurrency Review Requirementの人間
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [言語設計原則](docs/language-design-principles.md)
 - [現在の言語方針](docs/current-language-direction.md)
+- [Changesとatomic post-state案](docs/changes-proposal.md)
 - [会員登録flowのnotation比較](docs/membership-flow-notation-probe.md)
 - [会員登録flowの人間評価](docs/evaluations/membership-flow/README.md)
 - [ユーザー管理の完全例](examples/users.forma)

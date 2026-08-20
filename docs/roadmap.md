@@ -42,7 +42,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → 81/81と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
-| Expression以降 | **P3 in progress** | self-only Invariantの`<=`を実装し、通常のGo applicationで172/172 Factsをrepository E2E実測。concurrency Review Requirementの人間確認とChanges以降が残る |
+| Expression以降 | **P3 in progress** | self-only Invariantを通常のGo applicationで172/172 Factsまで実測。Changesはaction-attachedな同時代入とatomic post-stateのdesign candidateを選定し、compiler実装前 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -531,28 +531,35 @@ CRUDとstate transitionを越えるdomain behaviorを、statement languageやfra
 ### 検討順序
 
 ```text
-1. pure Expression
-2. Derived Value / Invariant / Precondition
-3. Changesとatomic post-state
+1. pure ExpressionとInvariantの最初のconsumer
+2. Changesとatomic post-state
+3. full Order approvalに必要なDerived Value / Precondition / Expression拡張
 4. Occurrence model
 5. Effect binding / delivery contract
 ```
 
 Effectを先に設計しない。recipientや発生条件にもExpressionが必要であり、ChangesとEffectの境界には
 atomic post-stateの意味が必要だからである。
+bounded Changesはaction entityのrequired field valueだけでatomicityを検証できるため、Derived Valueやoperator集合を
+先に一般化しない。これは機能を捨てる順序ではなく、複数の未知を同じprobeへ混ぜないための実装順序である。
 
 ### 現在のprobe
 
 - [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`、成立・違反2 Facts、該当formのauthoritative拒否Fact、concurrency Review Requirement、Generation Request差分を最小sliceとして実装
+- [`changes-proposal.md`](changes-proposal.md): action-attachedな同時代入、pre-state評価、複数entityのall-or-nothing post-state、cross-entity認可とtarget-unavailable outcomeを含む最小candidate
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
 - [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
-- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで172/172 Factsと29 repository testを実測。concurrency Review Requirementは人間確認待ち
+- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで172/172 Factsと39 repository testを実測。concurrency Review Requirementは人間確認待ち
 
 最初のExpression sliceはcompilerからGeneration Requestまで到達した。該当form submitへの拒否Factにより、
 entity単位の隔離testだけで満たす経路も閉じた。repository E2Eではcoding agentが`post-state`のInvariantを
 authoritativeな保存境界で検査し、違反時に部分変更を残さない実装とtestへ変換できた。172 Factsはすべて
 repository commandから再測定して成功した。concurrent operationで同じ保証を維持することは独立Review Requirementとして
-人間が確認する。その確認後はExpressionの一般化を急がず、次の実例に必要なChangesとatomic post-stateを設計する。
+人間が確認する。次のChanges designではExpressionの一般化を急がず、requiredなto-one relation先へabsolute valueを
+代入する`StockReservation.commit`をbounded sliceに選んだ。design review後はParserからGeneration Requestまで実装し、
+既存actionに不足するtransition outcome、明示`confirm`と標準`delete`のconfirmation、surface feedback Factsも同じsliceで
+追加する。cross-entity targetの認可差とruntime欠落を明示し、transitionとrelated entity changeのpartial commitを
+通常application E2Eで検出する。
 
 ### 選別基準
 

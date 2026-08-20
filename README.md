@@ -326,9 +326,11 @@ human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
 members on their source pages. P3 is now in progress: the first self-only
 Invariant reaches Acceptance Facts, Generation Request diffs, and a 172/172
-repository E2E in an ordinary Go application. After the concurrency Review
-Requirement is reviewed, the main sequence continues with Changes, Occurrence,
-and Effect. Projection readability evaluation runs independently.
+repository E2E in an ordinary Go application. The concurrency Review
+Requirement remains pending while the next bounded Changes and atomic
+post-state design awaits review before compiler implementation; Occurrence and
+Effect follow only after that boundary is measured. Projection readability
+evaluation runs independently.
 
 ## Design documents
 
@@ -339,6 +341,7 @@ and Effect. Projection readability evaluation runs independently.
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [Language design principles](docs/language-design-principles.md)
 - [Current language direction](docs/current-language-direction.md)
+- [Changes and atomic post-state proposal](docs/changes-proposal.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)

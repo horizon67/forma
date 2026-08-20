@@ -78,7 +78,8 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
 必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
 実装し、通常のGo applicationを使うrepository E2Eで172/172 Factsを実測した。concurrent operationの
-Review Requirementは人間確認待ちであり、Changes以降は未決定である。
+Review Requirementは人間確認待ちである。Changesはaction-attachedな同時代入とatomic post-stateを最小候補に選び、
+compiler実装前のdesign review段階に進んだ。Occurrence以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -132,19 +133,28 @@ Candidate Cの完全な`flow` DSLを採用する判断には人間評価を使�
 
 Navigationのbounded probeが完了したため、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
 
-1. Expression
-2. Derived Value
-3. Changesとatomic post-state
+1. Expression coreとInvariant（最初のslice完了）
+2. Changesとatomic post-state
+3. full Order approvalに必要なDerived Value / Action Precondition / Expression拡張
 4. Occurrence
 5. Effect binding / delivery contract
+
+これは一般的な機能階層ではなく、実例を分離して検証する実装順序である。bounded Changesは既存field valueだけで
+atomicityを検査できるため、Derived Valueや算術を先に一般化しない。
 
 Expressionの最初のvertical sliceでは、`StockItem.stockAvailable`の`reserved <= onHand`からentity単位の
 正常系・否定系2 Factsに加え、参照fieldを編集するform submitのauthoritativeな拒否Factを導出した。
 post-stateでの全commit／無commitをGeneration Requestへ運び、concurrent operationの保証は独立Review Requirementとして
 人間へ表示する。[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、このrequestを
-Formaに依存しない通常のGo applicationのauthoritative mutation境界と29 repository testへ落とし、172/172 Factsを
+Formaに依存しない通常のGo applicationのauthoritative mutation境界と39 repository testへ落とし、172/172 Factsを
 検証した。mutex内の競合更新testを含むReview Requirementの人間確認後、operator集合を先に広げずChangesとatomic
-post-stateの設計へ進む。
+post-stateの設計へ進んだ。[`changes-proposal.md`](changes-proposal.md)では、最終対象を`Order.approve`の在庫引当に
+保ちつつ、最初のsliceをrequiredなto-one relationへの1 assignmentとimplicit state transitionに分離した。
+design reviewでこの境界を確認した後、bounded syntax、Resolved Intent、atomic Facts、Review Requirementを
+reference compilerへ実装する。このsliceには、v0が要求しながら現compilerに無いdomain actionのsource precondition、
+遷移後state Fact、明示`confirm` actionと標準`delete`のconfirmation Fact、action拒否時のsurface feedbackも先に含める。
+cross-entity writeの認可はactionが所有し、target entityの別surface accessは継承しないが、その差はReview Requirementとして
+人間へ提示する。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

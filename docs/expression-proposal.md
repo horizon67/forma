@@ -606,4 +606,6 @@ pureなrole判定testではなく、それぞれのpage、form submit、action�
 invalid post-stateの
 全変更拒否と、競合する在庫予約をmutex内で評価・commitするtestも通る。後者のarchitecture判断はReview Requirementとして
 人間確認待ちであり、機械Factへ偽装しない。その確認後はgeneral functionやcollectionを先回りで足さず、Changesと
-atomic post-stateの次のvertical sliceへ進む。Effect syntaxはOccurrenceとの境界が定まるまで追加しない。
+atomic post-stateの次のvertical sliceへ進む。最小candidateは[`changes-proposal.md`](changes-proposal.md)に分離し、
+最初のvalue expressionをaction entity自身のrequired field参照に限定した。Effect syntaxはOccurrenceとの境界が
+定まるまで追加しない。
