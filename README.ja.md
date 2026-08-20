@@ -240,6 +240,7 @@ go run ./cmd/forma check examples/public-membership.forma
 go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project outcomes experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -251,7 +252,9 @@ applicationなので、上記のように個別に検査します。
 
 `forma resolve`はcanonicalなResolved Intent JSONを出力します。`forma project navigation`はResolved Intentに
 既にあるnavigationを決定的な読み取り専用text viewへ投影し、第二の正本にしたり、未宣言のdefault entryを
-推測したりしません。`forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
+推測したりしません。`forma project outcomes`は観測可能なAcceptance Factsをcase単位のreview textへ展開します。
+明示されたabsence、zero、excluded、unchangedだけを`must not`へ分離し、未記載Factの逆命題は作りません。
+`forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
 feedbackの検査結果を出力します。メール認証付きsignup/signinの
 Identity probeはStage Dまで完了し、Resolved Intent `v0.7`、Source Map `v0.4`、81 Acceptance Facts、
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも

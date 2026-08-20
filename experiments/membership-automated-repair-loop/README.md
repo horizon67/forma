@@ -46,7 +46,7 @@ compileしない**。
 固定対象はそのrunで使うbinaryだけではない。次のrunがtrusted binaryへcompileする`cmd/forma`、
 `internal/agentrequest`、`internal/compiler`、`internal/implementationpolicy`、orchestrator自身、
 および`go.mod` / `go.sum`もretry baselineへ含める。agentが今のrunのprebuilt verifierを回避できなくても、
-改変sourceを残して次のrunでtrustへ昇格させる経路を閉じる。baselineは61 pathsと8 directory listingsを持つ。
+改変sourceを残して次のrunでtrustへ昇格させる経路を閉じる。baselineは63 pathsと8 directory listingsを持つ。
 
 ```text
 trusted orchestrator process starts

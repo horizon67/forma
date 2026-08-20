@@ -1,0 +1,314 @@
+outcome projection forma/outcome-projection/v0alpha1
+intent forma/resolved-intent/v0.7
+facts forma/acceptance-facts/v0alpha4
+rows 69
+
+group UserCreate:User.create form [page/UserCreate/view/form/create/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/feedback
+
+group UserCreate:User.create submit [page/UserCreate/view/form/create/User/submit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/submit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/submit/access/denied/anonymous
+  case mutation-accepted / mutation-accepted
+    expect: outcome=accepted; stored=input
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/submit/mutation/accepted
+  case mutation-at-most-once / mutation-at-most-once
+    expect: outcome=accepted-once; applied-mutations=1
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/submit/mutation/at-most-once
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserCreate/view/form/create/User/submit/navigation
+  case matches User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.team
+    must not: stored data changed
+    fact: fact/page/UserCreate/view/form/create/User/submit/validation/matches/email/constraint/type/Email/constraint/matches
+  case required User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.team
+    must not: stored data changed
+    fact: fact/page/UserCreate/view/form/create/User/submit/validation/required/email
+  case required User.name / validation-rejected
+    expect: outcome=rejected; preserve-input=User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserCreate/view/form/create/User/submit/validation/required/name
+  case unique User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserCreate/view/form/create/User/submit/validation/unique/email
+
+group UserDetail:User.detail [page/UserDetail/view/detail/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=empty,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/feedback
+  case records-visible / records-visible
+    expect: outcome=record-visible
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/records/visible
+
+group UserDetail:User.activate [page/UserDetail/view/detail/User/action/activate]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/navigation
+
+group UserDetail:User.confirm [page/UserDetail/view/detail/User/action/confirm]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/navigation
+
+group UserDetail:User.delete [page/UserDetail/view/detail/User/action/delete]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/delete/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/delete/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:Users
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/delete/navigation
+
+group UserDetail:User.edit [page/UserDetail/view/detail/User/action/edit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserEdit
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/navigation
+
+group UserDetail:User.reinstate [page/UserDetail/view/detail/User/action/reinstate]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/navigation
+
+group UserDetail:User.suspend [page/UserDetail/view/detail/User/action/suspend]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/navigation
+
+group UserEdit:User.edit form [page/UserEdit/view/form/edit/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/feedback
+
+group UserEdit:User.edit submit [page/UserEdit/view/form/edit/User/submit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous
+  case mutation-accepted / mutation-accepted
+    expect: outcome=accepted; stored=input
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted
+  case mutation-at-most-once / mutation-at-most-once
+    expect: outcome=accepted-once; applied-mutations=1
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/navigation
+  case matches User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches
+  case required User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/required/email
+  case required User.name / validation-rejected
+    expect: outcome=rejected; preserve-input=User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/required/name
+  case unique User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email
+
+group Users:User.list [page/Users/view/list/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=empty,failure
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/feedback
+  case list-filter / list-filter
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/filter/status
+  case list-filter / list-filter
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/filter/team
+  case list-page-boundary / list-page-boundary
+    expect: outcome=window-bounded-and-remainder-reachable
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/page-boundary
+  case records-visible / records-visible
+    expect: outcome=all-matching-records-visible
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/records/visible
+  case list-search / list-search
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/search
+
+group Users:User.create [page/Users/view/list/User/action/create]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/create/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/create/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserCreate
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/create/navigation
+
+group Users:User.delete [page/Users/view/list/User/action/delete]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/delete/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/delete/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:Users
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/delete/navigation
+
+group Users:User.edit [page/Users/view/list/User/action/edit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserEdit
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/navigation
+
+group Users:User.suspend [page/Users/view/list/User/action/suspend]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:Users
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/navigation
+
+group Users:User.view [page/Users/view/list/User/action/view]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserDetail
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/navigation

@@ -1,6 +1,6 @@
 # Membership Flow Notation Probe
 
-Status: candidate B text projection implemented — candidate C remains pseudocode and is not a language decision
+Status: candidate B navigation and outcome text projections implemented — candidate C remains pseudocode and is not a language decision
 
 ## 1. 目的
 
@@ -383,8 +383,16 @@ signin/signout時のsession変化、continuationを一つのtext viewで確認�
 domain transition、form submitを同じedge modelで確認できる。すべてのedgeはsource pathではなくsemantic node ID集合を
 provenanceとして持ち、既存Source Mapから宣言位置へ戻れる。
 
-outcome tableとvisual diagramは同じprojection modelから後続で作る。最初からlayout、Mermaid syntax、UIを
-semantic modelへ入れない。
+次に`forma project outcomes`を実装した。compiler-owned Acceptance Factsのうち観測可能なresult、feedback、navigationを
+group化し、multi-case Factをcase行へ展開する。membership applicationは83行、admin CRUDは69行となり、同じmodelと
+formatterでgolden固定した。各行はFact IDとSource Map provenanceを保持する。
+
+概念例の11行へ手作業で畳み込むと、複数Factを一つの物語へ結合する際に未宣言の禁止結果を作りやすい。最初の実装では
+Factとの1対1または1対case対応を維持し、`count=0`、`added=0`、`absent`、`excluded`、`stored=unchanged`だけを
+`must not`へ分離した。たとえばinvalid registrationのsubject/credential/evidence/notice非作成、duplicate時の
+evidence/notice非追加、signin失敗時のsession非作成が表示される。一方、Factに無い逆命題は推測しない。
+
+domain-state専用projectionとvisual diagramは後続候補である。最初からlayout、Mermaid syntax、UIをsemantic modelへ入れない。
 
 ## 9. 判定を見直す条件
 

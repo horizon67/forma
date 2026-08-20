@@ -33,12 +33,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 	projection := ""
 	if command == "project" {
 		if len(args) < 2 {
-			fmt.Fprintln(stderr, "forma: project requires a projection name; supported: navigation")
+			fmt.Fprintln(stderr, "forma: project requires a projection name; supported: navigation, outcomes")
 			return 2
 		}
 		projection = args[1]
-		if projection != "navigation" {
-			fmt.Fprintf(stderr, "forma: unknown projection %q; supported: navigation\n", projection)
+		if projection != "navigation" && projection != "outcomes" {
+			fmt.Fprintf(stderr, "forma: unknown projection %q; supported: navigation, outcomes\n", projection)
 			return 2
 		}
 	}
@@ -107,14 +107,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if command == "project" {
-		navigation, err := compiler.BuildNavigationProjection(result.Intent, result.SourceMap)
+		content, err := buildProjection(projection, result.Intent, result.SourceMap)
 		if err != nil {
-			fmt.Fprintf(stderr, "forma: build %s projection: %v\n", projection, err)
-			return 1
-		}
-		content, err := compiler.FormatNavigationProjection(navigation)
-		if err != nil {
-			fmt.Fprintf(stderr, "forma: format %s projection: %v\n", projection, err)
+			fmt.Fprintf(stderr, "forma: %v\n", err)
 			return 1
 		}
 		if _, err := io.WriteString(stdout, content); err != nil {
@@ -146,6 +141,33 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "checked %d %s: no errors\n", len(paths), label)
 	return 0
+}
+
+func buildProjection(name string, intent *compiler.ResolvedIntent, sourceMap *compiler.SourceMap) (string, error) {
+	switch name {
+	case "navigation":
+		projection, err := compiler.BuildNavigationProjection(intent, sourceMap)
+		if err != nil {
+			return "", fmt.Errorf("build navigation projection: %w", err)
+		}
+		content, err := compiler.FormatNavigationProjection(projection)
+		if err != nil {
+			return "", fmt.Errorf("format navigation projection: %w", err)
+		}
+		return content, nil
+	case "outcomes":
+		projection, err := compiler.BuildOutcomeProjection(intent, sourceMap)
+		if err != nil {
+			return "", fmt.Errorf("build outcomes projection: %w", err)
+		}
+		content, err := compiler.FormatOutcomeProjection(projection)
+		if err != nil {
+			return "", fmt.Errorf("format outcomes projection: %w", err)
+		}
+		return content, nil
+	default:
+		return "", fmt.Errorf("unknown projection %q", name)
+	}
 }
 
 func runVerify(arguments []string, stdout, stderr io.Writer) int {
@@ -395,6 +417,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project navigation <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma project outcomes <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)

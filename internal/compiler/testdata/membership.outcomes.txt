@@ -1,0 +1,370 @@
+outcome projection forma/outcome-projection/v0alpha1
+intent forma/resolved-intent/v0.7
+facts forma/acceptance-facts/v0alpha4
+rows 83
+
+group UserAccount.password [identity/UserAccount/credential/password]
+  case credential-non-projectable / credential-non-projectable
+    expect: outcome=absent-from-domain-projections
+    must not: credential included=UserAccount.password
+    fact: fact/identity/UserAccount/credential/password/non-projectable
+
+group UserAccount.register [identity/UserAccount/operation/register]
+  case operation-at-most-once / operation-at-most-once
+    expect: outcome=applied-once; subject.count=1; notice.count=1; applied-operations=1
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/register/at-most-once
+  case credential-bound / credential-bound
+    expect: credential=UserAccount.password:satisfies-policy
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/register/credential/bound
+  case canonical-equivalent / duplicate-identifier-rejected
+    expect: outcome=rejected; subject.count=1; subject unchanged; credential=UserAccount.password:unchanged; evidence.count=1; evidence.condition=issued; notice.count=1; disclosure=guide-resend
+    must not: evidence added; notice added
+    fact: fact/identity/UserAccount/operation/register/identifier/duplicate
+  case exact / duplicate-identifier-rejected
+    expect: outcome=rejected; subject.count=1; subject unchanged; credential=UserAccount.password:unchanged; evidence.count=1; evidence.condition=issued; notice.count=1; disclosure=guide-resend
+    must not: evidence added; notice added
+    fact: fact/identity/UserAccount/operation/register/identifier/duplicate
+  case notice-emitted / notice-emitted
+    expect: notice.count=1; notice.emission=durable-record-required
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/register/notice/emitted
+  case registration-created / registration-created
+    expect: outcome=created; subject.count=1; subject.state=User.status:Pending
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/register/subject/created
+  case invalid-credential / registration-validation-rejected
+    expect: outcome=rejected
+    must not: subject present; credential present=UserAccount.password; evidence present; notice present
+    fact: fact/identity/UserAccount/operation/register/validation/rejected
+  case invalid-identifier / registration-validation-rejected
+    expect: outcome=rejected
+    must not: subject present; credential present=UserAccount.password; evidence present; notice present
+    fact: fact/identity/UserAccount/operation/register/validation/rejected
+  case invalid-name / registration-validation-rejected
+    expect: outcome=rejected
+    must not: subject present; credential present=UserAccount.password; evidence present; notice present
+    fact: fact/identity/UserAccount/operation/register/validation/rejected
+  case verification-issued / verification-issued
+    expect: evidence.count=1; evidence.condition=issued; evidence.max-uses=1; evidence.lifetime=30-minute
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/register/verification/issued
+  case delivery-failure-separated / delivery-failure-separated
+    expect: outcome=retryable; subject.count=1; subject.state=User.status:Pending; evidence.count=1; evidence.condition=issued; notice.count=1; notice.emission=durable-record-required; notice.delivery=failed
+    must not: (none declared)
+    fact: fact/identity/UserAccount/verification/email/notice/delivery/failure
+  case anonymous / access-allowed
+    expect: outcome=allowed; surfaces=SignUp,SignUp:UserAccount.register
+    must not: (none declared)
+    fact: fact/page/SignUp/identity/register/UserAccount/access/allowed/anonymous
+  case navigation / navigation
+    expect: navigation.success=page:CheckEmail
+    must not: (none declared)
+    fact: fact/page/SignUp/identity/register/UserAccount/navigation
+  case invalid-credential / secret-input-not-preserved
+    expect: outcome=invalid-input-redisplayed; preserve-fields=User.email,User.name; case-outcome=rejected
+    must not: credential included=UserAccount.password
+    fact: fact/page/SignUp/identity/register/UserAccount/validation/preserve-input
+  case invalid-identifier / secret-input-not-preserved
+    expect: outcome=invalid-input-redisplayed; preserve-fields=User.email,User.name; case-outcome=rejected
+    must not: credential included=UserAccount.password
+    fact: fact/page/SignUp/identity/register/UserAccount/validation/preserve-input
+  case invalid-name / secret-input-not-preserved
+    expect: outcome=invalid-input-redisplayed; preserve-fields=User.email,User.name; case-outcome=rejected
+    must not: credential included=UserAccount.password
+    fact: fact/page/SignUp/identity/register/UserAccount/validation/preserve-input
+
+group UserAccount.resend [identity/UserAccount/operation/resend]
+  case verification-resent / verification-resent
+    expect: outcome=accepted; subject.count=1; subject.state=User.status:Pending; subject unchanged; evidence.count=2; evidence.added=1; evidence.condition=issued; notice.added=1
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/resend/accepted
+  case operation-at-most-once / operation-at-most-once
+    expect: outcome=applied-once; notice.added=1; applied-operations=1
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/resend/at-most-once
+  case verification-rotated / verification-rotated
+    expect: evidence.count=2; evidence.condition=superseded; evidence.rotation=invalidate-prior-unconsumed
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/resend/evidence/rotated
+  case active / enumeration-safe-outcome
+    expect: disclosure=uniform-for-pending-active-and-unknown; outcome=accepted
+    must not: (none declared)
+    fact: fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform
+  case pending / enumeration-safe-outcome
+    expect: disclosure=uniform-for-pending-active-and-unknown; outcome=accepted
+    must not: (none declared)
+    fact: fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform
+  case unknown / enumeration-safe-outcome
+    expect: disclosure=uniform-for-pending-active-and-unknown; outcome=accepted
+    must not: (none declared)
+    fact: fact/page/CheckEmail/identity/resend/UserAccount/disclosure/uniform
+
+group UserAccount.signin [identity/UserAccount/operation/signin]
+  case authentication-accepted / authentication-accepted
+    expect: outcome=accepted; session=active
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/signin/accepted
+  case non-matching-credential / authentication-rejected
+    expect: outcome=rejected; disclosure=generic
+    must not: session present
+    fact: fact/identity/UserAccount/operation/signin/rejected/generic
+  case unknown-identifier / authentication-rejected
+    expect: outcome=rejected; disclosure=generic
+    must not: session present
+    fact: fact/identity/UserAccount/operation/signin/rejected/generic
+  case authentication-ineligible-state / authentication-ineligible-state
+    expect: outcome=rejected; subject.state=User.status:Pending; subject unchanged
+    must not: session present
+    fact: fact/identity/UserAccount/operation/signin/state/ineligible
+
+group UserAccount.signout [identity/UserAccount/operation/signout]
+  case authenticated / session-terminated
+    expect: outcome=terminated-and-access-denied; session=terminated; surfaces=Profile,Profile:User.detail,ProfileEdit,ProfileEdit:User.edit form
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/signout/session/terminated
+
+group UserAccount.verify [identity/UserAccount/operation/verify]
+  case verification-accepted / verification-accepted
+    expect: outcome=accepted; subject.count=1; subject.state=User.status:Active
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/accepted
+  case verification-consumed / verification-consumed
+    expect: evidence.count=1; evidence.condition=consumed
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/evidence/consumed
+  case consumed / verification-rejected
+    expect: outcome=rejected; subject.state=User.status:Active
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/evidence/rejected
+  case expired / verification-rejected
+    expect: outcome=rejected; subject.state=User.status:Pending
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/evidence/rejected
+  case invalid / verification-rejected
+    expect: outcome=rejected; subject.state=User.status:Pending
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/evidence/rejected
+  case after-expiry / verification-expiry-boundary
+    expect: outcome=rejected; subject.state=User.status:Pending; evidence.condition=issued
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/expiry/boundary
+  case at-expiry / verification-expiry-boundary
+    expect: outcome=rejected; subject.state=User.status:Pending; evidence.condition=issued
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/expiry/boundary
+  case before-expiry / verification-expiry-boundary
+    expect: outcome=accepted; subject.state=User.status:Active; evidence.condition=consumed
+    must not: (none declared)
+    fact: fact/identity/UserAccount/operation/verify/expiry/boundary
+  case navigation / navigation
+    expect: navigation.success=page:RegistrationComplete; navigation.continue=SignIn; surfaces=RegistrationComplete,SignIn
+    must not: (none declared)
+    fact: fact/page/VerifyEmail/identity/verify/UserAccount/navigation
+
+group UserAccount.self [identity/UserAccount/ownership/self]
+  case authenticated / ownership-allowed
+    expect: outcome=allowed; surfaces=Profile,Profile:User.detail,ProfileEdit,ProfileEdit:User.edit form
+    must not: (none declared)
+    fact: fact/identity/UserAccount/ownership/self/access/allowed/self
+  case anonymous / access-denied
+    expect: outcome=denied; surfaces=Profile,Profile:User.detail,ProfileEdit,ProfileEdit:User.edit form
+    must not: (none declared)
+    fact: fact/identity/UserAccount/ownership/self/access/denied/anonymous
+  case authenticated / ownership-denied
+    expect: outcome=denied; surfaces=Profile,Profile:User.detail,ProfileEdit,ProfileEdit:User.edit form
+    must not: (none declared)
+    fact: fact/identity/UserAccount/ownership/self/access/denied/other-subject
+
+group Profile:User.detail [page/Profile/view/detail/User]
+  case observable-feedback / observable-feedback
+    expect: feedback=empty,failure
+    must not: (none declared)
+    fact: fact/page/Profile/view/detail/User/feedback
+  case records-visible / records-visible
+    expect: outcome=record-visible
+    must not: (none declared)
+    fact: fact/page/Profile/view/detail/User/records/visible
+
+group ProfileEdit:User.edit form [page/ProfileEdit/view/form/edit/User]
+  case observable-feedback / observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/ProfileEdit/view/form/edit/User/feedback
+
+group ProfileEdit:User.edit submit [page/ProfileEdit/view/form/edit/User/submit]
+  case mutation-accepted / mutation-accepted
+    expect: outcome=accepted; stored=input
+    must not: (none declared)
+    fact: fact/page/ProfileEdit/view/form/edit/User/submit/mutation/accepted
+  case mutation-at-most-once / mutation-at-most-once
+    expect: outcome=accepted-once; applied-mutations=1
+    must not: (none declared)
+    fact: fact/page/ProfileEdit/view/form/edit/User/submit/mutation/at-most-once
+  case navigation / navigation
+    expect: navigation.success=page:Profile
+    must not: (none declared)
+    fact: fact/page/ProfileEdit/view/form/edit/User/submit/navigation
+  case required User.name / validation-rejected
+    expect: outcome=rejected; preserve-input=User.nickname
+    must not: stored data changed
+    fact: fact/page/ProfileEdit/view/form/edit/User/submit/validation/required/name
+
+group UserDetail:User.detail [page/UserDetail/view/detail/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=empty,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/feedback
+  case records-visible / records-visible
+    expect: outcome=record-visible
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/records/visible
+
+group UserDetail:User.edit [page/UserDetail/view/detail/User/action/edit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserEdit
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/edit/navigation
+
+group UserEdit:User.edit form [page/UserEdit/view/form/edit/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/feedback
+
+group UserEdit:User.edit submit [page/UserEdit/view/form/edit/User/submit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/access/denied/anonymous
+  case mutation-accepted / mutation-accepted
+    expect: outcome=accepted; stored=input
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/mutation/accepted
+  case mutation-at-most-once / mutation-at-most-once
+    expect: outcome=accepted-once; applied-mutations=1
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/mutation/at-most-once
+  case navigation / navigation
+    expect: navigation.success=page:UserDetail
+    must not: (none declared)
+    fact: fact/page/UserEdit/view/form/edit/User/submit/navigation
+  case closed-set User.plan / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.nickname,User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/closed-set/plan
+  case matches User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.nickname,User.team,User.plan
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/matches/email/constraint/type/Email/constraint/matches
+  case required User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.nickname,User.team,User.plan
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/required/email
+  case required User.name / validation-rejected
+    expect: outcome=rejected; preserve-input=User.nickname,User.email,User.team,User.plan
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/required/name
+  case required User.plan / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.nickname,User.email,User.team
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/required/plan
+  case unique User.email / validation-rejected
+    expect: outcome=rejected; preserve-input=User.name,User.nickname,User.email,User.team,User.plan
+    must not: stored data changed
+    fact: fact/page/UserEdit/view/form/edit/User/submit/validation/unique/email
+
+group Users:User.list [page/Users/view/list/User]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/access/denied/anonymous
+  case observable-feedback / observable-feedback
+    expect: feedback=empty,failure
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/feedback
+  case list-filter / list-filter
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/filter/plan
+  case list-filter / list-filter
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/filter/status
+  case list-filter / list-filter
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/filter/team
+  case list-page-boundary / list-page-boundary
+    expect: outcome=window-bounded-and-remainder-reachable
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/page-boundary
+  case records-visible / records-visible
+    expect: outcome=all-matching-records-visible
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/records/visible
+  case list-search / list-search
+    expect: outcome=matching-records-only
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/search
+
+group Users:User.edit [page/Users/view/list/User/action/edit]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserEdit
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/edit/navigation
+
+group Users:User.view [page/Users/view/list/User/action/view]
+  case roles(admin) / access-allowed
+    expect: outcome=allowed; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/access/allowed/admin
+  case anonymous / access-denied
+    expect: outcome=denied; enforcement=authoritative
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/access/denied/anonymous
+  case navigation / navigation
+    expect: navigation.target=UserDetail
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/view/navigation
