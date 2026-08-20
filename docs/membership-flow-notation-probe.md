@@ -1,6 +1,6 @@
 # Membership Flow Notation Probe
 
-Status: candidate B navigation, outcome, and domain-state text projections implemented — candidate C remains pseudocode and is not a language decision
+Status: candidate B navigation, outcome, domain-state, and visual flow projections implemented; human evaluation protocol ready with no participant result yet — candidate C remains pseudocode and is not a language decision
 
 ## 1. 目的
 
@@ -400,10 +400,30 @@ eligibleなことが一つのviewになる。signin/signoutのsession lifecycle�
 
 admin CRUDも同じmodelで、create initializer、4つのtransition、`confirm`/`allow`要件、同じ`suspend`を起動するlist/detail
 surfaceを表示する。multi-source action、declaration/value順の不変性、destination mutation、surface削除でdomain
-transitionを失わないことをtestした。visual diagramは後続候補である。最初からlayout、Mermaid syntax、UIをsemantic
-modelへ入れない。
+transitionを失わないことをtestした。
 
-## 9. 判定を見直す条件
+最後に`forma project flow`を実装した。navigation edgeを骨格にし、Outcome groupはedgeのtyped triggerまたは
+page-owned action semantic ID、State elementはinitializer trigger、eligibility operation、transition effect/invocationで
+関連付ける。単なるlabel一致やSource Map nodeの偶然のoverlapは使わない。membershipでは10 page/12 edgeへ
+Outcome 10/17 group（60/83 case）とDomain State 5/5 elementを結び、external email open boundaryへverify operationの
+outcomeを誤って貼らない。対応しないcredential、ownership、surface detail等はunlinked indexへ残る。
+
+formatterはMarkdown内にMermaid graph、edge trace table、unlinked indexを出す。Mermaid syntax、色、layoutはsemantic
+modelへ入れず、図を編集しても正本は変わらない。membership/adminのgolden、declaration/source-path順不変、state mutationの
+局所性、同じ`suspend` operationを持つ2 surfaceのOutcomeを混同しないこと、cross-projection provenanceをtestした。
+
+## 9. 人間評価
+
+[`evaluations/membership-flow/README.md`](evaluations/membership-flow/README.md)に、source-only条件Aと
+source+projection条件Bを実際に読み比べるprotocolを固定した。同一applicationを二度読むlearning effectを避けるため
+primary studyはbetween-subjectとし、最初のstop ruleをA/B各4 sessionとする。T1〜T6ごとの正答、時間、false assertion、
+confidenceを記録し、31点のanswer keyと判定thresholdをsession開始前に固定した。
+
+Candidate Cは未実装なので定量条件へ含めない。まずBがT1/T4を改善し、T2/T5とCRUDのT6を悪化させないかを測る。
+T3は両条件とも「現行semanticではsurface-only chainを追加できない」が正答であり、図を編集すれば解決すると誤認する場合は
+language primitiveの前にviewを直す。protocolとstimuliはreadyだが、participant resultはまだ記録していない。
+
+## 10. 判定を見直す条件
 
 次のいずれかを実測した場合は候補Cを再評価する。
 

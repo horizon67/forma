@@ -277,6 +277,7 @@ go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma project outcomes experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma project states experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project flow experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -296,7 +297,11 @@ excluded, or unchanged results as `must not` guarantees without inventing the
 inverse of an unstated fact. `forma project states` shows entity state machines,
 creation initializers, transition invocations, confirmation/role requirements,
 and Identity state eligibility. Session lifecycle is not misrepresented as a
-domain transition. `forma request` emits a Generation Request, and
+domain transition. `forma project flow` composes those three projections into
+a deterministic Markdown/Mermaid review view. Exact semantic IDs link outcome
+groups and state elements to navigation edges; unmatched detail remains in an
+explicit index. The diagram is not editable application meaning and does not
+infer layout or an application entry point. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
 through Stage D: Resolved Intent v0.7, Source Map v0.4, 81 Acceptance Facts,
@@ -318,6 +323,7 @@ human handoff. The next central probe is P3: Expression → Changes → Occurren
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [Language design principles](docs/language-design-principles.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
+- [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)
 - [Order approval and inventory probe](examples/orders.forma)
 - [Email-verified membership probe](docs/email-verified-membership-probe.md)

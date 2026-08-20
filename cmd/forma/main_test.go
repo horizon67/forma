@@ -82,6 +82,23 @@ func TestProjectStatesCommand(t *testing.T) {
 	}
 }
 
+func TestProjectFlowCommand(t *testing.T) {
+	path := filepath.Join("..", "..", "examples", "users.forma")
+	wantPath := filepath.Join("..", "..", "internal", "compiler", "testdata", "users.flow.md")
+	want, err := os.ReadFile(wantPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	exitCode := run([]string{"project", "flow", path}, &stdout, &stderr)
+	if exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if stdout.String() != string(want) {
+		t.Fatalf("unexpected flow projection:\n%s", stdout.String())
+	}
+}
+
 func TestProjectCommandRequiresAKnownProjection(t *testing.T) {
 	for _, test := range []struct {
 		name string

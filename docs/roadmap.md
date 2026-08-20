@@ -285,7 +285,10 @@ Forma coreはGo/HTTP/HTML用のgeneratorやadapterを持たない。
 `forma project navigation`、case-oriented outcome projectionを`forma project outcomes`、domain state projectionを
 `forma project states`として実装した。Identityとadmin CRUDを同じmodelへ投影し、outcome側はAcceptance Factに明示された
 negative guaranteeだけを`must not`へ分離する。state側はinitializer、transition invocation、eligibilityを結び、sessionを
-domain stateへ混ぜない。
+domain stateへ混ぜない。さらに`forma project flow`が3 projectionをMarkdown/Mermaid viewへ合成する。Outcomeは
+navigation edgeのsemantic source、Stateはtyped trigger/effect/invocationだけで関連付け、unlinked detailをindexへ残す。
+source-only条件とsource+projection条件をT1〜T6で比較する人間評価protocol、刺激、31点の事前採点基準も
+[`evaluations/membership-flow/README.md`](evaluations/membership-flow/README.md)へ固定した。participant resultはまだない。
 language syntaxとResolved Intent schemaは増やさず、未宣言のdefault entryを`unspecified`と表示する。一方、現行shapeでは
 任意のsurface-only chainを表せないsemantic gapは残る。
 
