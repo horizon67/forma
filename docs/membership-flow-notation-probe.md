@@ -1,6 +1,6 @@
 # Membership Flow Notation Probe
 
-Status: candidate B navigation and outcome text projections implemented — candidate C remains pseudocode and is not a language decision
+Status: candidate B navigation, outcome, and domain-state text projections implemented — candidate C remains pseudocode and is not a language decision
 
 ## 1. 目的
 
@@ -392,7 +392,16 @@ Factとの1対1または1対case対応を維持し、`count=0`、`added=0`、`ab
 `must not`へ分離した。たとえばinvalid registrationのsubject/credential/evidence/notice非作成、duplicate時の
 evidence/notice非追加、signin失敗時のsession非作成が表示される。一方、Factに無い逆命題は推測しない。
 
-domain-state専用projectionとvisual diagramは後続候補である。最初からlayout、Mermaid syntax、UIをsemantic modelへ入れない。
+さらに`forma project states`を実装した。entity stateごとにvaluesとinitialを示し、form createとIdentity registrationを
+initializer、actionをsource valueごとのtransition、page actionとIdentity verification successをtransition invocation、
+verification/resend/authenticationをstate eligibilityとして関連付ける。membershipでは`register -> Pending`、
+`Pending -- User.activate --> Active`を`UserAccount.verify`が起動すること、verify/resendはPending、signinはActiveで
+eligibleなことが一つのviewになる。signin/signoutのsession lifecycleはdomain transitionへ混ぜない。
+
+admin CRUDも同じmodelで、create initializer、4つのtransition、`confirm`/`allow`要件、同じ`suspend`を起動するlist/detail
+surfaceを表示する。multi-source action、declaration/value順の不変性、destination mutation、surface削除でdomain
+transitionを失わないことをtestした。visual diagramは後続候補である。最初からlayout、Mermaid syntax、UIをsemantic
+modelへ入れない。
 
 ## 9. 判定を見直す条件
 

@@ -33,12 +33,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 	projection := ""
 	if command == "project" {
 		if len(args) < 2 {
-			fmt.Fprintln(stderr, "forma: project requires a projection name; supported: navigation, outcomes")
+			fmt.Fprintln(stderr, "forma: project requires a projection name; supported: navigation, outcomes, states")
 			return 2
 		}
 		projection = args[1]
-		if projection != "navigation" && projection != "outcomes" {
-			fmt.Fprintf(stderr, "forma: unknown projection %q; supported: navigation, outcomes\n", projection)
+		if projection != "navigation" && projection != "outcomes" && projection != "states" {
+			fmt.Fprintf(stderr, "forma: unknown projection %q; supported: navigation, outcomes, states\n", projection)
 			return 2
 		}
 	}
@@ -163,6 +163,16 @@ func buildProjection(name string, intent *compiler.ResolvedIntent, sourceMap *co
 		content, err := compiler.FormatOutcomeProjection(projection)
 		if err != nil {
 			return "", fmt.Errorf("format outcomes projection: %w", err)
+		}
+		return content, nil
+	case "states":
+		projection, err := compiler.BuildDomainStateProjection(intent, sourceMap)
+		if err != nil {
+			return "", fmt.Errorf("build states projection: %w", err)
+		}
+		content, err := compiler.FormatDomainStateProjection(projection)
+		if err != nil {
+			return "", fmt.Errorf("format states projection: %w", err)
 		}
 		return content, nil
 	default:
@@ -418,6 +428,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project navigation <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project outcomes <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma project states <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)

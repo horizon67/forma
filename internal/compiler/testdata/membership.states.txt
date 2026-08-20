@@ -1,0 +1,16 @@
+domain state projection forma/domain-state-projection/v0alpha1
+intent forma/resolved-intent/v0.7
+machines 1
+
+state User.status [entity/User/state/status]
+  values: Active, Confirmed, Pending (initial), Suspended
+  initializers:
+    UserAccount.register --> Pending [projection/states/initializer/identity/UserAccount/operation/register]
+  transitions:
+    Pending -- User.activate --> Active [projection/states/transition/action/User/activate/from/Pending]
+      invoked by:
+        UserAccount.verify (identity-success) [identity/UserAccount/operation/verify]
+  eligibility:
+    Active: UserAccount.signin (authentication) [projection/states/eligibility/identity/UserAccount/operation/signin/state/Active]
+    Pending: UserAccount.resend (resend) [projection/states/eligibility/identity/UserAccount/operation/resend/state/Pending]
+    Pending: UserAccount.verify (verification) [projection/states/eligibility/identity/UserAccount/operation/verify/state/Pending]

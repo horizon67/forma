@@ -282,8 +282,10 @@ Forma coreはGo/HTTP/HTML用のgeneratorやadapterを持たない。
 同じsourceが意味的に十分でも、複数pageへ分散したnavigationと例外結果を人間が読みやすいとは限らない。
 現行source、現行sourceからの決定的projection、`flow`をnavigationの正本にする案を
 [`membership-flow-notation-probe.md`](membership-flow-notation-probe.md)で比較した。read-only navigation projectionを
-`forma project navigation`、case-oriented outcome projectionを`forma project outcomes`として実装した。Identityとadmin
-CRUDを同じmodelへ投影し、outcome側はAcceptance Factに明示されたnegative guaranteeだけを`must not`へ分離する。
+`forma project navigation`、case-oriented outcome projectionを`forma project outcomes`、domain state projectionを
+`forma project states`として実装した。Identityとadmin CRUDを同じmodelへ投影し、outcome側はAcceptance Factに明示された
+negative guaranteeだけを`must not`へ分離する。state側はinitializer、transition invocation、eligibilityを結び、sessionを
+domain stateへ混ぜない。
 language syntaxとResolved Intent schemaは増やさず、未宣言のdefault entryを`unspecified`と表示する。一方、現行shapeでは
 任意のsurface-only chainを表せないsemantic gapは残る。
 

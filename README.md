@@ -276,6 +276,7 @@ go run ./cmd/forma check examples/email-verified-membership.forma
 go run ./cmd/forma resolve examples/users.forma
 go run ./cmd/forma project navigation experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma project outcomes experiments/membership-agent-e2e/app.forma
+go run ./cmd/forma project states experiments/membership-agent-e2e/app.forma
 go run ./cmd/forma request experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma request --previous internal/agentrequest/testdata/admin.request.json --manifest experiments/admin-agent-e2e/target/forma.implementation.yaml experiments/admin-agent-e2e/app.forma
 go run ./cmd/forma verify --repository experiments/admin-agent-e2e/target --baseline internal/agentrequest/testdata/admin.request.json internal/agentrequest/testdata/admin.incremental.request.json experiments/admin-agent-e2e/target/generation-feedback.json
@@ -292,7 +293,10 @@ Resolved Intent; it does not become a second source of truth or infer an
 undeclared default entry. `forma project outcomes` expands observable Acceptance
 Facts into case-oriented review text. It separates explicitly absent, zero,
 excluded, or unchanged results as `must not` guarantees without inventing the
-inverse of an unstated fact. `forma request` emits a Generation Request, and
+inverse of an unstated fact. `forma project states` shows entity state machines,
+creation initializers, transition invocations, confirmation/role requirements,
+and Identity state eligibility. Session lifecycle is not misrepresented as a
+domain transition. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
 through Stage D: Resolved Intent v0.7, Source Map v0.4, 81 Acceptance Facts,
