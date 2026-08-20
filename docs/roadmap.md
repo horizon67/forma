@@ -279,6 +279,11 @@ sourceからincremental Generation Requestを構築し、[`../experiments/member
 38件がすべてadded）と3 Implementation Policies、3 Review Requirementsを`forma verify --baseline`で検証した。
 Forma coreはGo/HTTP/HTML用のgeneratorやadapterを持たない。
 
+同じsourceが意味的に十分でも、複数pageへ分散したnavigationと例外結果を人間が読みやすいとは限らない。
+現行source、現行sourceからの決定的projection、`flow`をnavigationの正本にする案を
+[`membership-flow-notation-probe.md`](membership-flow-notation-probe.md)で比較する。最初はlanguage syntaxを増やさず
+navigation projectionを測り、同時に現行shapeでは任意のsurface-only chainを表せないsemantic gapを記録した。
+
 この実測で4つの穴が出た。既存applicationへIdentityを足すと標準actionの宛先が曖昧になり、明示`goto`
 （[`navigation-destination-proposal.md`](navigation-destination-proposal.md)）で解決した。Factが2件、
 到達不能な状態をsetupしていた。`verification-rejected`のconsumed caseは`Pending + consumed`を、
