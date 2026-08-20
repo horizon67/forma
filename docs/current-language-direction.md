@@ -76,7 +76,8 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 ### 3. CRUD/state transitionを越えるdomain behavior
 
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
-必要である。self-only Invariantのfield参照と`<=`までは実装したが、Changes以降は未決定である。
+必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分までは
+実装したが、repository固有の保存境界でのE2EとChanges以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -113,7 +114,7 @@ semantic graphへ解決されることを意味する。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
 `RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、Resolved Intent `v0.8`、Source Map `v0.5`、
-Acceptance Facts `v0alpha5`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+Acceptance Facts `v0alpha6`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -135,6 +136,12 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 3. Changesとatomic post-state
 4. Occurrence
 5. Effect binding / delivery contract
+
+Expressionの最初のvertical sliceでは、`StockItem.stockAvailable`の`reserved <= onHand`からentity単位の
+正常系・否定系2 Factsに加え、参照fieldを編集するform submitのauthoritativeな拒否Factを導出した。
+post-stateでの全commit／無commitをGeneration Requestへ運び、concurrent operationの保証は独立Review Requirementとして
+人間へ表示する。次はこのrequestをcoding agentへ渡し、repository固有のauthoritative mutation境界とtestへ落とせるかを
+実測する。その確認前にoperator集合やChanges syntaxを広げない。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

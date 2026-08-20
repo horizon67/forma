@@ -1,6 +1,6 @@
-// Order approval and inventory, written with only the ten Forma v0 primitives.
-// This is a design probe for effect, occurrence, and expression semantics.
-// What v0 cannot express here is recorded in docs/order-approval-proposal.md.
+// Order approval and inventory, using the ten Forma v0 primitives plus the
+// experimental self-only Invariant slice. This probes effect, occurrence, and
+// expression semantics; remaining gaps are in docs/order-approval-proposal.md.
 
 role admin
 role staff
@@ -24,6 +24,8 @@ entity StockItem {
     location String required label
     onHand   Quantity required
     reserved Quantity required
+
+    invariant stockAvailable: reserved <= onHand
 }
 
 entity Order {

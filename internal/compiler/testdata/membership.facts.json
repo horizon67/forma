@@ -1,5 +1,5 @@
 {
-  "version": "forma/acceptance-facts/v0alpha5",
+  "version": "forma/acceptance-facts/v0alpha6",
   "intentVersion": "forma/resolved-intent/v0.8",
   "facts": [
     {

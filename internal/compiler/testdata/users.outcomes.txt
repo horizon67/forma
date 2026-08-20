@@ -1,6 +1,6 @@
-outcome projection forma/outcome-projection/v0alpha1
+outcome projection forma/outcome-projection/v0alpha2
 intent forma/resolved-intent/v0.8
-facts forma/acceptance-facts/v0alpha5
+facts forma/acceptance-facts/v0alpha6
 rows 69
 
 group UserCreate:User.create form [page/UserCreate/view/form/create/User]

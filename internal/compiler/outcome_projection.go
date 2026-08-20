@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha1"
+const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha2"
 
 // OutcomeProjection is a deterministic review view over observable Acceptance
 // Facts. It splits multi-case facts into rows but does not add outcomes that
@@ -95,7 +95,7 @@ func isOutcomeFact(fact AcceptanceFact) bool {
 	}
 	expected := fact.Expected
 	if expected.Outcome != "" || len(expected.Feedback) > 0 || expected.AppliedMutations > 0 ||
-		expected.Enforcement != "" || expected.Stored != "" || len(expected.PreserveInput) > 0 || expected.Navigation != nil {
+		expected.Enforcement != "" || expected.Atomicity != "" || expected.Stored != "" || len(expected.PreserveInput) > 0 || expected.Navigation != nil {
 		return true
 	}
 	identity := expected.Identity
@@ -191,6 +191,12 @@ func cloneFactPrincipal(value *FactPrincipal) *FactPrincipal {
 }
 
 func outcomeFactCase(fact AcceptanceFact) string {
+	if fact.Input != nil && fact.Input.Predicate != nil {
+		if fact.Input.Predicate.Result {
+			return "predicate true"
+		}
+		return "predicate false"
+	}
 	if fact.Input != nil && fact.Input.Violation != nil {
 		violation := fact.Input.Violation
 		return violation.Kind + " " + outcomeSemanticLabel(violation.Field)
@@ -318,6 +324,13 @@ func summarizeOutcomeRow(row OutcomeRow) ([]string, []string) {
 	}
 	if value.Enforcement != "" {
 		addExpected("enforcement=" + value.Enforcement)
+	}
+	if value.Atomicity != "" {
+		if value.Atomicity == "no-changes-committed" {
+			addProhibited("changes committed")
+		} else {
+			addExpected("atomicity=" + value.Atomicity)
+		}
 	}
 	if value.Stored == "unchanged" {
 		addProhibited("stored data changed")

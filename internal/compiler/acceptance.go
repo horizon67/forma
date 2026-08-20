@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha5"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha6"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -37,11 +37,22 @@ type FactPrincipal struct {
 }
 
 type FactInput struct {
-	Fields          []SemanticID       `json:"fields,omitempty"`
-	ExistingRecords int                `json:"existingRecords,omitempty"`
-	Dispatches      int                `json:"dispatches,omitempty"`
-	Violation       *FactViolation     `json:"violation,omitempty"`
-	Identity        *IdentityFactInput `json:"identity,omitempty"`
+	Fields          []SemanticID        `json:"fields,omitempty"`
+	ExistingRecords int                 `json:"existingRecords,omitempty"`
+	Dispatches      int                 `json:"dispatches,omitempty"`
+	Violation       *FactViolation      `json:"violation,omitempty"`
+	Predicate       *FactPredicateInput `json:"predicate,omitempty"`
+	Identity        *IdentityFactInput  `json:"identity,omitempty"`
+}
+
+// FactPredicateInput describes one compiler-resolved expression evaluation.
+// The complete tree is copied from Resolved Intent so a semantic predicate
+// change also changes the Fact and its incremental Generation Request diff.
+type FactPredicateInput struct {
+	Expression        IRExpression `json:"expression"`
+	Evaluation        string       `json:"evaluation"`
+	OtherRequirements string       `json:"otherRequirements"`
+	Result            bool         `json:"result"`
 }
 
 type FactViolation struct {
@@ -59,6 +70,7 @@ type FactExpectation struct {
 	PageSize         int                      `json:"pageSize,omitempty"`
 	AppliedMutations int                      `json:"appliedMutations,omitempty"`
 	Enforcement      string                   `json:"enforcement,omitempty"`
+	Atomicity        string                   `json:"atomicity,omitempty"`
 	Stored           string                   `json:"stored,omitempty"`
 	PreserveInput    []SemanticID             `json:"preserveInput,omitempty"`
 	Relation         *FactRelation            `json:"relation,omitempty"`
@@ -303,6 +315,9 @@ func (b *acceptanceBuilder) build() error {
 		})
 	}
 	for _, entity := range b.intent.Entities {
+		for _, invariant := range entity.Invariants {
+			b.addInvariantFacts(invariant)
+		}
 		for _, field := range entity.Fields {
 			if field.Relation != nil {
 				b.addRelationFact(field)
@@ -337,6 +352,93 @@ func (b *acceptanceBuilder) build() error {
 		}
 	}
 	return nil
+}
+
+func (b *acceptanceBuilder) addInvariantFacts(invariant IRInvariant) {
+	sources := invariantFactSourceNodes(invariant)
+	for _, item := range []struct {
+		caseName  string
+		kind      string
+		result    bool
+		outcome   string
+		atomicity string
+	}{
+		{caseName: "satisfied", kind: "invariant-satisfied", result: true, outcome: "accepted", atomicity: "all-changes-committed"},
+		{caseName: "violated", kind: "invariant-violated", result: false, outcome: "rejected", atomicity: "no-changes-committed"},
+	} {
+		b.add(AcceptanceFact{
+			ID: factID(invariant.ID, "evaluation", item.caseName), Kind: item.kind, Subject: invariant.ID,
+			Input: &FactInput{Predicate: &FactPredicateInput{
+				Expression: cloneIRExpression(invariant.Predicate), Evaluation: "post-state",
+				OtherRequirements: "satisfied", Result: item.result,
+			}},
+			Expected: FactExpectation{
+				Outcome: item.outcome, Enforcement: "authoritative", Atomicity: item.atomicity,
+			},
+			SourceNodes: sources,
+		})
+	}
+}
+
+func cloneIRExpression(expression IRExpression) IRExpression {
+	result := expression
+	if expression.Left != nil {
+		left := cloneIRExpression(*expression.Left)
+		result.Left = &left
+	}
+	if expression.Right != nil {
+		right := cloneIRExpression(*expression.Right)
+		result.Right = &right
+	}
+	return result
+}
+
+func invariantFactSourceNodes(invariant IRInvariant) []SemanticID {
+	result := []SemanticID{invariant.ID}
+	var visit func(IRExpression)
+	visit = func(expression IRExpression) {
+		result = append(result, expression.ID, expression.Field)
+		if expression.Left != nil {
+			visit(*expression.Left)
+		}
+		if expression.Right != nil {
+			visit(*expression.Right)
+		}
+	}
+	visit(invariant.Predicate)
+	return canonicalSemanticIDs(result)
+}
+
+func invariantFieldReferences(invariant IRInvariant) []SemanticID {
+	var result []SemanticID
+	var visit func(IRExpression)
+	visit = func(expression IRExpression) {
+		if expression.Field != "" {
+			result = append(result, expression.Field)
+		}
+		if expression.Left != nil {
+			visit(*expression.Left)
+		}
+		if expression.Right != nil {
+			visit(*expression.Right)
+		}
+	}
+	visit(invariant.Predicate)
+	return canonicalSemanticIDs(result)
+}
+
+func intersectSemanticIDs(left, right []SemanticID) []SemanticID {
+	wanted := make(map[SemanticID]bool, len(right))
+	for _, value := range right {
+		wanted[value] = true
+	}
+	var result []SemanticID
+	for _, value := range left {
+		if wanted[value] {
+			result = append(result, value)
+		}
+	}
+	return canonicalSemanticIDs(result)
 }
 
 func (b *acceptanceBuilder) addRelationFact(field IRField) {
@@ -560,7 +662,46 @@ func (b *acceptanceBuilder) addSubmitFacts(view IRView, entity IREntity) error {
 			b.addValidationFact(submit, field, constraint.Kind, constraint.ID, preserve)
 		}
 	}
+	for _, invariant := range entity.Invariants {
+		inputFields := intersectSemanticIDs(fields, invariantFieldReferences(invariant))
+		if len(inputFields) == 0 {
+			continue
+		}
+		b.addInvariantValidationFact(view, *submit, invariant, fields, inputFields)
+	}
 	return b.addSubmitNavigationFact(*submit)
+}
+
+func (b *acceptanceBuilder) addInvariantValidationFact(
+	view IRView,
+	submit IRSubmitIntent,
+	invariant IRInvariant,
+	formFields []SemanticID,
+	inputFields []SemanticID,
+) {
+	sources := append([]SemanticID{view.ID, submit.ID}, formFields...)
+	sources = append(sources, invariantFactSourceNodes(invariant)...)
+	b.add(AcceptanceFact{
+		ID:      invariantValidationFactID(submit.ID, invariant.ID),
+		Kind:    "invariant-validation-rejected",
+		Subject: submit.ID,
+		Input: &FactInput{
+			Fields: inputFields,
+			Predicate: &FactPredicateInput{
+				Expression: cloneIRExpression(invariant.Predicate),
+				Evaluation: "post-state", OtherRequirements: "satisfied", Result: false,
+			},
+		},
+		Expected: FactExpectation{
+			Outcome: "rejected", Feedback: []string{"invalid"}, Enforcement: "authoritative",
+			Atomicity: "no-changes-committed", Stored: "unchanged", PreserveInput: formFields,
+		},
+		SourceNodes: canonicalSemanticIDs(sources),
+	})
+}
+
+func invariantValidationFactID(submitID, invariantID SemanticID) SemanticID {
+	return factID(submitID, "validation", "invariant", string(invariantID))
 }
 
 func (b *acceptanceBuilder) addValidationFact(

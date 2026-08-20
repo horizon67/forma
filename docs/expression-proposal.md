@@ -1,13 +1,14 @@
 # Minimal Expression Layer Proposal
 
-Status: exploratory proposal — first self-only `<=` compiler slice implemented outside normative v0
+Status: exploratory proposal — first self-only `<=` compiler and Acceptance Facts slice implemented outside normative v0
 
 この文書は、Forma sourceに書かれた計算や条件を、未検査のpromptではなく、compilerがparse・名前解決・
 型検査できるapplication semanticsとして扱うための最小expression layerを提案する。
 
 規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書はまだlanguage decisionではなく、v0の
 10 primitivesも変更しない。reference compilerは検証用の最初の縦切りとして、名前付きInvariant、
-selfのfield参照、`<=`、名前解決・型検査、Resolved Expression tree、Source Mapまでを実装している。
+selfのfield参照、`<=`、名前解決・型検査、Resolved Expression tree、Source Map、成立・違反の
+entity Facts、form mutation拒否Fact、concurrency Review Requirementまでを実装している。
 numeric literal、他のoperator、`=`によるDerived Value、`require`は未実装である。
 
 本書は[`order-approval-proposal.md`](order-approval-proposal.md)で実測した不足を受けている。Expressionを
@@ -433,9 +434,16 @@ onHand = 10, reserved = 12
 test frameworkに合わせ、上記の正常系・否定系をtestへ変換する。Forma coreが全target共通のfixture
 evaluatorやruntime adapterを保有することは要求しない。
 
-InvariantはUIだけで検査してはならない。authoritativeなmutation境界で、concurrent operationを含めて
-post-stateがInvariantを満たす必要がある。database constraint、transaction、server validationのどれを
-使うかはcoding agentがrepository contextから決める。
+InvariantはUIだけで検査してはならない。参照fieldを入力に含むform submitごとに、compilerは
+`invariant-validation-rejected`を導出する。このFactはsubmitをsubjectとし、解決済みpredicateの偽、
+`post-state`評価、`authoritative` enforcement、`no-changes-committed`、保存値不変、入力保持、利用者へ
+`invalid` feedbackを同じscenarioで要求する。したがってentity単位の隔離testだけではmutation境界の要件を
+満たせない。
+
+concurrent operationでもpost-stateがInvariantを満たすことは、repository固有のtransactionやstorage mechanismを
+Formaが機械的に証明できない。この部分は`concurrent-invariant-enforcement` Review RequirementとしてInvariantごとに
+導出し、`forma verify`の成功とは分離して人間へ必ず表示する。database constraint、transaction、server validationの
+どれを使うかはcoding agentがrepository contextから決める。
 
 ## 必須diagnostic
 
@@ -553,14 +561,18 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 
 1. `invariant name: expression`のentity memberとstable identity。**実装済み**。
 2. field参照と`<=`の最小parser・型検査・Resolved Intent出力。**実装済み**。numeric literalは未実装。
-3. self-only Invariantから正常系・否定系のAcceptance Factsを出力する。
-4. Generation Requestをcoding agentへ渡し、repository固有testと保存境界の実装を確認する。
-5. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
-6. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
-7. 同じExpression treeをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
-8. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
-9. relationを読むInvariantのdependency/revalidation contractを設計する。
-10. collection、Action Precondition、Effect Binding、Occurrence Predicateをそれぞれの実例で拡張する。
+3. self-only Invariantから正常系・否定系のAcceptance Factsを出力する。**実装済み**。
+4. 参照fieldを変更できるform submitへauthoritativeな拒否Factを接続し、concurrencyをReview Requirementへ分離する。
+   **実装済み**。
+5. Generation RequestへExpression treeを含むFactsとReview Requirementを渡す。追加時のsemantic diffまで
+   **実装済み**。
+   coding agentがrepository固有testと保存境界へ実装できるかのE2Eは未実施。
+6. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
+7. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
+8. 同じExpression treeをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
+9. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
+10. relationを読むInvariantのdependency/revalidation contractを設計する。
+11. collection、Action Precondition、Effect Binding、Occurrence Predicateをそれぞれの実例で拡張する。
 
 最初のacceptance caseは次である。
 
@@ -580,6 +592,12 @@ entity StockItem {
 - 正常post-stateの受理とinvalid post-stateの拒否をAcceptance Factsとして出力する。
 - coding agentがtarget repositoryのauthoritativeな境界とtestへ実装し、build/testを通す。
 
-現在は最初の4項目までをreference compilerとtestで確認済みである。Acceptance Factsとcoding agentへの
-Generation Requestは未実装である。これらが成立するまでは、general function、collection、Effect syntaxを
-compilerへ追加しない。
+現在は最初の5項目までをreference compilerとtestで確認済みである。各Invariantから
+`invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
+`invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
+解決済みExpression tree、`post-state`評価、authoritative enforcement、
+`all-changes-committed` / `no-changes-committed`を`forma/acceptance-facts/v0alpha6`へ固定する。
+concurrencyは`forma/review-requirements/v0alpha2`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
+将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。残るのはcoding agentによるrepository固有testと
+保存境界の実測である。
+それが成立するまでは、general function、collection、Effect syntaxをcompilerへ追加しない。

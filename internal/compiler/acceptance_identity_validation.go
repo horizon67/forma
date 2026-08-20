@@ -44,9 +44,10 @@ var identityFactKindContracts = map[string]FactKindContract{
 	"delivery-failure-separated":       {Kind: "delivery-failure-separated", RequiresOperation: true, MinDispatches: 1},
 }
 
-// ValidateAcceptanceFacts checks every emitted Identity fact in addition to
-// the existing admin-flow derivation. A particular program may emit only a
-// supported subset of the Identity Fact kind registry.
+// ValidateAcceptanceFacts checks compiler-owned invariant facts and every
+// emitted Identity fact in addition to the existing admin-flow derivation. A
+// particular program may emit only a supported subset of the Identity Fact
+// kind registry.
 func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) error {
 	if intent == nil || facts == nil {
 		return fmt.Errorf("validate Acceptance Facts: intent and facts are required")
@@ -54,26 +55,31 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 	if facts.Version != AcceptanceFactsVersion || facts.IntentVersion != intent.Version {
 		return fmt.Errorf("validate Acceptance Facts: schema versions do not match Resolved Intent")
 	}
-	if len(intent.Identities) == 0 {
-		for _, fact := range facts.Facts {
-			if isIdentityFact(fact) {
-				return fmt.Errorf("validate Acceptance Facts: Identity fact %s has no Identity intent", fact.ID)
-			}
-		}
-		return nil
-	}
 	semanticIDs, err := resolvedIntentSemanticIDs(intent)
 	if err != nil {
 		return fmt.Errorf("validate Acceptance Facts: %w", err)
 	}
+	invariants := map[SemanticID]IRInvariant{}
+	for _, entity := range intent.Entities {
+		for _, invariant := range entity.Invariants {
+			invariants[invariant.ID] = invariant
+		}
+	}
+	invariantMutationFacts, err := expectedInvariantMutationFacts(intent)
+	if err != nil {
+		return err
+	}
+	invariantMutationByID := make(map[SemanticID]invariantMutationFact, len(invariantMutationFacts))
+	for _, expected := range invariantMutationFacts {
+		invariantMutationByID[expected.ID] = expected
+	}
+	seenFacts := map[SemanticID]bool{}
 	for _, fact := range facts.Facts {
-		if !isIdentityFact(fact) {
-			continue
+		if fact.ID == "" || seenFacts[fact.ID] {
+			return fmt.Errorf("validate Acceptance Facts: fact has an empty or duplicate ID %s", fact.ID)
 		}
-		if err := validateIdentityFactReferences(intent, fact, semanticIDs); err != nil {
-			return err
-		}
-		if err := ValidateFactSetup(fact); err != nil {
+		seenFacts[fact.ID] = true
+		if err := validateAcceptanceFactReferences(intent, fact, semanticIDs); err != nil {
 			return err
 		}
 		if !semanticIDs[fact.Subject] {
@@ -90,8 +96,161 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 				return fmt.Errorf("validate Acceptance Facts: fact %s references missing source node %s", fact.ID, source)
 			}
 		}
+		if isIdentityFact(fact) {
+			if len(intent.Identities) == 0 {
+				return fmt.Errorf("validate Acceptance Facts: Identity fact %s has no Identity intent", fact.ID)
+			}
+			if err := ValidateFactSetup(fact); err != nil {
+				return err
+			}
+		}
+		invariantKind := fact.Kind == "invariant-satisfied" || fact.Kind == "invariant-violated" ||
+			fact.Kind == "invariant-validation-rejected"
+		invariantPayload := fact.Input != nil && fact.Input.Predicate != nil
+		if invariantKind != invariantPayload {
+			return fmt.Errorf("validate Acceptance Facts: fact %s has a mismatched invariant kind and predicate payload", fact.ID)
+		}
+		if fact.Kind == "invariant-satisfied" || fact.Kind == "invariant-violated" {
+			if err := validateInvariantFact(fact, invariants); err != nil {
+				return err
+			}
+		} else if fact.Kind == "invariant-validation-rejected" {
+			expected, ok := invariantMutationByID[fact.ID]
+			if !ok {
+				return fmt.Errorf("validate Acceptance Facts: invariant mutation fact %s is not derived from Resolved Intent", fact.ID)
+			}
+			if err := validateInvariantMutationFact(fact, expected); err != nil {
+				return err
+			}
+		}
+	}
+	for _, invariant := range invariants {
+		for _, caseName := range []string{"satisfied", "violated"} {
+			id := factID(invariant.ID, "evaluation", caseName)
+			if !seenFacts[id] {
+				return fmt.Errorf("validate Acceptance Facts: missing invariant evaluation fact %s", id)
+			}
+		}
+	}
+	for _, expected := range invariantMutationFacts {
+		if !seenFacts[expected.ID] {
+			return fmt.Errorf("validate Acceptance Facts: missing invariant mutation fact %s", expected.ID)
+		}
 	}
 	return validateVerificationRejectionReachability(facts.Facts)
+}
+
+type invariantMutationFact struct {
+	ID          SemanticID
+	View        IRView
+	Submit      IRSubmitIntent
+	Invariant   IRInvariant
+	FormFields  []SemanticID
+	InputFields []SemanticID
+}
+
+func expectedInvariantMutationFacts(intent *ResolvedIntent) ([]invariantMutationFact, error) {
+	entities := make(map[string]IREntity, len(intent.Entities))
+	for _, entity := range intent.Entities {
+		entities[entity.Name] = entity
+	}
+	var result []invariantMutationFact
+	for _, page := range intent.Pages {
+		for _, view := range page.Views {
+			if view.Submit == nil {
+				continue
+			}
+			entity, ok := entities[view.Entity]
+			if !ok {
+				return nil, fmt.Errorf("validate Acceptance Facts: view %s references missing entity %s", view.ID, view.Entity)
+			}
+			formFields, err := fieldIDs(entity, view.Fields)
+			if err != nil {
+				return nil, fmt.Errorf("validate Acceptance Facts for %s: %w", view.ID, err)
+			}
+			for _, invariant := range entity.Invariants {
+				inputFields := intersectSemanticIDs(formFields, invariantFieldReferences(invariant))
+				if len(inputFields) == 0 {
+					continue
+				}
+				result = append(result, invariantMutationFact{
+					ID: invariantValidationFactID(view.Submit.ID, invariant.ID), View: view,
+					Submit: *view.Submit, Invariant: invariant, FormFields: formFields, InputFields: inputFields,
+				})
+			}
+		}
+	}
+	return result, nil
+}
+
+func validateInvariantMutationFact(fact AcceptanceFact, expected invariantMutationFact) error {
+	wantInput := FactInput{
+		Fields: expected.InputFields,
+		Predicate: &FactPredicateInput{
+			Expression: expected.Invariant.Predicate, Evaluation: "post-state",
+			OtherRequirements: "satisfied", Result: false,
+		},
+	}
+	wantExpectation := FactExpectation{
+		Outcome: "rejected", Feedback: []string{"invalid"}, Enforcement: "authoritative",
+		Atomicity: "no-changes-committed", Stored: "unchanged", PreserveInput: expected.FormFields,
+	}
+	sources := append([]SemanticID{expected.View.ID, expected.Submit.ID}, expected.FormFields...)
+	sources = append(sources, invariantFactSourceNodes(expected.Invariant)...)
+	if fact.Subject != expected.Submit.ID || fact.Principal != nil || fact.Setup != nil ||
+		fact.Input == nil || !reflect.DeepEqual(*fact.Input, wantInput) {
+		return fmt.Errorf("validate Acceptance Facts: invariant mutation fact %s has non-canonical input or subject", fact.ID)
+	}
+	if !reflect.DeepEqual(fact.Expected, wantExpectation) {
+		return fmt.Errorf("validate Acceptance Facts: invariant mutation fact %s has a non-canonical expectation", fact.ID)
+	}
+	if !reflect.DeepEqual(fact.SourceNodes, canonicalSemanticIDs(sources)) {
+		return fmt.Errorf("validate Acceptance Facts: invariant mutation fact %s has incomplete mutation provenance", fact.ID)
+	}
+	return nil
+}
+
+func validateInvariantFact(fact AcceptanceFact, invariants map[SemanticID]IRInvariant) error {
+	invariant, ok := invariants[fact.Subject]
+	if !ok {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has no invariant subject", fact.ID)
+	}
+	if fact.Input == nil || fact.Input.Predicate == nil {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has no predicate input", fact.ID)
+	}
+	input := fact.Input.Predicate
+	if input.Evaluation != "post-state" || input.OtherRequirements != "satisfied" || !reflect.DeepEqual(input.Expression, invariant.Predicate) {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s differs from its resolved post-state predicate", fact.ID)
+	}
+	caseName := "satisfied"
+	wantKind := "invariant-satisfied"
+	wantExpectation := FactExpectation{
+		Outcome: "accepted", Enforcement: "authoritative", Atomicity: "all-changes-committed",
+	}
+	if !input.Result {
+		caseName = "violated"
+		wantKind = "invariant-violated"
+		wantExpectation = FactExpectation{
+			Outcome: "rejected", Enforcement: "authoritative", Atomicity: "no-changes-committed",
+		}
+	}
+	wantInput := FactInput{Predicate: &FactPredicateInput{
+		Expression: invariant.Predicate, Evaluation: "post-state",
+		OtherRequirements: "satisfied", Result: input.Result,
+	}}
+	if !reflect.DeepEqual(*fact.Input, wantInput) {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has a non-canonical predicate input", fact.ID)
+	}
+	if fact.ID != factID(invariant.ID, "evaluation", caseName) || fact.Kind != wantKind {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has non-canonical identity or kind", fact.ID)
+	}
+	if fact.Principal != nil || fact.Setup != nil || !reflect.DeepEqual(fact.Expected, wantExpectation) {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has a non-canonical expectation", fact.ID)
+	}
+	if !reflect.DeepEqual(fact.SourceNodes, invariantFactSourceNodes(invariant)) {
+		return fmt.Errorf("validate Acceptance Facts: invariant fact %s has incomplete predicate provenance", fact.ID)
+	}
+	return nil
 }
 
 // validateVerificationRejectionReachability pins the consumed rejection case to
@@ -294,7 +453,7 @@ func validateFactKindContractCoverage(kinds map[string]bool) error {
 	return nil
 }
 
-func validateIdentityFactReferences(intent *ResolvedIntent, fact AcceptanceFact, semanticIDs map[SemanticID]bool) error {
+func validateAcceptanceFactReferences(intent *ResolvedIntent, fact AcceptanceFact, semanticIDs map[SemanticID]bool) error {
 	var visit func(reflect.Value, bool) error
 	visit = func(value reflect.Value, rootFact bool) error {
 		if !value.IsValid() {

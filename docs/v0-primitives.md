@@ -954,10 +954,10 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 | --- | --- | --- |
 | Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.8`として部分実装。Identity proof、application entry、surface-only transition、明示navigation destinationを含む |
 | Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.5`として実装済み |
-| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha5`。admin/Identityに加えentryとsurface transitionを導出 |
-| Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha1`。Identityごとの3件を実装 |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha6`。admin/Identity、entry、surface transition、self-only Invariantの成立・違反と該当form mutationの拒否を導出 |
+| Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha2`。Identityごとの3件とInvariantごとのconcurrency確認を実装 |
 | Generation Request | intent、facts、review requirements、source map、implementation policy、requested change、verification policy | historical `v0alpha1` / `v0alpha2`とcurrent `v0alpha4`を実装。中間schemaは、現在のbinaryが再導出できないAcceptance Factsを運ぶため受理しない |
-| Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、43 facts・3 policiesのincremental runを実装。自動repair loopは未実装 |
+| Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、81 facts・3 policiesと最初のbounded automated repair loopを実装 |
 
 framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の
 schemaへ固定しない。model provider、prompt template、tool listもagent execution設定であり、language
@@ -972,13 +972,15 @@ versionのblockerではない。
 
 reference front-endはこの規範v0に加え、[Minimal Expression Layer Proposal](expression-proposal.md)を
 検証するexperimental syntaxとして、selfのrequired field同士を`<=`で比較する名前付きInvariantも受理する。
+このInvariantからは、解決済みpredicateを含む成立・違反の2 Acceptance Factsに加え、参照fieldを編集する
+form submitのauthoritativeな拒否Factとconcurrency Review Requirementを導出する。
 これはv0の10 primitives、EBNF、完了条件へは含めない。
 
 - §5.7の省略projectionを展開したlist/detail intent
 - inherited constraintの合成、constraintに対するdefault検査、`required readonly`のproducer検査
 - v0で閉じたstring/regex escape setの厳密な検査
 - state transitionなどadmin CRUD外のAcceptance Fact kind
-- rename、削除、migrationを扱うincremental change modelと、自動repairを行うGeneration Feedback loop
+- rename、削除、migrationを扱うincremental change model
 
 したがって現在のgolden outputとSource Mapは実装回帰には使えるが、v0.6 Resolved Intent schemaの
 完成形ではない。

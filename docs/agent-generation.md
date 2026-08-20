@@ -116,9 +116,11 @@ Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromp
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
 各factは少なくとも次を持つ。現在のkindは
-`forma/acceptance-facts/v0alpha5`として実装し、admin flow、Identity専用29 Facts、application entry、
-surface-only transitionを扱う。追加domainのkindは
-引き続き実例から拡張する。
+`forma/acceptance-facts/v0alpha6`として実装し、admin flow、Identity専用29 Facts、application entry、
+surface-only transition、self-only Invariantの成立・違反を扱う。Invariantはentity単位の成立・違反に加え、
+参照fieldを入力に含むform submitごとにauthoritativeな拒否Factを導出する。各Factは他のrequirementを満たした
+隔離scenarioとして、解決済みExpression tree、post-state評価、authoritative enforcement、atomic commit結果を
+持つ。追加domainのkindは引き続き実例から拡張する。
 
 ```text
 AcceptanceFact
@@ -144,10 +146,12 @@ operation・認可・観測経路を迂回していないかはFormaが再計算
 Identityでの具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
 
-人間確認が必要な境界は`forma/review-requirements/v0alpha1`としてAcceptance Factsから分離する。Identityごとに
-`secret-redaction`、`secret-storage`、`fixture-fidelity`の3件をstable ID付きで導出する。instructionはcompiler所有の
+人間確認が必要な境界は`forma/review-requirements/v0alpha2`としてAcceptance Factsから分離する。Identityごとに
+`secret-redaction`、`secret-storage`、`fixture-fidelity`の3件を、Invariantごとに
+`concurrent-invariant-enforcement`をstable ID付きで導出する。後者は、同じpredicateを参照するauthoritativeな
+mutation境界がconcurrent operationでも違反post-stateをcommitしないことを確認させる。instructionはcompiler所有の
 固定文であり、agent feedbackへreview coverageや完了statusを追加しない。`forma verify`のexit 0は機械検査の成功だけを
-意味し、これら3件は成功出力にも必ず表示される。
+意味し、これらの要件は成功出力にも必ず表示される。
 
 ## Generation Request
 

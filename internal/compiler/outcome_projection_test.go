@@ -161,6 +161,39 @@ page UserCreate {
 	}
 }
 
+func TestInvariantOutcomeProjectionShowsBothAtomicBoundaries(t *testing.T) {
+	projection, formatted, _ := outcomeProjectionFromSource(t, "stock.forma", invariantAcceptanceSource)
+	if outcomeRowCount(projection) != 2 {
+		t.Fatalf("invariant outcome rows = %d, want 2", outcomeRowCount(projection))
+	}
+	invariant := invariantID("StockItem", "stockAvailable")
+	satisfied := outcomeRowByFactAndCase(t, projection,
+		factID(invariant, "evaluation", "satisfied"), "predicate true")
+	expected, prohibited := summarizeOutcomeRow(satisfied)
+	for _, value := range []string{"outcome=accepted", "enforcement=authoritative", "atomicity=all-changes-committed"} {
+		assertOutcomeContains(t, expected, value)
+	}
+	if len(prohibited) != 0 {
+		t.Fatalf("satisfied invariant prohibits %v", prohibited)
+	}
+	violated := outcomeRowByFactAndCase(t, projection,
+		factID(invariant, "evaluation", "violated"), "predicate false")
+	expected, prohibited = summarizeOutcomeRow(violated)
+	for _, value := range []string{"outcome=rejected", "enforcement=authoritative"} {
+		assertOutcomeContains(t, expected, value)
+	}
+	assertOutcomeContains(t, prohibited, "changes committed")
+	for _, want := range []string{
+		"case predicate true / invariant-satisfied",
+		"case predicate false / invariant-violated",
+		"must not: changes committed",
+	} {
+		if !strings.Contains(formatted, want) {
+			t.Fatalf("formatted invariant outcomes omit %q:\n%s", want, formatted)
+		}
+	}
+}
+
 func outcomeProjectionFromFile(t *testing.T, path string) (*OutcomeProjection, string, *SourceMap) {
 	t.Helper()
 	content, err := os.ReadFile(path)

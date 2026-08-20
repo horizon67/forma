@@ -29,8 +29,9 @@ selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
 
 ## 現行v0で表現できる範囲
 
-[`examples/orders.forma`](../examples/orders.forma)を10プリミティブだけで書き、`forma check`が
-errorなしで通ることを確認した。表現できたのは次である。
+最初のprobeでは[`examples/orders.forma`](../examples/orders.forma)を10プリミティブだけで書き、`forma check`が
+errorなしで通ることを確認した。現在の同exampleには、後続probeで実装したexperimentalな
+`invariant stockAvailable: reserved <= onHand`も加えている。v0だけで表現できた範囲は次である。
 
 | flow | v0で表現できること |
 | --- | --- |
@@ -41,8 +42,8 @@ errorなしで通ることを確認した。表現できたのは次である。
 | 一覧・詳細・作成・編集・削除と検索・絞り込み・ソート・ページング | `page`、`list`、`detail`、`form` |
 | 承認後の遷移と二重実行防止 | Resolved Intentのsubmit intentとaction referenceへ決定的に解決される |
 
-つまりv0は、この領域の**構造とlifecycleと認可**をすでに表現できる。足りないのは値の導出、
-不変条件、状態遷移以外の事前条件、そして外部への効果である。
+つまりv0は、この領域の**構造とlifecycleと認可**をすでに表現できる。不変条件はexperimentalな
+self-only sliceまで進んだが、値の導出、状態遷移以外の事前条件、そして外部への効果はまだ足りない。
 
 ## probe実施時にv0が拒否した記述（実測）
 

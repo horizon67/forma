@@ -41,8 +41,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → 81/81と、intent gap → human handoffを自動実行 |
-| Navigation semantics | **Immediate P1 follow-up** | default entryとsurface-only transitionのgapを確認。`flow`所有とpage-local所有を比較する |
-| Expression以降 | **P3 after bounded navigation follow-up** | self-only Invariantの`<=`まで実装。Changes、Occurrence、Effectは未決定 |
+| Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
+| Expression以降 | **P3 in progress** | self-only Invariantの`<=`、entity評価2 Facts、form mutation拒否Fact、concurrency Review Requirement、Generation Request差分まで実装。repository E2EとChanges以降は未決定 |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -51,9 +51,9 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 
 同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
 applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dと最初のbounded
-repair loopも完了し、次はCRUD/state transitionを越えるapplication semanticsを検証する。
-その前に、membership flowで確認済みのdefault entryとsurface-only transitionを最小のbounded probeで解決する。
-projectionの人間評価は並行して進め、確認済みの表現力不足をblockしない。
+repair loopと、membership flowで確認したdefault entry / surface-only transitionのbounded probeも完了した。
+次はCRUD/state transitionを越えるapplication semanticsを検証する。projectionの人間評価は並行して進め、
+P3をblockしない。
 
 ## 3. 優先順位
 
@@ -64,7 +64,7 @@ projectionの人間評価は並行して進め、確認済みの表現力不足�
 | **P0 / first probe completed** | Incremental update + 最小Manifest | Forma差分から既存codeを壊さず更新できるか |
 | **P1 / Stage D completed** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
 | **P2 / first bounded loop completed** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
-| **P1 follow-up / Immediate** | Entry + surface-only transition | application entryとoperationを伴わないnavigationを一意に記述できるか |
+| **P1 follow-up / completed** | Entry + surface-only transition | application entryとoperationを伴わないnavigationを一意に記述できるか |
 | **P3 / Next main milestone** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
 
@@ -72,7 +72,8 @@ projectionの人間評価は並行して進め、確認済みの表現力不足�
 始める前にschemaを完成させず、最小のvertical sliceを実測してから一般化する。
 
 P1 follow-upでは`RegistrationComplete -> OnboardingGuide -> SignIn`を同一semantic modelで表す`flow`案と
-page-local案を比較する。先に固定するのはentry/edgeの意味とownershipであり、`flow` keywordではない。完了後にP3へ戻る。
+page-local案を比較し、page-local ownershipを採用した。entry/edgeの意味をsourceへ固定し、`flow`はkeywordではなく
+read-only projectionのまま維持したため、P3へ戻る。
 source-onlyとsource+projectionの人間評価は別trackであり、viewの読みやすさを測る。entry/edgeがsourceに存在しないという
 表現力gapの有無を測る試験ではない。
 
@@ -365,7 +366,7 @@ Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-pro
 
 このfirst sliceは当初Resolved Intent `v0.7`、Source Map `v0.4`、38 Identity Factsとして実装した。
 その後`examples/email-verified-membership.forma`へapplication entryとpage-local surface transitionを追加し、現在は
-Resolved Intent `v0.8`、Source Map `v0.5`、Acceptance Facts `v0alpha5`へ解決する。Identity semantics、3 Review
+Resolved Intent `v0.8`、Source Map `v0.5`、Acceptance Facts `v0alpha6`へ解決する。Identity semantics、3 Review
 Requirements、未対応proof / lifecycle / owner bindingのnegative testは維持している。各Identity operationのinteractionも
 application全体でちょうど1件に制限する。Stage DではIdentity追加Generation Requestを既存admin targetへ適用し、既存43件とIdentity 38件を合わせた
 81/81 Facts、3 Review Requirementsを検証した。詳細は
@@ -542,9 +543,15 @@ atomic post-stateの意味が必要だからである。
 
 ### 現在のprobe
 
-- [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`を最小sliceとして実装
+- [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`、成立・違反2 Facts、該当formのauthoritative拒否Fact、concurrency Review Requirement、Generation Request差分を最小sliceとして実装
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
-- [`examples/orders.forma`](../examples/orders.forma): v0だけで書ける構造・lifecycle・認可を確認
+- [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
+
+最初のExpression sliceはcompilerからGeneration Requestまで到達した。該当form submitへの拒否Factにより、
+entity単位の隔離testだけで満たす経路も閉じた。次はcoding agentが`post-state`のInvariantをauthoritativeな
+保存境界で検査し、違反時に部分変更を残さないrepository固有testを実装できるかを測る。concurrent operationで
+同じ保証を維持することは独立Review Requirementとして人間が確認する。このE2E後にExpressionを拡張し、Changesの
+設計へ進む。
 
 ### 選別基準
 

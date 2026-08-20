@@ -91,8 +91,15 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 		span := Span{}
 		if len(program.Identities) > 0 {
 			span = program.Identities[0].Span
+		} else {
+			for _, entity := range program.Entities {
+				if len(entity.Invariants) > 0 {
+					span = entity.Invariants[0].Span
+					break
+				}
+			}
 		}
-		c.error(span, "F2799", err.Error(), "fix the Identity declarations so every reference and closed first-slice contract is valid")
+		c.error(span, "F2799", err.Error(), "fix the declarations so every reference and closed semantic contract is valid")
 		SortDiagnostics(c.diagnostics)
 		return nil, nil, c.diagnostics
 	}

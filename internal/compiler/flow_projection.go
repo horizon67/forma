@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const FlowProjectionVersion = "forma/flow-projection/v0alpha2"
+const FlowProjectionVersion = "forma/flow-projection/v0alpha3"
 
 // FlowProjection is a deterministic review view composed from the navigation,
 // outcome, and domain-state projections. It owns no application meaning: the

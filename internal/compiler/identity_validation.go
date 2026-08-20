@@ -93,6 +93,9 @@ func ValidateResolvedIntent(intent *ResolvedIntent) error {
 	if _, err := resolvedIntentSemanticIDs(intent); err != nil {
 		return fmt.Errorf("validate Resolved Intent: %w", err)
 	}
+	if err := validateInvariantSemantics(intent); err != nil {
+		return err
+	}
 	if err := validateApplicationNavigation(intent); err != nil {
 		return err
 	}

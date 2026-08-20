@@ -216,6 +216,11 @@ parser、名前解決、型検査、semantic validation、stable identity、Reso
 管理画面flow向けの最小Acceptance Facts／Generation Request sliceも実装しています。v0外のself-only
 Invariant sliceも実験的に含みます。
 
+最初のInvariant vertical sliceは、post-state predicateの成立・違反2件に加え、参照fieldを編集するform submitへ
+authoritativeな拒否Factを導出します。解決済みExpression treeとatomic outcomeをGeneration Requestへ運び、
+concurrent operationの保証は独立Review Requirementとして人間へ表示します。repository固有のcoding-agent runを
+次のP3実測とします。
+
 最初のcontrolled agent runでは、Formaから生成したrequestをAI coding agentへ渡し、standalone Go
 repositoryへ管理画面を実装しました。そこで導出した43件すべてのAcceptance Factsを検証できました。
 これは「FormaがGo管理画面を生成した」のではなく、「Formaが意味を決め、AIが通常のGo applicationを
@@ -270,8 +275,9 @@ Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
-top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。ここから本線のP3
-Expression → Changes → Occurrence → Effectへ戻ります。projectionの人間評価は独立して進めます。
+top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、最初の
+self-only InvariantをAcceptance FactsとGeneration Request差分まで接続しました。次にrepository E2Eを実測し、
+Changes → Occurrence → Effectへ進みます。projectionの人間評価は独立して進めます。
 
 ## 設計資料
 

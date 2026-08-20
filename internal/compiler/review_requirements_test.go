@@ -84,3 +84,33 @@ func TestReviewRequirementsAreExplicitlyEmptyWithoutIdentity(t *testing.T) {
 		t.Fatalf("empty review requirements = %#v", requirements.Requirements)
 	}
 }
+
+func TestInvariantConcurrencyIsAnExplicitReviewRequirement(t *testing.T) {
+	result := Compile([]SourceFile{NewSourceFile("stock.forma", invariantAcceptanceSource)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	requirements, err := BuildReviewRequirements(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requirements.Requirements) != 1 {
+		t.Fatalf("invariant review requirements = %#v, want exactly one", requirements.Requirements)
+	}
+	invariant := result.Intent.Entities[0].Invariants[0]
+	want := ReviewRequirement{
+		ID:          "review/entity/StockItem/invariant/stockAvailable/concurrent-invariant-enforcement",
+		Kind:        "concurrent-invariant-enforcement",
+		Subject:     invariant.ID,
+		SourceNodes: invariantFactSourceNodes(invariant),
+		Instruction: reviewInstructions["concurrent-invariant-enforcement"],
+	}
+	if !reflect.DeepEqual(requirements.Requirements[0], want) {
+		t.Fatalf("invariant review requirement = %#v, want %#v", requirements.Requirements[0], want)
+	}
+
+	requirements.Requirements[0].SourceNodes = []SemanticID{invariant.ID}
+	if err := ValidateReviewRequirements(result.Intent, requirements); err == nil || !strings.Contains(err.Error(), "differs from canonical") {
+		t.Fatalf("tampered invariant review requirement error = %v", err)
+	}
+}

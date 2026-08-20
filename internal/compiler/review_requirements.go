@@ -6,9 +6,9 @@ import (
 	"sort"
 )
 
-const ReviewRequirementsVersion = "forma/review-requirements/v0alpha1"
+const ReviewRequirementsVersion = "forma/review-requirements/v0alpha2"
 
-// ReviewRequirements contains security properties that Forma cannot
+// ReviewRequirements contains implementation properties that Forma cannot
 // mechanically prove from agent feedback. They remain separate from
 // Acceptance Facts and never contribute to passed coverage counts.
 type ReviewRequirements struct {
@@ -25,10 +25,11 @@ type ReviewRequirement struct {
 	Instruction string       `json:"instruction"`
 }
 
-var identityReviewInstructions = map[string]string{
-	"secret-redaction": "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed.",
-	"secret-storage":   "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism.",
-	"fixture-fidelity": "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests.",
+var reviewInstructions = map[string]string{
+	"secret-redaction":                 "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed.",
+	"secret-storage":                   "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism.",
+	"fixture-fidelity":                 "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests.",
+	"concurrent-invariant-enforcement": "Review every authoritative mutation boundary that can change a field referenced by this invariant; confirm that concurrent operations cannot commit a post-state that violates it and that enforcement is not limited to a user interface or single-threaded test.",
 }
 
 // BuildReviewRequirements deterministically derives the human-review boundary
@@ -74,7 +75,19 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 				Kind:        item.kind,
 				Subject:     identity.ID,
 				SourceNodes: append([]SemanticID(nil), item.sourceNodes...),
-				Instruction: identityReviewInstructions[item.kind],
+				Instruction: reviewInstructions[item.kind],
+			})
+		}
+	}
+	for _, entity := range intent.Entities {
+		for _, invariant := range entity.Invariants {
+			kind := "concurrent-invariant-enforcement"
+			requirements = append(requirements, ReviewRequirement{
+				ID:          SemanticID("review/" + string(invariant.ID) + "/" + kind),
+				Kind:        kind,
+				Subject:     invariant.ID,
+				SourceNodes: invariantFactSourceNodes(invariant),
+				Instruction: reviewInstructions[kind],
 			})
 		}
 	}
@@ -121,7 +134,7 @@ func validateReviewRequirementsShape(intent *ResolvedIntent, requirements *Revie
 		if index > 0 && requirements.Requirements[index-1].ID >= requirement.ID {
 			return fmt.Errorf("validate Review Requirements: requirements are not in canonical order")
 		}
-		if requirement.Instruction != identityReviewInstructions[requirement.Kind] || requirement.Instruction == "" {
+		if requirement.Instruction != reviewInstructions[requirement.Kind] || requirement.Instruction == "" {
 			return fmt.Errorf("validate Review Requirements: requirement %s has a non-canonical instruction", requirement.ID)
 		}
 		if !semanticIDs[requirement.Subject] {

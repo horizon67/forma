@@ -247,6 +247,13 @@ Intent, and Source Maps. It also implements a minimal admin-flow Acceptance
 Facts and Generation Request slice and an exploratory non-v0 self-only
 Invariant slice.
 
+The first Invariant vertical slice emits two entity-level Acceptance Facts for
+satisfied and violated post-state predicates, plus an authoritative rejection
+Fact for each form submit that edits a referenced field. It carries the resolved
+Expression tree and atomic outcome into a Generation Request and exposes
+concurrent enforcement as a separate human Review Requirement. The
+repository-specific coding-agent run is the next P3 measurement.
+
 In the first controlled agent run, a Generation Request produced from Forma was
 given to an AI coding agent, which implemented an admin interface in a
 standalone Go repository. All 43 derived Acceptance Facts were verified. This
@@ -315,8 +322,10 @@ unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
 human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
-members on their source pages. The main line now returns to P3: Expression →
-Changes → Occurrence → Effect. Projection readability evaluation runs independently.
+members on their source pages. P3 is now in progress: the first self-only
+Invariant reaches Acceptance Facts and Generation Request diffs, followed by
+the repository E2E, Changes, Occurrence, and Effect. Projection readability
+evaluation runs independently.
 
 ## Design documents
 
