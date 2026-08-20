@@ -1,0 +1,543 @@
+{
+  "fact/entity/Order/field/customer/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+  ],
+  "fact/entity/Order/field/lines/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+  ],
+  "fact/entity/OrderLine/field/order/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+  ],
+  "fact/entity/OrderLine/field/product/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+  ],
+  "fact/entity/StockItem/field/product/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+  ],
+  "fact/entity/StockItem/invariant/stockAvailable/evaluation/satisfied": [
+    "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+  ],
+  "fact/entity/StockItem/invariant/stockAvailable/evaluation/violated": [
+    "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/feedback": [
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/fields": [
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/mutation/accepted": [
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation",
+    "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/mutation/at-most-once": [
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation",
+    "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/navigation": [
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/validation/required/number": [
+    "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderCreate/view/form/create/Order/submit/validation/unique/number": [
+    "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+    "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/access/denied/staff": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/edit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/edit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/edit/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/edit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/edit/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/access/denied/staff": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/actions": [
+    "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/feedback": [
+    "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/fields": [
+    "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/records/visible": [
+    "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/feedback": [
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/fields": [
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/mutation/accepted": [
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation",
+    "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/mutation/at-most-once": [
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation",
+    "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/navigation": [
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/validation/required/number": [
+    "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/OrderEdit/view/form/edit/Order/submit/validation/unique/number": [
+    "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+    "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+  ],
+  "fact/page/Orders/view/list/Order/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrdersHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrdersHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrdersHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/access/denied/staff": [
+    "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/create/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/create/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/create/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/create/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/create/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/edit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/edit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/edit/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/edit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/edit/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/access/denied/staff": [
+    "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/access/denied/admin": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/view/access/allowed/admin": [
+    "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/view/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/view/access/allowed/staff": [
+    "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/view/access/denied/anonymous": [
+    "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/view/navigation": [
+    "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/actions": [
+    "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/Orders/view/list/Order/feedback": [
+    "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/Orders/view/list/Order/fields": [
+    "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/Orders/view/list/Order/filter/customer": [
+    "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/filter/status": [
+    "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/page-boundary": [
+    "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/records/visible": [
+    "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/Orders/view/list/Order/search": [
+    "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/sort": [
+    "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/access/allowed/staff": [
+    "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/denied/staff": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/action/edit/navigation": [
+    "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/actions": [
+    "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/feedback": [
+    "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/fields": [
+    "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/StockItemDetail/view/detail/StockItem/records/visible": [
+    "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/access/denied/staff": [
+    "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/feedback": [
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/fields": [
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/denied/staff": [
+    "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/mutation/accepted": [
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation",
+    "internal/store/store_test.go#TestStockMutationIsAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/mutation/at-most-once": [
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation",
+    "internal/store/store_test.go#TestStockMutationIsAcceptedAndAppliedAtMostOnce"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/navigation": [
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/invariant/entity/StockItem/invariant/stockAvailable": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/min/onHand/constraint/type/Quantity/constraint/min": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/min/reserved/constraint/type/Quantity/constraint/min": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/location": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/onHand": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/reserved": [
+    "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+    "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+  ],
+  "fact/page/StockItems/view/list/StockItem/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/access/allowed/staff": [
+    "internal/web/server_test.go#TestStockItemsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/edit/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/edit/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/edit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/edit/access/denied/staff": [
+    "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/edit/navigation": [
+    "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/admin": [
+    "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/admin+staff": [
+    "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/staff": [
+    "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/view/access/denied/anonymous": [
+    "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+  ],
+  "fact/page/StockItems/view/list/StockItem/action/view/navigation": [
+    "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+  ],
+  "fact/page/StockItems/view/list/StockItem/actions": [
+    "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/StockItems/view/list/StockItem/feedback": [
+    "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/StockItems/view/list/StockItem/fields": [
+    "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/StockItems/view/list/StockItem/filter/product": [
+    "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+  ],
+  "fact/page/StockItems/view/list/StockItem/page-boundary": [
+    "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+  ],
+  "fact/page/StockItems/view/list/StockItem/records/visible": [
+    "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+  ],
+  "fact/page/StockItems/view/list/StockItem/search": [
+    "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+  ],
+  "fact/page/StockItems/view/list/StockItem/sort": [
+    "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+    "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+  ]
+}

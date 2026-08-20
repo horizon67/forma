@@ -76,8 +76,9 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 ### 3. CRUD/state transitionを越えるdomain behavior
 
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
-必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分までは
-実装したが、repository固有の保存境界でのE2EとChanges以降は未決定である。
+必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
+実装し、通常のGo applicationを使うrepository E2Eで172/172 Factsを実測した。concurrent operationの
+Review Requirementは人間確認待ちであり、Changes以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -140,8 +141,10 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 Expressionの最初のvertical sliceでは、`StockItem.stockAvailable`の`reserved <= onHand`からentity単位の
 正常系・否定系2 Factsに加え、参照fieldを編集するform submitのauthoritativeな拒否Factを導出した。
 post-stateでの全commit／無commitをGeneration Requestへ運び、concurrent operationの保証は独立Review Requirementとして
-人間へ表示する。次はこのrequestをcoding agentへ渡し、repository固有のauthoritative mutation境界とtestへ落とせるかを
-実測する。その確認前にoperator集合やChanges syntaxを広げない。
+人間へ表示する。[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、このrequestを
+Formaに依存しない通常のGo applicationのauthoritative mutation境界と29 repository testへ落とし、172/172 Factsを
+検証した。mutex内の競合更新testを含むReview Requirementの人間確認後、operator集合を先に広げずChangesとatomic
+post-stateの設計へ進む。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

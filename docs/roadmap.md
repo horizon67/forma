@@ -42,7 +42,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → 81/81と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
-| Expression以降 | **P3 in progress** | self-only Invariantの`<=`、entity評価2 Facts、form mutation拒否Fact、concurrency Review Requirement、Generation Request差分まで実装。repository E2EとChanges以降は未決定 |
+| Expression以降 | **P3 in progress** | self-only Invariantの`<=`を実装し、通常のGo applicationで172/172 Factsをrepository E2E実測。concurrency Review Requirementの人間確認とChanges以降が残る |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -546,12 +546,13 @@ atomic post-stateの意味が必要だからである。
 - [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`、成立・違反2 Facts、該当formのauthoritative拒否Fact、concurrency Review Requirement、Generation Request差分を最小sliceとして実装
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
 - [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
+- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで172/172 Factsと29 repository testを実測。concurrency Review Requirementは人間確認待ち
 
 最初のExpression sliceはcompilerからGeneration Requestまで到達した。該当form submitへの拒否Factにより、
-entity単位の隔離testだけで満たす経路も閉じた。次はcoding agentが`post-state`のInvariantをauthoritativeな
-保存境界で検査し、違反時に部分変更を残さないrepository固有testを実装できるかを測る。concurrent operationで
-同じ保証を維持することは独立Review Requirementとして人間が確認する。このE2E後にExpressionを拡張し、Changesの
-設計へ進む。
+entity単位の隔離testだけで満たす経路も閉じた。repository E2Eではcoding agentが`post-state`のInvariantを
+authoritativeな保存境界で検査し、違反時に部分変更を残さない実装とtestへ変換できた。172 Factsはすべて
+repository commandから再測定して成功した。concurrent operationで同じ保証を維持することは独立Review Requirementとして
+人間が確認する。その確認後はExpressionの一般化を急がず、次の実例に必要なChangesとatomic post-stateを設計する。
 
 ### 選別基準
 

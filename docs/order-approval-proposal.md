@@ -16,6 +16,11 @@ selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
 [`email-verified-membership-probe.md`](email-verified-membership-probe.md)がidentityの最初の実測probeであるのに対し、
 本書はeffectとoccurrenceのprobeである。両方に共通して必要なものだけをeffect proposalの対象とする。
 
+このprobeから先行して切り出したself-only Invariantは、
+[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で通常のGo applicationへ実装し、172/172 Acceptance
+Factsを実測した。concurrent invariant enforcementの人間Review Requirementは未完了である。本書に残るChanges、
+Occurrence、Effectの候補は、その確認後の設計入力であり、まだ採用済み構文ではない。
+
 ## 対象とするflow
 
 1. staffが注文を作成し、明細を追加して提出する。

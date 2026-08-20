@@ -1,0 +1,1238 @@
+{
+  "schema": "forma/generation-feedback/v0alpha2",
+  "stage": "test",
+  "status": "succeeded",
+  "factCoverage": [
+    {
+      "factId": "fact/entity/Order/field/customer/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/Order/field/lines/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/OrderLine/field/order/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/OrderLine/field/product/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/StockItem/field/product/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/StockItem/invariant/stockAvailable/evaluation/satisfied",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/StockItem/invariant/stockAvailable/evaluation/violated",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/mutation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation",
+        "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/mutation/at-most-once",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation",
+        "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/validation/required/number",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderCreate/view/form/create/Order/submit/validation/unique/number",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+        "internal/web/server_test.go#TestOrderCreateSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/edit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/edit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/edit/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/mutation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation",
+        "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/mutation/at-most-once",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation",
+        "internal/store/store_test.go#TestOrderMutationsAreAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/validation/required/number",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderEdit/view/form/edit/Order/submit/validation/unique/number",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderValidationRejectsRequiredAndUnique",
+        "internal/web/server_test.go#TestOrderEditSurfaceValidationMutationAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/create/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/create/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/create/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/create/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/create/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/edit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/edit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/edit/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/view/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/view/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/view/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/view/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/view/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/filter/customer",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/filter/status",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/page-boundary",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/search",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/sort",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/action/edit/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemDetail/view/detail/StockItem/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditFormHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSubmitHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/mutation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation",
+        "internal/store/store_test.go#TestStockMutationIsAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/mutation/at-most-once",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation",
+        "internal/store/store_test.go#TestStockMutationIsAcceptedAndAppliedAtMostOnce"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/invariant/entity/StockItem/invariant/stockAvailable",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/min/onHand/constraint/type/Quantity/constraint/min",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/min/reserved/constraint/type/Quantity/constraint/min",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/location",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/onHand",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItemEdit/view/form/edit/StockItem/submit/validation/required/reserved",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockValidationAndInvariantRejectAtomically",
+        "internal/web/server_test.go#TestStockItemEditSurfaceValidationInvariantAndNavigation"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/edit/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/edit/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/edit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/edit/access/denied/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemEditActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/edit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/admin+staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/view/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/view/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemDetailActionHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/action/view/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/filter/product",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/page-boundary",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/search",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/StockItems/view/list/StockItem/sort",
+      "testReferences": [
+        "internal/web/server_test.go#TestStockItemsListQueryHTTPBehavior",
+        "internal/store/store_test.go#TestStockQuerySearchFilterSortAndPageBoundary"
+      ],
+      "result": "passed"
+    }
+  ],
+  "command": "cd experiments/order-invariant-agent-e2e/target \u0026\u0026 go test -count=1 -json ./...",
+  "summary": "The AI-generated order and inventory application passed every repository-native test mapped to the 172 Acceptance Facts."
+}

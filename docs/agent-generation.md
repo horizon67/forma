@@ -76,6 +76,12 @@ Forma coreはframework別generator、capability matrix、共通runtime adapter�
 保有しない。coding agentが実装できない場合は、profile compatibility errorを捏造するのではなく、
 repositoryの事実と失敗したcommandをfeedbackとして返す。
 
+この境界は[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)でも維持された。Formaは
+172 Acceptance Factsと1 Review Requirementを持つGeneration Requestを生成し、coding agentはFormaをimportしない
+standard-library Go application、保存境界、HTTP surface、39 repository testを実装した。experiment側の測定processが
+実際の`go test -json`結果と明示的coverage mapを照合し、172/172 Factsをfeedbackとして返す。application runtimeで
+experiment commandやForma verifierが動く構成ではない。
+
 ## Resolved Intent
 
 Resolved Intentはcompiler内部のlowering用IRではなく、**coding agentが実装すべきapplication intentを
@@ -145,6 +151,14 @@ operation・認可・観測経路を迂回していないかはFormaが再計算
 人間が確認するstable review requirementとして扱う。
 Identityでの具体的なcandidate shapeは
 [`identity-semantic-model-proposal.md`](identity-semantic-model-proposal.md)に記録する。
+
+現在のcompilerが`fixture-fidelity`を導出するsubjectはIdentityだけである。
+[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、Identityを持たないsurface access Factsを
+pureなrole関数へだけ対応付けるとHTTP認可を迂回できることが分かったため、98 access Factsすべてを実HTTP handler testへ
+対応付けた。続く検査で、この条件をaccess kindに限定せず、`page/...`をsubjectに持つ165 Factsすべてが
+実HTTP testを参照する回帰条件へ広げた。一般のapplication／surface単位Review Requirementは必要性が確認できたが、
+Resolved Intentにapplication root nodeがなく、review完了の範囲もまだ定義していない。既存Identity requirementへ暗黙に
+混ぜず、target-neutralなsubjectとsourceNodesを設計してからcompiler-owned requirementへ一般化する。
 
 人間確認が必要な境界は`forma/review-requirements/v0alpha2`としてAcceptance Factsから分離する。Identityごとに
 `secret-redaction`、`secret-storage`、`fixture-fidelity`の3件を、Invariantごとに

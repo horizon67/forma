@@ -252,7 +252,9 @@ satisfied and violated post-state predicates, plus an authoritative rejection
 Fact for each form submit that edits a referenced field. It carries the resolved
 Expression tree and atomic outcome into a Generation Request and exposes
 concurrent enforcement as a separate human Review Requirement. The
-repository-specific coding-agent run is the next P3 measurement.
+repository-specific coding-agent run now passes all 172 Acceptance Facts in a
+standalone Go application across 39 mapped tests. The remaining concurrency
+Review Requirement awaits human review.
 
 In the first controlled agent run, a Generation Request produced from Forma was
 given to an AI coding agent, which implemented an admin interface in a
@@ -323,9 +325,10 @@ remeasurement published the Forma intent gap as a structured `test/blocked`
 human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
 members on their source pages. P3 is now in progress: the first self-only
-Invariant reaches Acceptance Facts and Generation Request diffs, followed by
-the repository E2E, Changes, Occurrence, and Effect. Projection readability
-evaluation runs independently.
+Invariant reaches Acceptance Facts, Generation Request diffs, and a 172/172
+repository E2E in an ordinary Go application. After the concurrency Review
+Requirement is reviewed, the main sequence continues with Changes, Occurrence,
+and Effect. Projection readability evaluation runs independently.
 
 ## Design documents
 

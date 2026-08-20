@@ -219,7 +219,8 @@ Invariant sliceも実験的に含みます。
 最初のInvariant vertical sliceは、post-state predicateの成立・違反2件に加え、参照fieldを編集するform submitへ
 authoritativeな拒否Factを導出します。解決済みExpression treeとatomic outcomeをGeneration Requestへ運び、
 concurrent operationの保証は独立Review Requirementとして人間へ表示します。repository固有のcoding-agent runを
-次のP3実測とします。
+Forma非依存の通常のGo applicationで実施し、39 testに対応付けた172/172 Acceptance Factsが成功しました。
+残るconcurrency Review Requirementは人間確認待ちです。
 
 最初のcontrolled agent runでは、Formaから生成したrequestをAI coding agentへ渡し、standalone Go
 repositoryへ管理画面を実装しました。そこで導出した43件すべてのAcceptance Factsを検証できました。
@@ -276,8 +277,9 @@ Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
 top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、最初の
-self-only InvariantをAcceptance FactsとGeneration Request差分まで接続しました。次にrepository E2Eを実測し、
-Changes → Occurrence → Effectへ進みます。projectionの人間評価は独立して進めます。
+self-only InvariantをAcceptance Facts、Generation Request差分、通常のGo applicationによる172/172の
+repository E2Eまで接続しました。concurrency Review Requirementの人間確認後、Changes → Occurrence → Effectへ
+進みます。projectionの人間評価は独立して進めます。
 
 ## 設計資料
 
