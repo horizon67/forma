@@ -2,6 +2,9 @@
 
 Status: candidate B navigation, outcome, domain-state, and visual flow projections implemented; human evaluation protocol ready with no participant result yet — candidate C remains pseudocode and is not a language decision
 
+このprobeを含む全実験後の現在の言語判断と実施順序は
+[`current-language-direction.md`](current-language-direction.md)を参照する。
+
 ## 1. 目的
 
 メール認証付き会員登録の同じapplication semanticsを、次の3案で比較する。
@@ -434,3 +437,5 @@ language primitiveの前にviewを直す。protocolとstimuliはreadyだが、pa
 - 人間参加のT1〜T4で、候補Cが候補Bより正確かつ速く、T6の悪化も許容範囲だと確認できる。
 
 逆に、生成projectionでglobal overviewとsemantic diffを十分に読めるなら、`flow`は新primitiveにせずviewとして維持する。
+これは完全な`flow`所有構文の判定である。default entryとsurface-only transitionのsemantic gap自体はprojectionで埋まらず、
+最小source syntaxの比較を次のbounded probeとして行う。

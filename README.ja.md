@@ -267,8 +267,10 @@ Identity probeはStage Dまで完了し、Resolved Intent `v0.7`、Source Map `v
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
-`test/blocked` handoffとして人間へ返しました。次の中心probeはP3の
-Expression → Changes → Occurrence → Effectです。
+`test/blocked` handoffとして人間へ返しました。直近のbounded language probeでは、application entryと
+surface-only transitionを`flow`所有とpage-local所有で比較します。その後、次の中心milestoneであるP3の
+Expression → Changes → Occurrence → Effectへ戻ります。projectionの人間評価は独立して進め、既に確認された
+言語gapを隠したり保留したりしません。
 
 ## 設計資料
 
@@ -278,6 +280,7 @@ Expression → Changes → Occurrence → Effectです。
 - [開発ロードマップ](docs/roadmap.md)
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [言語設計原則](docs/language-design-principles.md)
+- [現在の言語方針](docs/current-language-direction.md)
 - [会員登録flowのnotation比較](docs/membership-flow-notation-probe.md)
 - [会員登録flowの人間評価](docs/evaluations/membership-flow/README.md)
 - [ユーザー管理の完全例](examples/users.forma)

@@ -311,8 +311,11 @@ processes repaired a controlled test failure and build failure in one attempt
 each and returned both runs to 81/81. A third process left the repository
 unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
-human handoff. The next central probe is P3: Expression → Changes → Occurrence
-→ Effect.
+human handoff. The immediate bounded language probe compares application entry
+and surface-only transition ownership in `flow` and page-local syntax. It then
+returns to the next main milestone, P3: Expression → Changes → Occurrence →
+Effect. Projection readability evaluation runs independently and does not hide
+the already-confirmed language gap.
 
 ## Design documents
 
@@ -322,6 +325,7 @@ human handoff. The next central probe is P3: Expression → Changes → Occurren
 - [Development roadmap](docs/roadmap.md)
 - [Identity variant probe](docs/identity-variant-probe.md)
 - [Language design principles](docs/language-design-principles.md)
+- [Current language direction](docs/current-language-direction.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)

@@ -1,0 +1,161 @@
+# Current Language Direction
+
+Status: current design decision — language grammar remains experimental
+
+この文書は、これまでのForma実験、会員登録flow probe、外部design research（DR）を踏まえ、
+「何を検証したか」「何が決まったか」「次に何を言語へ入れるか」を一か所にまとめる。
+個別syntaxの規範は[`v0-primitives.md`](v0-primitives.md)、各proposalの詳細はリンク先を正とする。
+
+## 結論
+
+現在のFormaを完成形として維持するのではない。
+
+維持するのは、**Forma sourceを唯一の正本とし、共通semantic modelから目的別viewを生成し、AIが最終applicationを
+repository-nativeに実装するarchitecture**である。現在のgrammarは、そのarchitecture上で最初の実applicationを測るための
+subsetであり、表現不能になったapplication semanticsを順番に追加する。
+
+DRで調査した構文例を一括して移植はしない。一方、DRが整理したstructure、state、rule、interaction、flow、event、effect、
+constraintというsemantic facetはFormaの設計backlogとして扱う。sourceに追加するのは、既存facetやprojectionから導出できず、
+実applicationで必要性とownershipが確認できた意味だけである。
+
+```text
+Forma source（唯一の正本、複数の小さなsemantic facet）
+  ↓ parse / resolve / type check / semantic check
+Resolved Intent + Source Map + Acceptance Facts
+  ↓
+navigation / outcomes / states / visual flow等のread-only projection
+  ↓
+Generation Request + target repository + Implementation Policy
+  ↓
+AI coding agent
+  ↓
+通常のapplication code + test/build feedback
+```
+
+Forma coreが会員登録runtime、framework別generator、画面flow engineを提供するarchitectureにはしない。
+
+## これまで検証したこと
+
+| Probe | 検証した問い | 得られた結果 | 検証していないこと |
+| --- | --- | --- | --- |
+| Admin agent E2E | Formaの意味をAIへ渡して通常のapplicationを実装できるか | 43 Acceptance Factsを満たすGo applicationを生成・検証できた | あらゆるframeworkでの再現性 |
+| Incremental update | 既存repositoryを作り直さず変更できるか | 既存testを保ち、field/page-size変更を適用できた | rename、削除、migration全般 |
+| Identity / membership | CRUDを越えるsignup、verification、signin、ownershipをtarget-neutralに表せるか | 81 Facts、3 policies、3 human review requirementsまで検証できた | 任意のUX flow、任意の外部effect |
+| Automated repair | AIの失敗を意味やtestを弱めず修復できるか | test/build failureのrepairとintent-gap handoffを実測した | 一般的なfailure分類の完全性 |
+| Navigation/outcome/state projection | 分散した意味を正本を増やさずreviewできるか | stable IDとSource Mapを保つ決定的viewを生成できた | 人間の読解性能 |
+| Visual flow projection | 3 viewを一つのoverviewで関連付けられるか | navigationを骨格にOutcome/Stateを型付きで結べた | この表示がsource-onlyより読みやすいという実測 |
+| Human evaluation | 人間がsource-onlyとsource+projectionのどちらを速く正確に読めるか | protocolと事前採点基準まで準備した | participant resultはまだ0件 |
+
+直近のprojection実験は「現在のgrammarが完成しているか」を検証したものではない。既にsourceが持つ意味を、第二の正本を
+作らずglobal/localに読み分けられるかを検証した。その過程で、projectionでは解決できない言語上の不足も特定した。
+
+## 確認済みの言語gap
+
+### 1. Application default entry
+
+現在のsourceはpageを宣言できるが、application起動時のentryを宣言できない。最初のpage、名前が`Home`のpage、
+registration interactionを持つpage等から推測してはならないため、projectionは`unspecified`と表示している。
+
+これは表示上の問題ではなく、正本に意味が存在しない問題である。application-level entry semanticが必要である。
+
+### 2. Surface-only transition
+
+現在のIdentity interactionは、operation成功先と、その成功先からの1回の`continue`を持てる。しかし次のような、
+domain operationを伴わない任意のsurface chainは表現できない。
+
+```text
+RegistrationComplete -> OnboardingGuide -> SignIn
+```
+
+pageを追加するだけ、または生成diagramへedgeを足すだけでは正本の意味にならない。trigger/capability、source surface、destinationを
+持つ汎用surface transition semanticが必要である。
+
+### 3. CRUD/state transitionを越えるdomain behavior
+
+注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
+必要である。self-only Invariantのfield参照と`<=`までは実装したが、Changes以降は未決定である。
+
+## DRのsemantic facetをどう扱うか
+
+| DRで整理されたfacet | Formaの現在地 | 方針 |
+| --- | --- | --- |
+| Structure / relation | `type`、`entity`、field、entity reference | 現行を維持し、必要なrelation semanticsだけ追加する |
+| State / transition | entity `state`、`action A -> B` | 現行を維持し、Changesとpreconditionへ接続する |
+| Interaction | `page`、`list`、`detail`、`form`、`interact` | 現行のpage-local ownershipを基本にする |
+| Navigation / task flow | action/submit/interaction destinationのみ | `entry`とsurface transitionを直近で追加検討する |
+| Policy / authorization | `allow`、`require authenticated/owner`、Implementation Policy | application ruleとimplementation policyを混同せず、汎用ruleはExpression利用者として拡張する |
+| Invariant / declarative constraint | self-only Invariantの最小Expression slice | P3で型付きExpressionと利用contextを段階的に拡張する |
+| Mandatory / possible / forbidden | 一部をcompiler invariant、Acceptance Fact、`must not`として導出 | 汎用modifierを先に入れず、導出不能なsafety/recovery要件が現れた時点でsource syntaxを設計する |
+| Scenario / example | Acceptance Factsとtest scenarioを原則生成 | 重複するscenario正本は作らない。導出不能な補助exampleだけを将来候補にする |
+| Event / occurrence | Identity operationとnoticeに専用semanticがある | P3でdomain-neutralなOccurrenceへ一般化する |
+| Effect / recovery | Identity notice emission/delivery failureに専用semanticがある | P3でEffect bindingとdelivery contractへ一般化する |
+| State table / task tree / diagram | states、outcomes、flow projection | 原則viewとして生成する。layoutをsourceへ入れない |
+| Nested / parallel / interruptible flow | 未対応 | 具体的applicationで必要になるまでgrammarへ入れない |
+
+DRの「複数の小さな記法を共通semantic modelへ接続する」という結論は採用する。ただし、これは`.forma`内に無関係な言語を
+何個も埋め込むという意味ではない。各facetが独立したidentity、ownership、型、failure semanticsを持ち、compiler内で同じ
+semantic graphへ解決されることを意味する。
+
+## 直近の実施順序
+
+### Track A — Navigation semantics follow-up（直近のbounded probe）
+
+1. application entryのsemantic identity、cardinality、Source Map表現を決める。
+2. surface-only transitionを、operation navigationと重複しない共通edge modelへ追加する。
+3. 次の2つのsurface syntaxを同じmembership変更で比較する。
+   - `flow` blockがnavigationを所有する案
+   - page-localな`continue` / navigation actionが所有する案
+4. ownershipを一意にする。pageと`flow`が同じdestinationを二重宣言する形は採用しない。
+5. `RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、Resolved Intent、Source Map、Acceptance Facts、
+   navigation/flow projection、semantic diffまで通す。
+6. admin CRUDへ不要な`flow` boilerplateを要求しないことを確認する。
+
+このprobeで先に固定するのはsemantic modelであり、`flow`というkeywordではない。
+
+### Track B — Human readability evaluation（Track Aをblockしない）
+
+source-onlyとsource+projectionの比較を実施する。これはprojectionのprogressive disclosure、label、trace情報を改善するための
+評価である。既に確認されたentry/surface transitionの表現力不足を、participant resultが出るまで保留する試験ではない。
+
+Candidate Cの完全な`flow` DSLを採用する判断には人間評価を使うが、最小surface transition semanticの必要性は既に確認済みである。
+
+### Track C — P3 Domain behavior
+
+Navigationのbounded probe後、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
+
+1. Expression
+2. Derived Value
+3. Changesとatomic post-state
+4. Occurrence
+5. Effect binding / delivery contract
+
+Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
+ChangesとOccurrenceの境界が必要だからである。
+
+## Navigation syntaxを決める判定基準
+
+`flow` blockかpage-local syntaxかは、見た目の好みではなく次で決める。
+
+- semantic factの正本が一か所である。
+- 同じinteraction/actionのdestinationが競合しない。
+- normal pathとexternal entryを区別できる。
+- operationを伴わないtransitionを表せる。
+- source diffから変更したedgeを一意に特定できる。
+- page単体の局所理解とapplication全体のoverviewを往復できる。
+- 単純なCRUDへ新しいboilerplateを強制しない。
+- 将来のback/cancel/interrupt/parallelを、modifier追加だけで破綻させない。
+- Resolved Intentと全projectionがdeclaration順・source path・layoutから独立して決定的である。
+
+## 現時点で採らないもの
+
+- DRに登場したSCR、LSC、Declare、CTTのsyntaxをそのまま全部実装すること。
+- Mermaid、diagram layout、生成tableを編集可能な正本にすること。
+- membership専用flow runtimeや専用generatorをForma coreへ追加すること。
+- scenarioを全operationについて手書きし、Acceptance Factsと二重管理すること。
+- `hot`、`cold`、`forbidden`、parallel operator等を利用例なしで予約・実装すること。
+- Formaを通常のprogramming languageへ近づけるstatement、loop、汎用I/Oを追加すること。
+
+## 次の更新条件
+
+Track Aのsyntax probe、人間評価、P3の各vertical sliceが完了するたび、この文書の「現在地」「実施順序」「採らないもの」を更新する。
+実験結果と設計判断を分け、未実測の期待を「検証済み」と書かない。
