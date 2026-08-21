@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.10",
+  "version": "forma/resolved-intent/v0.11",
   "roles": [
     {
       "id": "role/admin",
@@ -12,6 +12,7 @@
       "name": "Email",
       "kind": "scalar",
       "base": "String",
+      "declaredBase": "String",
       "constraints": [
         {
           "id": "type/Email/constraint/matches",

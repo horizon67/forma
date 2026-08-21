@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha3"
+const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha4"
 
 // OutcomeProjection is a deterministic review view over observable Acceptance
 // Facts. It splits multi-case facts into rows but does not add outcomes that
@@ -360,7 +360,9 @@ func summarizeOutcomeRow(row OutcomeRow) ([]string, []string) {
 			addExpected(prefix + " unchanged")
 		}
 		for _, field := range subject.Fields {
-			addExpected(prefix + "." + outcomeSemanticLabel(field.Field) + "=" + field.ValueSubject + "." + outcomeSemanticLabel(field.ValueField))
+			if field.Expression != nil {
+				addExpected(prefix + "." + outcomeFieldLabel(field.Field) + "=" + outcomeExpressionSummary(*field.Expression))
+			}
 		}
 	}
 	appendNavigationSummary(value.Navigation, addExpected)
@@ -461,6 +463,32 @@ func summarizeOutcomeRow(row OutcomeRow) ([]string, []string) {
 		}
 	}
 	return expected, prohibited
+}
+
+func outcomeExpressionSummary(expectation FactExpressionExpectation) string {
+	bindings := make(map[SemanticID]string, len(expectation.Bindings))
+	for _, binding := range expectation.Bindings {
+		bindings[binding.Node] = binding.Subject
+	}
+	var render func(IRExpression) string
+	render = func(expression IRExpression) string {
+		if expression.Kind == "field-reference" {
+			return bindings[expression.ID] + "." + outcomeFieldLabel(expression.Field)
+		}
+		if expression.Kind == "binary-expression" && expression.Left != nil && expression.Right != nil {
+			return expression.Operator + "(" + render(*expression.Left) + "," + render(*expression.Right) + ")"
+		}
+		return outcomeSemanticLabel(expression.ID)
+	}
+	return render(expectation.Tree)
+}
+
+func outcomeFieldLabel(id SemanticID) string {
+	parts := strings.Split(string(id), "/")
+	if len(parts) == 0 {
+		return string(id)
+	}
+	return parts[len(parts)-1]
 }
 
 func appendCountSummary(name string, count *int, addExpected, addProhibited func(string)) {

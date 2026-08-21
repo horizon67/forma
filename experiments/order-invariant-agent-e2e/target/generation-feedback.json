@@ -165,7 +165,7 @@
       "result": "passed"
     },
     {
-      "factId": "fact/action/StockReservation/commit/changes/value-unavailable/from/Pending",
+      "factId": "fact/action/StockReservation/commit/changes/value-unavailable/via/plan/from/Pending",
       "testReferences": [
         "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
       ],
@@ -1529,7 +1529,7 @@
       "result": "passed"
     },
     {
-      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/changes/value-unavailable/from/Pending",
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/changes/value-unavailable/via/plan/from/Pending",
       "testReferences": [
         "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
       ],

@@ -25,6 +25,9 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 		resolved := c.resolveType(decl.Name.Text, decl.Name.Span)
 		id := typeID(decl.Name.Text)
 		item := IRType{ID: id, Name: decl.Name.Text, Kind: resolved.Kind, Base: resolved.Base}
+		if resolved.Kind == "scalar" && decl.Base != nil {
+			item.DeclaredBase = decl.Base.Text
+		}
 		sourceMap.add(id, "type", decl.Span)
 		if resolved.Kind == "union" {
 			item.Variants = append([]string(nil), resolved.Variants...)
@@ -33,6 +36,9 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 			constraintID := semanticID(string(id), "constraint", mod.Kind)
 			item.Constraints = append(item.Constraints, IRConstraint{ID: constraintID, Kind: mod.Kind, Value: mod.Value})
 			sourceMap.add(constraintID, "constraint", mod.Span)
+		}
+		if item.DeclaredBase == "Int" || item.DeclaredBase == "Decimal" {
+			item.EffectiveNumericBounds = numericBoundsFromConstraints(item.Constraints)
 		}
 		sort.Slice(item.Constraints, func(i, j int) bool { return item.Constraints[i].ID < item.Constraints[j].ID })
 		ir.Types = append(ir.Types, item)

@@ -62,7 +62,7 @@ action Order.ship:    Approved  -> Shipped  allow staff
 
 action StockReservation.commit: Pending -> Committed confirm allow staff {
     changes {
-        stock.reserved = plan.approvedReserved
+        stock.reserved = stock.reserved + plan.approvedReserved
     }
 }
 

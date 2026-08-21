@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.10"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.11"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -33,12 +33,23 @@ type IRRole struct {
 }
 
 type IRType struct {
-	ID          SemanticID     `json:"id"`
-	Name        string         `json:"name"`
-	Kind        string         `json:"kind"`
-	Base        string         `json:"base,omitempty"`
-	Variants    []string       `json:"variants,omitempty"`
-	Constraints []IRConstraint `json:"constraints,omitempty"`
+	ID                     SemanticID       `json:"id"`
+	Name                   string           `json:"name"`
+	Kind                   string           `json:"kind"`
+	Base                   string           `json:"base,omitempty"`
+	DeclaredBase           string           `json:"declaredBase,omitempty"`
+	Variants               []string         `json:"variants,omitempty"`
+	Constraints            []IRConstraint   `json:"constraints,omitempty"`
+	EffectiveNumericBounds *IRNumericBounds `json:"effectiveNumericBounds,omitempty"`
+}
+
+// IRNumericBounds records the exact source strings used to decide whether a
+// direct Int- or Decimal-based type is closed under the first addition slice.
+// Named-type chains deliberately omit it until inherited constraints are
+// materialized by the front-end.
+type IRNumericBounds struct {
+	Min string `json:"min,omitempty"`
+	Max string `json:"max,omitempty"`
 }
 
 type IRConstraint struct {

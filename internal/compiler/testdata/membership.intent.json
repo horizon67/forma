@@ -1,11 +1,12 @@
 {
-  "version": "forma/resolved-intent/v0.10",
+  "version": "forma/resolved-intent/v0.11",
   "types": [
     {
       "id": "type/Email",
       "name": "Email",
       "kind": "scalar",
       "base": "String",
+      "declaredBase": "String",
       "constraints": [
         {
           "id": "type/Email/constraint/matches",

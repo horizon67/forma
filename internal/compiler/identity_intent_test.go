@@ -238,7 +238,7 @@ func membershipIntentFixture(t *testing.T) (*ResolvedIntent, *SourceMap) {
 	intent := &ResolvedIntent{
 		Version: ResolvedIntentVersion,
 		Types: []IRType{{
-			ID: typeID("Email"), Name: "Email", Kind: "scalar", Base: "String",
+			ID: typeID("Email"), Name: "Email", Kind: "scalar", Base: "String", DeclaredBase: "String",
 			Constraints: []IRConstraint{{ID: semanticID(string(typeID("Email")), "constraint", "matches"), Kind: "matches", Value: ".+@.+"}},
 		}},
 		Entities: []IREntity{{

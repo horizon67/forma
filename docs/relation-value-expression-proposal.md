@@ -431,8 +431,8 @@ self-only Invariant validatorは同じ共有`IRExpression`の`relationPath`をde
 repository E2Eでは既存`StockReservation.commit`のtargetを`stock`、value sourceをdistinctな`plan` relationとし、
 `stock.reserved = plan.approvedReserved`を実装した。self上の`requestedReserved`は異なる値にして誤配線を検出する。
 target欠落、value欠落、Invariant違反、source state不一致、confirmation decline、access denyはいずれもHTTP surfaceと
-authoritative store boundaryで無部分commitを観測する。current artifactは52 mapped tests、278/278 Acceptance Facts、
-4 human Review Requirementsである。
+authoritative store boundaryで無部分commitを観測する。後続numeric addition統合後のcurrent artifactも52 mapped tests、
+278/278 Acceptance Factsを維持し、exact numeric enforcementを加えた5 human Review Requirementsを持つ。
 
 ## このsliceへ入れないもの
 

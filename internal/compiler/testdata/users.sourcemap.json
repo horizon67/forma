@@ -1,6 +1,6 @@
 {
   "version": "forma/source-map/v0.6",
-  "intentVersion": "forma/resolved-intent/v0.10",
+  "intentVersion": "forma/resolved-intent/v0.11",
   "entries": [
     {
       "nodeId": "action/User/activate",

@@ -68,6 +68,8 @@ func (l *lexer) scanToken() {
 		l.single(tokenColon, start)
 	case '=':
 		l.single(tokenEqual, start)
+	case '+':
+		l.single(tokenPlus, start)
 	case '|':
 		l.single(tokenPipe, start)
 	case '<':

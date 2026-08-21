@@ -1,6 +1,6 @@
-outcome projection forma/outcome-projection/v0alpha3
-intent forma/resolved-intent/v0.10
-facts forma/acceptance-facts/v0alpha8
+outcome projection forma/outcome-projection/v0alpha4
+intent forma/resolved-intent/v0.11
+facts forma/acceptance-facts/v0alpha9
 rows 120
 
 group User.activate [action/User/activate]

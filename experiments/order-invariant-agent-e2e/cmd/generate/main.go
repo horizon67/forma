@@ -15,7 +15,7 @@ import (
 
 const (
 	expectedFacts   = 278
-	expectedReviews = 4
+	expectedReviews = 5
 )
 
 func main() {

@@ -227,7 +227,9 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 	t.Run("accepted", func(t *testing.T) {
 		item := newFixture(t)
 		reservation, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
-		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
+		wantReserved := item.stock.Reserved + item.plan.ApprovedReserved
+		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != wantReserved ||
+			stock.Reserved == item.stock.Reserved || stock.Reserved == item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
 			t.Fatalf("commit = %#v, %#v, %v", reservation, stock, err)
 		}
 	})
@@ -238,14 +240,40 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 			changed := item.store.plans[item.plan.ID]
 			changed.ApprovedReserved = 9
 			item.store.plans[item.plan.ID] = changed
+			changedStock := item.store.stockItems[item.stock.ID]
+			changedStock.Reserved = 1
+			item.store.stockItems[item.stock.ID] = changedStock
 		}
 		_, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
-		if err != nil || stock.Reserved != item.plan.ApprovedReserved {
-			t.Fatalf("commit reread the value source after its pre-state snapshot: stock=%#v error=%v", stock, err)
+		if err != nil || stock.Reserved != item.stock.Reserved+item.plan.ApprovedReserved {
+			t.Fatalf("commit reread an operand after its pre-state snapshot: stock=%#v error=%v", stock, err)
 		}
 		changedPlan, _ := item.store.ReservationPlan(item.plan.ID)
-		if changedPlan.ApprovedReserved == stock.Reserved {
-			t.Fatalf("test did not separate captured and later source values: plan=%#v stock=%#v", changedPlan, stock)
+		if changedPlan.ApprovedReserved != 9 {
+			t.Fatalf("snapshot hook did not alter the backing value source: plan=%#v", changedPlan)
+		}
+	})
+
+	t.Run("unrepresentable exact result preserves both entities", func(t *testing.T) {
+		item := newFixture(t)
+		maximum := int(^uint(0) >> 1)
+		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-OVERFLOW", ApprovedReserved: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		reservation, err := item.store.PutStockReservation(domain.StockReservation{
+			Code: "RES-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := item.store.CommitStockReservation(reservation.ID, staff, true); !errors.Is(err, domain.ErrNumericRepresentation) {
+			t.Fatalf("representation error = %v", err)
+		}
+		storedReservation, _ := item.store.StockReservation(reservation.ID)
+		storedStock, _ := item.store.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedReservation.Version != reservation.Version || storedStock != item.stock {
+			t.Fatalf("representation failure partially committed: reservation=%#v stock=%#v", storedReservation, storedStock)
 		}
 	})
 
@@ -329,11 +357,11 @@ func TestStockReservationCommitAuthorizationOwnsCrossEntityWritePath(t *testing.
 
 func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *testing.T) {
 	item := newFixture(t)
-	validPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-VALID", ApprovedReserved: 8})
+	validPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-VALID", ApprovedReserved: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalidPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-INVALID", ApprovedReserved: 11})
+	invalidPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-INVALID", ApprovedReserved: 9})
 	if err != nil {
 		t.Fatal(err)
 	}

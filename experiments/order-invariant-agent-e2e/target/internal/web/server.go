@@ -414,7 +414,7 @@ func (server *Server) actionError(writer http.ResponseWriter, err error) {
 		feedback(writer, http.StatusUnprocessableEntity, "invalid", nil)
 		return
 	}
-	if errors.Is(err, domain.ErrTargetUnavailable) || errors.Is(err, domain.ErrValueUnavailable) {
+	if errors.Is(err, domain.ErrTargetUnavailable) || errors.Is(err, domain.ErrValueUnavailable) || errors.Is(err, domain.ErrNumericRepresentation) {
 		feedback(writer, http.StatusInternalServerError, "failure", nil)
 		return
 	}

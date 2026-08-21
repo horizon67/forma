@@ -551,8 +551,33 @@ func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
 		}
 		reservation, _ := item.repository.StockReservation(item.reservation.ID)
 		stock, _ := item.repository.StockItem(item.stock.ID)
-		if reservation.Status != domain.ReservationCommitted || stock.Reserved != item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
+		wantReserved := item.stock.Reserved + item.plan.ApprovedReserved
+		if reservation.Status != domain.ReservationCommitted || stock.Reserved != wantReserved ||
+			stock.Reserved == item.stock.Reserved || stock.Reserved == item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
 			t.Fatalf("accepted surface state = reservation %#v stock %#v", reservation, stock)
+		}
+	})
+
+	t.Run("representation failure", func(t *testing.T) {
+		item := newWebFixture(t)
+		maximum := int(^uint(0) >> 1)
+		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-OVERFLOW", ApprovedReserved: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		reservation, err := item.repository.PutStockReservation(domain.StockReservation{
+			Code: "RES-HTTP-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusInternalServerError, "failure")
+		storedReservation, _ := item.repository.StockReservation(reservation.ID)
+		stock, _ := item.repository.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedReservation.Version != reservation.Version || stock != item.stock {
+			t.Fatalf("representation surface partially committed: reservation %#v stock %#v", storedReservation, stock)
 		}
 	})
 

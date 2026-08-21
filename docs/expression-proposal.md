@@ -571,7 +571,9 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 6. [`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)に従い、同じExpression treeをChanges右辺で
    再利用し、requiredなto-one relation traversal 1 hopを追加する。共有IR fieldの追加と同時に、relation traversalを
    許さないself-only Invariant validatorのclosed shapeも更新する。**実装済み**。
-7. Changesの実例で二項`+`を追加する。二項`-`を同時に入れる場合はv0 lexerの符号付きnumberも移行する。
+7. [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)に従い、Changesの実例で
+   field reference 2個の二項`+`を追加する。exact arithmetic、複数operand binding、relation別availability、
+   repository representation failureを**実装済み**。二項`-`とnumeric literalは同時に入れず後続へ残す。
 8. Action Preconditionの実例が要求する比較、等価、boolean、括弧と左結合binary normalizationを追加する。
 9. multiple assignment、collection binding、record creationを分離し、full Order approvalのatomic coreまで進める。
 10. 同じExpression treeをDerived Value proposalで再利用し、保存／再計算／dependency semanticsを独立に決める。
@@ -597,12 +599,12 @@ entity StockItem {
 - 正常post-stateの受理とinvalid post-stateの拒否をAcceptance Factsとして出力する。
 - coding agentがtarget repositoryのauthoritativeな境界とtestへ実装し、build/testを通す。
 
-現在は最初の5項目までをreference compilerとtestで確認済みである。各Invariantから
+現在は最初の7項目までをreference compilerとtestで確認済みである。各Invariantから
 `invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
 `invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
 解決済みExpression tree、`post-state`評価、authoritative enforcement、
-`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha8`へ固定する。
-concurrencyはcurrent `forma/review-requirements/v0alpha4`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
+`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha9`へ固定する。
+concurrencyはcurrent `forma/review-requirements/v0alpha5`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
 将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。coding agentによるrepository固有testと
 保存境界の実測は、[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で完了した。
 targetはForma runtimeを持たない通常のGo applicationで、Invariant単独時は39 testsへ172 Factsを明示対応付けした。98 access Factsは
@@ -613,5 +615,6 @@ invalid post-stateの
 人間確認待ちであり、機械Factへ偽装しない。その後general functionやcollectionを先回りで足さず、Changesと
 atomic post-stateとrelation valueのvertical sliceへ進み、current targetでは52 tests / 278 Factsまで統合した。最小sliceは
 [`changes-proposal.md`](changes-proposal.md)に分離し、最初のvalue expressionをaction entity自身のrequired field参照に
-限定した後、[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)でrequired to-one relation 1 hopまで拡張した。Effect syntaxはOccurrenceとの境界が
+限定した後、[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)でrequired to-one relation 1 hop、
+[`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)でexact binary `+`と複数operand bindingまで拡張した。Effect syntaxはOccurrenceとの境界が
 定まるまで追加しない。

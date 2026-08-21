@@ -304,6 +304,30 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 		}
 		fact.SourceNodes = sources
 	}
+	// v0.4 flattened scalar bases and did not retain the immediate declaration.
+	// The supported historical syntax predates numeric Changes, so treating that
+	// effective builtin as the direct base is the only lossless upgrade needed by
+	// the pinned artifacts. Direct numeric constraints become the complete bounds
+	// carried by the current closed addition validator.
+	for typeIndex := range intent.Types {
+		item := &intent.Types[typeIndex]
+		if item.Kind != "scalar" {
+			continue
+		}
+		item.DeclaredBase = item.Base
+		if item.Base != "Int" && item.Base != "Decimal" {
+			continue
+		}
+		item.EffectiveNumericBounds = &compiler.IRNumericBounds{}
+		for _, constraint := range item.Constraints {
+			switch constraint.Kind {
+			case "min":
+				item.EffectiveNumericBounds.Min = constraint.Value
+			case "max":
+				item.EffectiveNumericBounds.Max = constraint.Value
+			}
+		}
+	}
 	intent.Version = compiler.ResolvedIntentVersion
 	facts.Version = compiler.AcceptanceFactsVersion
 	facts.IntentVersion = compiler.ResolvedIntentVersion

@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 )
 
@@ -82,12 +83,20 @@ func validateActionSemantics(intent *ResolvedIntent) error {
 		if change.ID != wantChangeID || change.Target.ID != semanticID(string(wantChangeID), "target") {
 			return fmt.Errorf("validate Resolved Intent: change %s has non-canonical identity", change.ID)
 		}
-		valueField, err := validateChangeValueExpression(entity, fields, fieldOwners, change.Value, semanticID(string(wantChangeID), "value"), types)
+		valueType, err := validateChangeValueExpression(entity, fields, fieldOwners, change.Value, semanticID(string(wantChangeID), "value"), types)
 		if err != nil {
 			return err
 		}
-		if valueField.Type != targetField.Type {
+		if valueType != targetField.Type {
 			return fmt.Errorf("validate Resolved Intent: change %s assigns a different nominal type", change.ID)
+		}
+		if change.Value.Kind == "binary-expression" {
+			if targetField.Unique {
+				return fmt.Errorf("validate Resolved Intent: numeric change %s targets a unique field", change.ID)
+			}
+			if err := validateAdditionIRType(valueType, types); err != nil {
+				return fmt.Errorf("validate Resolved Intent: change %s: %w", change.ID, err)
+			}
 		}
 	}
 	return nil
@@ -100,28 +109,85 @@ func validateChangeValueExpression(
 	expression IRExpression,
 	wantID SemanticID,
 	types map[string]IRType,
-) (IRField, error) {
+) (string, error) {
+	if expression.Kind == "binary-expression" {
+		if expression.Operator != "add" || expression.Left == nil || expression.Right == nil ||
+			expression.Left.Kind != "field-reference" || expression.Right.Kind != "field-reference" {
+			return "", fmt.Errorf("validate Resolved Intent: change value %s is outside the first numeric expression slice", expression.ID)
+		}
+		leftType, err := validateChangeValueExpression(entity, fields, fieldOwners, *expression.Left, semanticID(string(wantID), "left"), types)
+		if err != nil {
+			return "", err
+		}
+		rightType, err := validateChangeValueExpression(entity, fields, fieldOwners, *expression.Right, semanticID(string(wantID), "right"), types)
+		if err != nil {
+			return "", err
+		}
+		if leftType != rightType || !isIRNumericType(leftType, types) || expression.ResultType != leftType {
+			return "", fmt.Errorf("validate Resolved Intent: change value %s does not add one nominal numeric type", expression.ID)
+		}
+		canonical := IRExpression{
+			ID: wantID, Kind: "binary-expression", ResultType: leftType, Operator: "add",
+			Left: expression.Left, Right: expression.Right,
+		}
+		if !reflect.DeepEqual(expression, canonical) {
+			return "", fmt.Errorf("validate Resolved Intent: change value %s is not a canonical addition", expression.ID)
+		}
+		return leftType, nil
+	}
 	canonical := IRExpression{
 		ID: wantID, Kind: "field-reference", ResultType: expression.ResultType, Binding: "self",
 		RelationPath: append([]SemanticID(nil), expression.RelationPath...), Field: expression.Field,
 	}
 	if expression.Field == "" || len(expression.RelationPath) > 1 || !reflect.DeepEqual(expression, canonical) {
-		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s is not a canonical field reference", expression.ID)
+		return "", fmt.Errorf("validate Resolved Intent: change value %s is not a canonical field reference", expression.ID)
 	}
 	owner := entity.ID
 	if len(expression.RelationPath) == 1 {
 		relation, ok := fields[expression.RelationPath[0]]
 		if !ok || fieldOwners[relation.ID] != entity.ID || relation.Collection || !relation.Required || relation.Relation == nil {
-			return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s does not traverse one required to-one relation", expression.ID)
+			return "", fmt.Errorf("validate Resolved Intent: change value %s does not traverse one required to-one relation", expression.ID)
 		}
 		owner = entityID(relation.Relation.Entity)
 	}
 	field, ok := fields[expression.Field]
 	if !ok || fieldOwners[field.ID] != owner || !field.Required || field.Collection || field.Relation != nil ||
 		!isIRScalar(field.Type, types) || expression.ResultType != field.Type {
-		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s does not reference a required scalar field on its resolved owner", expression.ID)
+		return "", fmt.Errorf("validate Resolved Intent: change value %s does not reference a required scalar field on its resolved owner", expression.ID)
 	}
-	return field, nil
+	return field.Type, nil
+}
+
+func isIRNumericType(name string, types map[string]IRType) bool {
+	if name == "Int" || name == "Decimal" {
+		return true
+	}
+	item, ok := types[name]
+	return ok && item.Kind == "scalar" && (item.Base == "Int" || item.Base == "Decimal")
+}
+
+func validateAdditionIRType(name string, types map[string]IRType) error {
+	if name == "Int" || name == "Decimal" {
+		return nil
+	}
+	item, ok := types[name]
+	if !ok || (item.DeclaredBase != "Int" && item.DeclaredBase != "Decimal") || item.EffectiveNumericBounds == nil {
+		return fmt.Errorf("numeric type %q does not directly declare an Int or Decimal base", name)
+	}
+	zero := new(big.Rat)
+	if item.EffectiveNumericBounds.Min != "" {
+		minimum, ok := new(big.Rat).SetString(item.EffectiveNumericBounds.Min)
+		if !ok || minimum.Cmp(zero) < 0 {
+			return fmt.Errorf("numeric type %q is not closed under addition", name)
+		}
+	}
+	if item.EffectiveNumericBounds.Max != "" {
+		maximum, ok := new(big.Rat).SetString(item.EffectiveNumericBounds.Max)
+		if !ok || maximum.Cmp(zero) > 0 {
+			return fmt.Errorf("numeric type %q is not closed under addition", name)
+		}
+	}
+	return nil
 }
 
 func isIRScalar(name string, types map[string]IRType) bool {

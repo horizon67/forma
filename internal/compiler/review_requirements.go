@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-const ReviewRequirementsVersion = "forma/review-requirements/v0alpha4"
+const ReviewRequirementsVersion = "forma/review-requirements/v0alpha5"
 
 // ReviewRequirements contains implementation properties that Forma cannot
 // mechanically prove from agent feedback. They remain separate from
@@ -33,6 +33,7 @@ var reviewInstructions = map[string]string{
 	"atomic-changes-enforcement":            "Review the action implementation; confirm that target identity resolution, pre-state reads, invariant checks, and commit share one transaction, lock, or conflict-retry boundary, and that concurrent invocation or process failure cannot commit only part of the transition and explicit Changes.",
 	"cross-entity-write-authorization":      "Review the action access, every presenting surface's effective access, the changed entity and field, and existing surfaces that can change that field; confirm that the cross-entity write path is intentional without inferring the target surfaces' roles as additional action authorization.",
 	"cross-entity-value-read-authorization": "Review the action access, every presenting surface's effective access, each relation value source entity and field and existing surfaces that present it, and each stored target field and existing surfaces that present it; confirm that roles allowed to invoke the action may use the source value and that downstream disclosure is intentional without inferring the source entity's surface roles as additional action authorization.",
+	"exact-numeric-expression-enforcement":  "Review the action's Int or Decimal representation, addition operation, storage boundary, and failure path; confirm that wrap, binary floating-point rounding, or silent saturation cannot commit as success and that an unrepresentable exact result leaves state and every changed subject unmodified.",
 }
 
 // BuildReviewRequirements deterministically derives the human-review boundary
@@ -116,14 +117,25 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 			})
 		}
 		crossEntityValue := false
+		numericExpression := false
 		for _, change := range action.Changes {
-			crossEntityValue = crossEntityValue || len(change.Value.RelationPath) != 0
+			for _, leaf := range expressionFieldReferenceNodes(change.Value) {
+				crossEntityValue = crossEntityValue || len(leaf.RelationPath) != 0
+			}
+			numericExpression = numericExpression || expressionHasOperator(change.Value, "add")
 		}
 		if crossEntityValue {
 			kind = "cross-entity-value-read-authorization"
 			requirements = append(requirements, ReviewRequirement{
 				ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
 				SourceNodes: actionValueReadReviewSources(intent, action), Instruction: reviewInstructions[kind],
+			})
+		}
+		if numericExpression {
+			kind = "exact-numeric-expression-enforcement"
+			requirements = append(requirements, ReviewRequirement{
+				ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
+				SourceNodes: actionReviewSources(intent, action, false), Instruction: reviewInstructions[kind],
 			})
 		}
 	}
@@ -149,13 +161,13 @@ func actionReviewSources(intent *ResolvedIntent, action IRAction, includeAuthori
 	}
 	targetFields := map[SemanticID]bool{}
 	for _, change := range action.Changes {
-		sources = append(sources, change.ID, change.Target.ID, change.Target.Field, change.Value.ID, change.Value.Field)
+		sources = append(sources, change.ID, change.Target.ID, change.Target.Field)
 		sources = append(sources, change.Target.RelationPath...)
-		sources = append(sources, change.Value.RelationPath...)
+		sources = appendExpressionReviewSources(intent, sources, change.Value)
 		targetFields[change.Target.Field] = true
 		for _, entity := range intent.Entities {
 			for _, field := range entity.Fields {
-				if field.ID == change.Target.Field || field.ID == change.Value.Field {
+				if field.ID == change.Target.Field {
 					sources = append(sources, entity.ID)
 				}
 			}
@@ -205,7 +217,9 @@ func actionValueReadReviewSources(intent *ResolvedIntent, action IRAction) []Sem
 	fields := map[SemanticID]bool{}
 	for _, change := range action.Changes {
 		fields[change.Target.Field] = true
-		fields[change.Value.Field] = true
+		for _, leaf := range expressionFieldReferenceNodes(change.Value) {
+			fields[leaf.Field] = true
+		}
 	}
 	for _, page := range intent.Pages {
 		for _, view := range page.Views {
@@ -239,6 +253,38 @@ func actionValueReadReviewSources(intent *ResolvedIntent, action IRAction) []Sem
 		}
 	}
 	return canonicalSemanticIDs(sources)
+}
+
+func appendExpressionReviewSources(intent *ResolvedIntent, sources []SemanticID, expression IRExpression) []SemanticID {
+	sources = append(sources, expressionSemanticIDs(expression)...)
+	for _, leaf := range expressionFieldReferenceNodes(expression) {
+		for _, entity := range intent.Entities {
+			for _, field := range entity.Fields {
+				if field.ID != leaf.Field {
+					continue
+				}
+				sources = append(sources, entity.ID)
+				for _, item := range intent.Types {
+					if item.Name != field.Type {
+						continue
+					}
+					sources = append(sources, item.ID)
+					for _, constraint := range item.Constraints {
+						sources = append(sources, constraint.ID)
+					}
+				}
+			}
+		}
+	}
+	return sources
+}
+
+func expressionHasOperator(expression IRExpression, operator string) bool {
+	if expression.Operator == operator {
+		return true
+	}
+	return expression.Left != nil && expressionHasOperator(*expression.Left, operator) ||
+		expression.Right != nil && expressionHasOperator(*expression.Right, operator)
 }
 
 func fieldByEntityAndName(intent *ResolvedIntent, entityName, fieldName string) (IRField, bool) {

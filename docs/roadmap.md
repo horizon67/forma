@@ -42,7 +42,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、current 85/85 Facts、3 Review Requirementsを検証した |
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → current 85/85と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
-| Expression以降 | **P3 in progress** | self-only Invariant、bounded Changes、required relation valueを通常のGo applicationで278/278 Factsまで実測。distinct value欠落とcross-entity value disclosure reviewまでcompiler実装済み |
+| Expression以降 | **P3 in progress** | self-only Invariant、bounded Changes、required relation value、exact binary numeric `+`を通常のGo applicationで278/278 Factsまで実測。次はAction Preconditionの最小slice |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -366,7 +366,7 @@ Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-pro
 
 このfirst sliceは当初Resolved Intent `v0.7`、Source Map `v0.4`、38 Identity Factsとして実装した。
 その後`examples/email-verified-membership.forma`へapplication entryとpage-local surface transitionを追加し、現在は
-Resolved Intent `v0.10`、Source Map `v0.6`、Acceptance Facts `v0alpha8`へ解決する。Identity semantics、3 Review
+Resolved Intent `v0.11`、Source Map `v0.6`、Acceptance Facts `v0alpha9`へ解決する。Identity semantics、3 Review
 Requirements、未対応proof / lifecycle / owner bindingのnegative testは維持している。各Identity operationのinteractionも
 application全体でちょうど1件に制限する。Stage DではIdentity追加Generation Requestを既存admin targetへ適用し、当初81/81、
 action transition Fact追加後のcurrent artifactでは85/85 Facts、3 Review Requirementsを検証した。詳細は
@@ -551,9 +551,10 @@ bounded Changesはaction entityのrequired field valueだけでatomicityを検�
 - [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`、成立・違反2 Facts、該当formのauthoritative拒否Fact、concurrency Review Requirement、Generation Request差分を最小sliceとして実装
 - [`changes-proposal.md`](changes-proposal.md): action-attachedな同時代入、pre-state評価、複数entityのall-or-nothing post-state、cross-entity認可とtarget-unavailable outcomeを含む最小実装slice
 - [`relation-value-expression-proposal.md`](relation-value-expression-proposal.md): Changes右辺でrequired relationを1 hop読み、target/value binding共有、value-unavailable、cross-entity value disclosure reviewを定めて実装したslice
+- [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md): Changes右辺の二項`+`、複数field-reference leafのruntime subject binding、exact Int/Decimal semantics、relation別value-unavailableとrepresentation reviewを定めて実装したslice
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
 - [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
-- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで278/278 Factsと52 repository testsを実測。concurrency、atomicity、cross-entity write/value-read authorizationの4 Review Requirementsは人間確認待ち
+- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで278/278 Factsと52 repository testsを実測。concurrency、atomicity、cross-entity write/value-read authorization、exact numeric enforcementの5 Review Requirementsは人間確認待ち
 
 最初のExpression sliceはcompilerからGeneration Requestまで到達した。該当form submitへの拒否Factにより、
 entity単位の隔離testだけで満たす経路も閉じた。repository E2Eではcoding agentが`post-state`のInvariantを
@@ -563,7 +564,9 @@ requiredなto-one relation先へabsolute valueを代入する`StockReservation.c
 cross-entity targetの認可差とruntime欠落を明示した。通常application E2Eではtransitionとrelated entity changeのpartial
 commit、confirmation bypass、cross-entity authorization bypassを検出した。続くrelation value sliceではdistinctな
 `ReservationPlan.approvedReserved`をpre-stateで読み、selfのdecoy値との誤配線、value欠落時のfallback、surface feedback省略を
-検出する。全278 Factsをrepository commandから再測定し、4件のReview Requirementは引き続き人間が確認する。
+検出する。続くnumeric addition sliceではtargetのpre-state値2とrelation値6をexactに加算して8を保存し、片operandの脱落、
+snapshot後の再読込、integer overflow、Fact上のleaf binding欠落を検出する。全278 Factsをrepository commandから再測定し、
+exact numeric enforcementを加えた5件のReview Requirementは引き続き人間が確認する。
 
 relation traversalはChanges RHSを最初のconsumerとして独立させた。既存のaction invocation、consistent
 pre-state、atomic outcome、surface feedbackを再利用できる。Derived Valueから始めた場合に同時に必要になる保存／再計算／
@@ -571,6 +574,15 @@ dependency contractは後続へ分離する。targetとは別のvalue relation�
 全変更を拒否し、target pathと同じrelationなら同じruntime identityを共有して到達不能なFactを作らない。実行認可は
 actionが所有するが、参照先valueの利用／再公開は新しいReview Requirementとして人間へ提示する。また共有`IRExpression`へ
 relation pathを加える同じrunで、relation traversalを許さないInvariant validatorのclosed shapeも更新した。
+
+numeric addition sliceは[`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)へ分離して実装した。
+`stock.reserved = stock.reserved + plan.approvedReserved`を最小fixtureとし、field reference 2個と`+` 1個だけを受理する。
+単一`valueSubject/valueField`では複数operandを表せないため、Acceptance Factはcanonical Expression treeとleafごとの
+runtime subject bindingへ正規化する。Int／Decimalはexactに加算し、repository表現でwrapまたはroundingしないことを
+Review Requirementでも確認する。current compilerがinherited constraintをまだ合成しないため、最初はbuiltinを直接baseにする
+numeric typeだけを受理し、declared baseと判定boundsをIRへ残してvalidatorが再計算する。Action Precondition、multiple
+assignment、collectionは引き続き別sliceであり、次はAction Preconditionの評価時点、拒否理由、surface feedbackを
+最小例で設計する。
 
 ### 選別基準
 

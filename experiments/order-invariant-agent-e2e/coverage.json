@@ -68,7 +68,7 @@
   "fact/action/StockReservation/commit/changes/target-unavailable/from/Pending": [
     "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
   ],
-  "fact/action/StockReservation/commit/changes/value-unavailable/from/Pending": [
+  "fact/action/StockReservation/commit/changes/value-unavailable/via/plan/from/Pending": [
     "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
   ],
   "fact/action/StockReservation/commit/transition/accepted/from/Pending": [
@@ -660,7 +660,7 @@
   "fact/page/Reservations/view/list/StockReservation/action/commit/changes/target-unavailable/from/Pending": [
     "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
   ],
-  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/value-unavailable/from/Pending": [
+  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/value-unavailable/via/plan/from/Pending": [
     "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
   ],
   "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/accepted": [

@@ -71,7 +71,9 @@ func TestChangesFactsDescribeDomainAndSurfaceAtomicOutcomes(t *testing.T) {
 		t.Fatalf("accepted action subject = %#v", got)
 	}
 	if got := accepted.Expected.Subjects[1]; got.Handle != "subject/target" || len(got.Fields) != 1 ||
-		got.Fields[0].Field != "entity/StockItem/field/reserved" || got.Fields[0].ValueField != "entity/StockReservation/field/reservedAfter" {
+		got.Fields[0].Field != "entity/StockItem/field/reserved" || got.Fields[0].Stored != "expression-result" ||
+		got.Fields[0].Expression == nil || got.Fields[0].Expression.Tree.Field != "entity/StockReservation/field/reservedAfter" ||
+		!reflect.DeepEqual(got.Fields[0].Expression.Bindings, []FactExpressionBinding{{Node: "action/StockReservation/commit/change/stock/reserved/value", Subject: "subject/action"}}) {
 		t.Fatalf("accepted target subject = %#v", got)
 	}
 
@@ -319,6 +321,268 @@ func TestResolvedRelationValueValidationRejectsUnsupportedOrTamperedIR(t *testin
 	}
 }
 
+func TestNumericAdditionBuildsCanonicalIRFactsReviewsAndProjection(t *testing.T) {
+	result := compileNumericAdditionFixture(t)
+	action := actionByID(t, result.Intent, "action/StockReservation/commit")
+	value := action.Changes[0].Value
+	if value.Kind != "binary-expression" || value.Operator != "add" || value.ResultType != "Quantity" ||
+		value.Left == nil || value.Right == nil || value.Left.ID != SemanticID(string(value.ID)+"/left") ||
+		value.Right.ID != SemanticID(string(value.ID)+"/right") ||
+		!reflect.DeepEqual(value.Left.RelationPath, []SemanticID{"entity/StockReservation/field/stock"}) ||
+		!reflect.DeepEqual(value.Right.RelationPath, []SemanticID{"entity/StockReservation/field/plan"}) {
+		t.Fatalf("numeric addition IR = %#v", value)
+	}
+	quantity := result.Intent.Types[0]
+	if quantity.Name != "Quantity" || quantity.DeclaredBase != "Int" || quantity.EffectiveNumericBounds == nil ||
+		quantity.EffectiveNumericBounds.Min != "0" || quantity.EffectiveNumericBounds.Max != "" {
+		t.Fatalf("Quantity IR = %#v", quantity)
+	}
+	entries := map[SemanticID]SourceMapEntry{}
+	for _, entry := range result.SourceMap.Entries {
+		entries[entry.NodeID] = entry
+	}
+	if entries[value.ID].Kind != "binary-expression" || entries[value.Left.ID].Kind != "field-reference" ||
+		entries[value.Right.ID].Kind != "field-reference" {
+		t.Fatalf("numeric Source Map entries = %#v", entries)
+	}
+	rootEntry := entries[value.ID]
+	if got := numericAdditionAcceptanceSource[rootEntry.Span.Start.Offset:rootEntry.Span.End.Offset]; got != "stock.reserved + plan.approvedReserved" {
+		t.Fatalf("numeric expression source span = %q", got)
+	}
+
+	facts, err := BuildAcceptanceFacts(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain := SemanticID("action/StockReservation/commit")
+	accepted := acceptanceFactByID(t, facts, factID(domain, "changes", "accepted", "from", "Pending"))
+	field := accepted.Expected.Subjects[1].Fields[0]
+	wantBindings := []FactExpressionBinding{
+		{Node: value.Left.ID, Subject: "subject/target"},
+		{Node: value.Right.ID, Subject: "subject/value/plan"},
+	}
+	if field.Stored != "expression-result" || field.Expression == nil ||
+		!reflect.DeepEqual(field.Expression.Tree, value) || field.Expression.Evaluation != "pre-state" ||
+		!reflect.DeepEqual(field.Expression.Bindings, wantBindings) {
+		t.Fatalf("numeric expression Fact = %#v", field)
+	}
+	valueUnavailable := acceptanceFactByID(t, facts, factID(domain, "changes", "value-unavailable", "via", "plan", "from", "Pending"))
+	conditions := map[SemanticID]string{}
+	for _, relation := range valueUnavailable.Setup.Relations {
+		conditions[relation.Field] = relation.Condition
+	}
+	if conditions["entity/StockReservation/field/stock"] != "resolved" ||
+		conditions["entity/StockReservation/field/plan"] != "value-unavailable" {
+		t.Fatalf("numeric value-unavailable setup = %#v", valueUnavailable.Setup)
+	}
+	for _, fact := range facts.Facts {
+		if strings.Contains(string(fact.ID), "/changes/value-unavailable/via/stock/") {
+			t.Fatalf("target relation received unreachable value-unavailable Fact %s", fact.ID)
+		}
+	}
+	if got := outcomeExpressionSummary(*field.Expression); got != "add(subject/target.reserved,subject/value/plan.approvedReserved)" {
+		t.Fatalf("numeric outcome expression = %q", got)
+	}
+
+	requirements, err := BuildReviewRequirements(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exactID := SemanticID("review/action/StockReservation/commit/exact-numeric-expression-enforcement")
+	var exact *ReviewRequirement
+	for index := range requirements.Requirements {
+		if requirements.Requirements[index].ID == exactID {
+			exact = &requirements.Requirements[index]
+		}
+	}
+	if exact == nil {
+		t.Fatalf("missing exact numeric review: %v", ReviewRequirementIDs(requirements))
+	}
+	for _, source := range []SemanticID{value.ID, value.Left.ID, value.Right.ID, "type/Quantity", "type/Quantity/constraint/min"} {
+		if !containsSemanticID(exact.SourceNodes, source) {
+			t.Errorf("exact numeric review omits %s: %v", source, exact.SourceNodes)
+		}
+	}
+}
+
+func TestNumericAdditionValidationRejectsTamperedIRAndFacts(t *testing.T) {
+	t.Run("resolved expression operator", func(t *testing.T) {
+		intent := compileNumericAdditionFixture(t).Intent
+		intent.Actions[0].Changes[0].Value.Operator = "subtract"
+		if err := ValidateResolvedIntent(intent); err == nil || !strings.Contains(err.Error(), "outside the first numeric expression slice") {
+			t.Fatalf("tampered operator error = %v", err)
+		}
+	})
+	t.Run("effective bounds", func(t *testing.T) {
+		intent := compileNumericAdditionFixture(t).Intent
+		intent.Types[0].EffectiveNumericBounds.Max = "1"
+		if err := ValidateResolvedIntent(intent); err == nil || !strings.Contains(err.Error(), "non-canonical effective bounds") {
+			t.Fatalf("tampered bounds error = %v", err)
+		}
+	})
+	t.Run("fact leaf omitted", func(t *testing.T) {
+		intent := compileNumericAdditionFixture(t).Intent
+		facts, err := BuildAcceptanceFacts(intent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		accepted, ok := acceptanceFactPointerByID(facts, factID("action/StockReservation/commit", "changes", "accepted", "from", "Pending"))
+		if !ok {
+			t.Fatal("missing numeric accepted Fact")
+		}
+		accepted.Expected.Subjects[1].Fields[0].Expression.Bindings = accepted.Expected.Subjects[1].Fields[0].Expression.Bindings[:1]
+		if err := ValidateAcceptanceFacts(intent, facts); err == nil || !strings.Contains(err.Error(), "field expectation") {
+			t.Fatalf("missing leaf binding error = %v", err)
+		}
+	})
+	t.Run("fact expression is deeply cloned", func(t *testing.T) {
+		intent := compileNumericAdditionFixture(t).Intent
+		facts, err := BuildAcceptanceFacts(intent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		accepted, ok := acceptanceFactPointerByID(facts, factID("action/StockReservation/commit", "changes", "accepted", "from", "Pending"))
+		if !ok {
+			t.Fatal("missing numeric accepted Fact")
+		}
+		tree := &accepted.Expected.Subjects[1].Fields[0].Expression.Tree
+		tree.Left.RelationPath[0] = "entity/StockReservation/field/plan"
+		original := intent.Actions[0].Changes[0].Value.Left.RelationPath[0]
+		if original != "entity/StockReservation/field/stock" {
+			t.Fatalf("Fact expression aliases Resolved Intent relationPath: %s", original)
+		}
+	})
+	t.Run("invariant consumer remains closed", func(t *testing.T) {
+		intent := compileNumericAdditionFixture(t).Intent
+		predicate := &intent.Entities[1].Invariants[0].Predicate
+		predicate.Kind = "binary-expression"
+		predicate.Operator = "add"
+		if err := ValidateResolvedIntent(intent); err == nil || !strings.Contains(err.Error(), "supported self-only <= predicate") {
+			t.Fatalf("invariant addition error = %v", err)
+		}
+	})
+}
+
+func TestNumericTypeIRRetainsImmediateAndEffectiveBases(t *testing.T) {
+	result := Compile([]SourceFile{NewSourceFile("numeric-types.forma", `type Bounded = Int max 100
+type Quantity = Bounded min 0
+entity Item {
+    quantity Quantity required
+}
+`)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	if len(result.Intent.Types) != 2 {
+		t.Fatalf("types = %#v", result.Intent.Types)
+	}
+	bounded, quantity := result.Intent.Types[0], result.Intent.Types[1]
+	if bounded.Name != "Bounded" || bounded.Base != "Int" || bounded.DeclaredBase != "Int" ||
+		bounded.EffectiveNumericBounds == nil || bounded.EffectiveNumericBounds.Max != "100" {
+		t.Fatalf("Bounded IR = %#v", bounded)
+	}
+	if quantity.Name != "Quantity" || quantity.Base != "Int" || quantity.DeclaredBase != "Bounded" || quantity.EffectiveNumericBounds != nil {
+		t.Fatalf("Quantity IR = %#v", quantity)
+	}
+}
+
+func TestNumericAdditionDiagnosticsCloseTheFirstSlice(t *testing.T) {
+	base := numericAdditionAcceptanceSource
+	tests := []struct {
+		name, source, code string
+	}{
+		{name: "third operand", source: strings.Replace(base, "stock.reserved + plan.approvedReserved", "stock.reserved + plan.approvedReserved + requestedReserved", 1), code: "F2807"},
+		{name: "non numeric", source: strings.Replace(strings.Replace(base, "stock.reserved + plan.approvedReserved", "stock.code + plan.code", 1), "approvedReserved Quantity required", "approvedReserved Quantity required\n    code String required", 1), code: "F2808"},
+		{name: "nominal mismatch", source: strings.Replace(base, "approvedReserved Quantity required", "approvedReserved Int required", 1), code: "F2808"},
+		{name: "unique target", source: strings.Replace(base, "reserved Quantity required", "reserved Quantity required unique", 1), code: "F2809"},
+		{name: "positive maximum", source: strings.Replace(base, "type Quantity = Int min 0", "type Quantity = Int min 0 max 100", 1), code: "F2809"},
+		{name: "chained named type", source: strings.Replace(base, "type Quantity = Int min 0", "type Bounded = Int max 100\ntype Quantity = Bounded min 0", 1), code: "F2809"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := Compile([]SourceFile{NewSourceFile("numeric-invalid.forma", test.source)})
+			if !slices.Contains(diagnosticCodes(result.Diagnostics), test.code) {
+				t.Fatalf("missing diagnostic %s:\n%s", test.code, diagnosticMessages(result.Diagnostics))
+			}
+		})
+	}
+	for _, numericType := range []string{"Int", "Decimal"} {
+		t.Run("builtin "+numericType, func(t *testing.T) {
+			source := strings.Replace(base, "type Quantity = Int min 0\n\n", "", 1)
+			source = strings.ReplaceAll(source, "Quantity", numericType)
+			result := Compile([]SourceFile{NewSourceFile("numeric-builtin.forma", source)})
+			if len(result.Diagnostics) != 0 {
+				t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+			}
+		})
+	}
+}
+
+func TestNumericAdditionAvailabilityIsPerDistinctRelation(t *testing.T) {
+	source := strings.Replace(numericAdditionAcceptanceSource,
+		"stock.reserved = stock.reserved + plan.approvedReserved",
+		"requestedReserved = stock.reserved + plan.approvedReserved", 1)
+	result := Compile([]SourceFile{NewSourceFile("numeric-relations.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	facts, err := BuildAcceptanceFacts(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	domain := SemanticID("action/StockReservation/commit")
+	accepted := acceptanceFactByID(t, facts, factID(domain, "changes", "accepted", "from", "Pending"))
+	if len(accepted.Setup.Relations) != 2 || len(accepted.Setup.Subjects) != 3 {
+		t.Fatalf("two-relation setup = %#v", accepted.Setup)
+	}
+	bindings := accepted.Expected.Subjects[0].Fields[0].Expression.Bindings
+	if !reflect.DeepEqual(bindings, []FactExpressionBinding{
+		{Node: "action/StockReservation/commit/change/requestedReserved/value/left", Subject: "subject/value/stock"},
+		{Node: "action/StockReservation/commit/change/requestedReserved/value/right", Subject: "subject/value/plan"},
+	}) {
+		t.Fatalf("two-relation bindings = %#v", bindings)
+	}
+	for _, unavailableName := range []string{"plan", "stock"} {
+		fact := acceptanceFactByID(t, facts, factID(domain, "changes", "value-unavailable", "via", unavailableName, "from", "Pending"))
+		conditions := map[SemanticID]string{}
+		for _, relation := range fact.Setup.Relations {
+			conditions[relation.Field] = relation.Condition
+		}
+		if conditions[SemanticID("entity/StockReservation/field/"+unavailableName)] != "value-unavailable" {
+			t.Fatalf("%s unavailable setup = %#v", unavailableName, fact.Setup)
+		}
+		other := "stock"
+		if unavailableName == "stock" {
+			other = "plan"
+		}
+		if conditions[SemanticID("entity/StockReservation/field/"+other)] != "resolved" {
+			t.Fatalf("%s unavailable setup does not resolve %s: %#v", unavailableName, other, fact.Setup)
+		}
+	}
+
+	sharedSource := strings.Replace(source, "stock.reserved + plan.approvedReserved", "stock.reserved + stock.onHand", 1)
+	shared := Compile([]SourceFile{NewSourceFile("numeric-shared-relation.forma", sharedSource)})
+	if len(shared.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(shared.Diagnostics))
+	}
+	sharedFacts, err := BuildAcceptanceFacts(shared.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, fact := range sharedFacts.Facts {
+		if strings.Contains(string(fact.ID), "/changes/value-unavailable/") && fact.Subject == domain {
+			count++
+			if !strings.Contains(string(fact.ID), "/via/stock/") {
+				t.Fatalf("shared relation Fact ID = %s", fact.ID)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("shared relation value-unavailable Facts = %d, want 1", count)
+	}
+}
+
 func TestChangesDoesNotInventARejectionForAnUnaffectedInvariant(t *testing.T) {
 	source := strings.Replace(
 		changesAcceptanceSource,
@@ -374,13 +638,15 @@ func TestChangesRelationValueBuildsResolvedIRFactsAndUnavailableOutcome(t *testi
 	domain := SemanticID("action/InventorySnapshot/capture")
 	surface := SemanticID("page/Snapshots/view/list/InventorySnapshot/action/capture")
 	accepted := acceptanceFactByID(t, facts, factID(domain, "changes", "accepted", "from", "Pending"))
-	if accepted.Setup == nil || len(accepted.Setup.Relations) != 1 || accepted.Setup.Relations[0].Target != "subject/value" {
+	if accepted.Setup == nil || len(accepted.Setup.Relations) != 1 || accepted.Setup.Relations[0].Target != "subject/value/stock" {
 		t.Fatalf("accepted relation value setup = %#v", accepted.Setup)
 	}
-	if got := accepted.Expected.Subjects[0].Fields[0]; got.ValueSubject != "subject/value" || got.ValueField != "entity/StockItem/field/onHand" {
+	if got := accepted.Expected.Subjects[0].Fields[0]; got.Expression == nil ||
+		!reflect.DeepEqual(got.Expression.Bindings, []FactExpressionBinding{{Node: change.Value.ID, Subject: "subject/value/stock"}}) ||
+		got.Expression.Tree.Field != "entity/StockItem/field/onHand" {
 		t.Fatalf("accepted relation value expectation = %#v", got)
 	}
-	unavailable := acceptanceFactByID(t, facts, factID(surface, "changes", "value-unavailable", "from", "Pending"))
+	unavailable := acceptanceFactByID(t, facts, factID(surface, "changes", "value-unavailable", "via", "stock", "from", "Pending"))
 	if unavailable.Kind != "action-changes-value-unavailable" || unavailable.Expected.Reason != "value-unavailable" ||
 		!reflect.DeepEqual(unavailable.Expected.Feedback, []string{"failure"}) || unavailable.Setup == nil ||
 		len(unavailable.Setup.Relations) != 1 || unavailable.Setup.Relations[0].Condition != "value-unavailable" ||
@@ -388,7 +654,7 @@ func TestChangesRelationValueBuildsResolvedIRFactsAndUnavailableOutcome(t *testi
 		t.Fatalf("value unavailable Fact = %#v", unavailable)
 	}
 	facts.Facts = slices.DeleteFunc(facts.Facts, func(fact AcceptanceFact) bool {
-		return fact.ID == factID(domain, "changes", "value-unavailable", "from", "Pending")
+		return fact.ID == factID(domain, "changes", "value-unavailable", "via", "stock", "from", "Pending")
 	})
 	if err := ValidateAcceptanceFacts(result.Intent, facts); err == nil || !strings.Contains(err.Error(), "missing compiler-derived fact") {
 		t.Fatalf("missing value-unavailable Fact error = %v", err)
@@ -409,7 +675,8 @@ func TestChangesRelationValueSharesTheTargetSubject(t *testing.T) {
 	domain := SemanticID("action/InventorySnapshot/capture")
 	accepted := acceptanceFactByID(t, facts, factID(domain, "changes", "accepted", "from", "Pending"))
 	if len(accepted.Setup.Subjects) != 2 || len(accepted.Setup.Relations) != 1 ||
-		accepted.Expected.Subjects[1].Fields[0].ValueSubject != "subject/target" {
+		accepted.Expected.Subjects[1].Fields[0].Expression == nil ||
+		accepted.Expected.Subjects[1].Fields[0].Expression.Bindings[0].Subject != "subject/target" {
 		t.Fatalf("shared target/value Fact = %#v", accepted)
 	}
 	targetUnavailable := acceptanceFactByID(t, facts, factID(domain, "changes", "target-unavailable", "from", "Pending"))
@@ -442,10 +709,11 @@ func TestChangesRelationValueKeepsDistinctTargetAndValueSubjects(t *testing.T) {
 	accepted := acceptanceFactByID(t, facts, factID(domain, "changes", "accepted", "from", "Pending"))
 	if accepted.Setup == nil || len(accepted.Setup.Subjects) != 3 || len(accepted.Setup.Relations) != 2 ||
 		accepted.Expected.Subjects[1].Handle != "subject/target" ||
-		accepted.Expected.Subjects[1].Fields[0].ValueSubject != "subject/value" {
+		accepted.Expected.Subjects[1].Fields[0].Expression == nil ||
+		accepted.Expected.Subjects[1].Fields[0].Expression.Bindings[0].Subject != "subject/value/source" {
 		t.Fatalf("distinct target/value Fact = %#v", accepted)
 	}
-	valueUnavailable := acceptanceFactByID(t, facts, factID(domain, "changes", "value-unavailable", "from", "Pending"))
+	valueUnavailable := acceptanceFactByID(t, facts, factID(domain, "changes", "value-unavailable", "via", "source", "from", "Pending"))
 	relationConditions := map[SemanticID]string{}
 	if valueUnavailable.Setup != nil {
 		for _, relation := range valueUnavailable.Setup.Relations {
@@ -460,8 +728,15 @@ func TestChangesRelationValueKeepsDistinctTargetAndValueSubjects(t *testing.T) {
 		t.Fatalf("distinct value-unavailable Fact = %#v", valueUnavailable)
 	}
 	targetUnavailable := acceptanceFactByID(t, facts, factID(domain, "changes", "target-unavailable", "from", "Pending"))
-	if targetUnavailable.Setup == nil || len(targetUnavailable.Setup.Relations) != 1 ||
-		targetUnavailable.Setup.Relations[0].Condition != "target-unavailable" {
+	targetConditions := map[SemanticID]string{}
+	if targetUnavailable.Setup != nil {
+		for _, relation := range targetUnavailable.Setup.Relations {
+			targetConditions[relation.Field] = relation.Condition
+		}
+	}
+	if targetUnavailable.Setup == nil || len(targetUnavailable.Setup.Relations) != 2 ||
+		targetConditions["entity/Transfer/field/target"] != "target-unavailable" ||
+		targetConditions["entity/Transfer/field/source"] != "resolved" {
 		t.Fatalf("target-unavailable precedence Fact = %#v", targetUnavailable)
 	}
 }
@@ -597,6 +872,15 @@ func compileChangesFixture(t *testing.T) Result {
 	return result
 }
 
+func compileNumericAdditionFixture(t *testing.T) Result {
+	t.Helper()
+	result := Compile([]SourceFile{NewSourceFile("numeric-addition.forma", numericAdditionAcceptanceSource)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	return result
+}
+
 func actionByID(t *testing.T, intent *ResolvedIntent, id SemanticID) IRAction {
 	t.Helper()
 	for _, action := range intent.Actions {
@@ -636,6 +920,44 @@ func irFieldPointerByID(t *testing.T, intent *ResolvedIntent, id SemanticID) *IR
 	t.Fatalf("missing field %s", id)
 	return nil
 }
+
+const numericAdditionAcceptanceSource = `role staff
+
+type Quantity = Int min 0
+
+entity ReservationPlan {
+    name             String required label
+    approvedReserved Quantity required
+}
+
+entity StockItem {
+    code     String required label
+    onHand   Quantity required
+    reserved Quantity required
+    invariant stockAvailable: reserved <= onHand
+}
+
+entity StockReservation {
+    stock             StockItem required
+    plan              ReservationPlan required
+    requestedReserved Quantity required
+    state status Pending | Committed initial Pending
+}
+
+action StockReservation.commit: Pending -> Committed confirm allow staff {
+    changes {
+        stock.reserved = stock.reserved + plan.approvedReserved
+    }
+}
+
+page Reservations {
+    allow staff
+    list StockReservation {
+        columns stock, plan, requestedReserved, status
+        actions commit
+    }
+}
+`
 
 const changesAcceptanceSource = `role admin
 role staff

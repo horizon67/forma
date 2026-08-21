@@ -105,7 +105,7 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 			}
 		}
 		if fact.Input != nil && fact.Input.Action != nil {
-			if err := validateActionFactHandles(fact); err != nil {
+			if err := validateActionFactHandles(intent, fact); err != nil {
 				return err
 			}
 		}
@@ -183,7 +183,7 @@ func isActionContractFact(fact AcceptanceFact) bool {
 	return fact.Kind == "action-observable-feedback" || fact.Input != nil && fact.Input.Action != nil
 }
 
-func validateActionFactHandles(fact AcceptanceFact) error {
+func validateActionFactHandles(intent *ResolvedIntent, fact AcceptanceFact) error {
 	if err := validateFactSetupHandles(fact.Setup); err != nil {
 		return fmt.Errorf("validate action Fact %s: %w", fact.ID, err)
 	}
@@ -196,9 +196,56 @@ func validateActionFactHandles(fact AcceptanceFact) error {
 			return fmt.Errorf("validate action Fact %s: expected subject handle %q is not established", fact.ID, subject.Handle)
 		}
 		for _, field := range subject.Fields {
-			if field.Stored != "value-source" || !setupHasSubject(fact.Setup, field.ValueSubject) || field.ValueField == "" {
+			if err := validateFactExpressionExpectation(intent, fact, field); err != nil {
 				return fmt.Errorf("validate action Fact %s: field expectation for %s is not closed", fact.ID, field.Field)
 			}
+		}
+	}
+	return nil
+}
+
+func validateFactExpressionExpectation(intent *ResolvedIntent, fact AcceptanceFact, field FactFieldExpectation) error {
+	if field.Stored != "expression-result" || field.Expression == nil || field.Expression.Evaluation != "pre-state" {
+		return fmt.Errorf("missing expression-result contract")
+	}
+	var resolvedExpression *IRExpression
+	for _, action := range intent.Actions {
+		if action.ID != fact.Input.Action.Action {
+			continue
+		}
+		for _, change := range action.Changes {
+			if change.Target.Field == field.Field {
+				resolvedExpression = &change.Value
+				break
+			}
+		}
+	}
+	if resolvedExpression == nil || !reflect.DeepEqual(field.Expression.Tree, *resolvedExpression) {
+		return fmt.Errorf("expression tree differs from Resolved Intent")
+	}
+	leaves := expressionFieldReferenceNodes(field.Expression.Tree)
+	if len(leaves) == 0 || len(leaves) != len(field.Expression.Bindings) {
+		return fmt.Errorf("expression leaf bindings are incomplete")
+	}
+	for index, leaf := range leaves {
+		binding := field.Expression.Bindings[index]
+		if binding.Node != leaf.ID || !setupHasSubject(fact.Setup, binding.Subject) {
+			return fmt.Errorf("expression leaf %s has a non-canonical subject binding", leaf.ID)
+		}
+		wantSubject := "subject/action"
+		if len(leaf.RelationPath) == 1 {
+			wantSubject = ""
+			if fact.Setup != nil {
+				for _, relation := range fact.Setup.Relations {
+					if relation.Field == leaf.RelationPath[0] && relation.Condition == "resolved" {
+						wantSubject = relation.Target
+						break
+					}
+				}
+			}
+		}
+		if binding.Subject != wantSubject || wantSubject == "" {
+			return fmt.Errorf("expression leaf %s does not follow its runtime relation binding", leaf.ID)
 		}
 	}
 	return nil
@@ -872,7 +919,14 @@ func validateFactNonSelfFulfillment(fact AcceptanceFact) error {
 
 func validSubjectHandle(handle string) bool {
 	parts := strings.Split(handle, "/")
-	return len(parts) == 2 && parts[0] == "subject" && parts[1] != "" && !strings.ContainsAny(parts[1], "@:. ")
+	if len(parts) == 2 {
+		return parts[0] == "subject" && validSubjectHandlePart(parts[1])
+	}
+	return len(parts) == 3 && parts[0] == "subject" && parts[1] == "value" && validSubjectHandlePart(parts[2])
+}
+
+func validSubjectHandlePart(part string) bool {
+	return part != "" && !strings.ContainsAny(part, "@:. ")
 }
 
 func setupHasSubject(setup *FactSetup, handle string) bool {

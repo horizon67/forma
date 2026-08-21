@@ -1,6 +1,6 @@
 {
-  "version": "forma/review-requirements/v0alpha4",
-  "intentVersion": "forma/resolved-intent/v0.10",
+  "version": "forma/review-requirements/v0alpha5",
+  "intentVersion": "forma/resolved-intent/v0.11",
   "requirements": [
     {
       "id": "review/identity/UserAccount/fixture-fidelity",

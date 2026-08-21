@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha8"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha9"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -225,10 +225,20 @@ type FactSubjectExpectation struct {
 }
 
 type FactFieldExpectation struct {
-	Field        SemanticID `json:"field"`
-	Stored       string     `json:"stored"`
-	ValueSubject string     `json:"valueSubject,omitempty"`
-	ValueField   SemanticID `json:"valueField,omitempty"`
+	Field      SemanticID                 `json:"field"`
+	Stored     string                     `json:"stored"`
+	Expression *FactExpressionExpectation `json:"expression,omitempty"`
+}
+
+type FactExpressionExpectation struct {
+	Tree       IRExpression            `json:"tree"`
+	Evaluation string                  `json:"evaluation"`
+	Bindings   []FactExpressionBinding `json:"bindings"`
+}
+
+type FactExpressionBinding struct {
+	Node    SemanticID `json:"node"`
+	Subject string     `json:"subject"`
 }
 
 type FactCredentialExpectation struct {
@@ -463,6 +473,32 @@ func cloneIRExpression(expression IRExpression) IRExpression {
 	if expression.Right != nil {
 		right := cloneIRExpression(*expression.Right)
 		result.Right = &right
+	}
+	return result
+}
+
+func expressionSemanticIDs(expression IRExpression) []SemanticID {
+	result := []SemanticID{expression.ID, expression.Field}
+	result = append(result, expression.RelationPath...)
+	if expression.Left != nil {
+		result = append(result, expressionSemanticIDs(*expression.Left)...)
+	}
+	if expression.Right != nil {
+		result = append(result, expressionSemanticIDs(*expression.Right)...)
+	}
+	return canonicalSemanticIDs(result)
+}
+
+func expressionFieldReferenceNodes(expression IRExpression) []IRExpression {
+	if expression.Kind == "field-reference" {
+		return []IRExpression{expression}
+	}
+	var result []IRExpression
+	if expression.Left != nil {
+		result = append(result, expressionFieldReferenceNodes(*expression.Left)...)
+	}
+	if expression.Right != nil {
+		result = append(result, expressionFieldReferenceNodes(*expression.Right)...)
 	}
 	return result
 }

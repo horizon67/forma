@@ -26,7 +26,7 @@ func TestResolveCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &intent); err != nil {
 		t.Fatalf("resolve output is not JSON: %v\n%s", err, stdout.String())
 	}
-	if intent.Version != "forma/resolved-intent/v0.10" || len(intent.Pages) == 0 {
+	if intent.Version != "forma/resolved-intent/v0.11" || len(intent.Pages) == 0 {
 		t.Fatalf("resolved intent = %#v", intent)
 	}
 }

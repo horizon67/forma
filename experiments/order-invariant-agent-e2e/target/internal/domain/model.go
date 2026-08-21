@@ -7,16 +7,17 @@ import (
 )
 
 var (
-	ErrDenied             = errors.New("access denied")
-	ErrNotFound           = errors.New("record not found")
-	ErrUnavailable        = errors.New("repository unavailable")
-	ErrInvalid            = errors.New("invalid input")
-	ErrConflict           = errors.New("unique value already exists")
-	ErrInvalidTransition  = errors.New("invalid state transition")
-	ErrConfirmationNeeded = errors.New("confirmation required")
-	ErrInvariant          = errors.New("stock availability invariant violated")
-	ErrTargetUnavailable  = errors.New("change target unavailable")
-	ErrValueUnavailable   = errors.New("change value unavailable")
+	ErrDenied                = errors.New("access denied")
+	ErrNotFound              = errors.New("record not found")
+	ErrUnavailable           = errors.New("repository unavailable")
+	ErrInvalid               = errors.New("invalid input")
+	ErrConflict              = errors.New("unique value already exists")
+	ErrInvalidTransition     = errors.New("invalid state transition")
+	ErrConfirmationNeeded    = errors.New("confirmation required")
+	ErrInvariant             = errors.New("stock availability invariant violated")
+	ErrTargetUnavailable     = errors.New("change target unavailable")
+	ErrValueUnavailable      = errors.New("change value unavailable")
+	ErrNumericRepresentation = errors.New("exact numeric result is not representable")
 )
 
 type Role string

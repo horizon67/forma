@@ -271,15 +271,16 @@ state elementはexactなsemantic ID関係だけでnavigation edgeへ結び、対
 図は編集可能なapplication semanticsではなく、layoutを推測しません。
 `forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
 feedbackの検査結果を出力します。メール認証付きsignup/signinの
-Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v0.8`、Source Map `v0.5`、81 Acceptance Facts、
+Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v0.11`、Source Map `v0.6`、85 Acceptance Facts、
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
-完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで81/81へ戻し、
+完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで85/85へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
-top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、最初の
-self-only InvariantをAcceptance Facts、Generation Request差分、通常のGo applicationによる172/172の
-repository E2Eまで接続しました。concurrency Review Requirementは人間確認待ちのまま、次のbounded Changesと
-atomic post-stateはcompiler実装前の設計review待ちまで進みました。その境界を実測してからOccurrence → Effectへ進みます。
+top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、self-only Invariant、
+bounded Changes、required relation value、field reference 2個のexact binary `+`をAcceptance Facts、Generation Request、
+通常のGo applicationによる278/278 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
+保持し、integer overflowは部分commitなしの`failure`になります。5 Review Requirementsは人間確認待ちで、次は
+Action Preconditionの最小sliceからfull Order approvalへ進み、その後Occurrence → Effectを扱います。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料

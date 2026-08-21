@@ -319,7 +319,7 @@ explicit index. The diagram is not editable application meaning and does not
 infer layout. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
-through Stage D: current artifacts use Resolved Intent v0.10, Source Map v0.6, 85 Acceptance Facts,
+through Stage D: current artifacts use Resolved Intent v0.11, Source Map v0.6, 85 Acceptance Facts,
 and three Review Requirements are verified in the existing admin target. The
 first bounded P2 automated-repair probe is also complete. Separate fresh agent
 processes repaired a controlled test failure and build failure in one attempt
@@ -330,9 +330,9 @@ human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
 members on their source pages. P3 is now in progress: self-only Invariant, the
 first bounded Changes/atomic-post-state slice, and one required to-one relation
-value on a Changes RHS reach the Parser, Resolved Intent, Acceptance Facts,
+value and one exact binary numeric addition on a Changes RHS reach the Parser, Resolved Intent, Acceptance Facts,
 Generation Request, and a 278/278 repository E2E in an ordinary Go application.
-Arithmetic and collections remain later slices. Four human Review Requirements
+The addition slice carries the full expression tree and runtime-bound operands into Facts, rejects unsupported type bounds and named-type chains, and detects repository integer overflow without partial commit. Five human Review Requirements
 remain pending; Occurrence and Effect follow only after the full Order approval boundary is
 fixed. Projection readability
 evaluation runs independently.
@@ -348,6 +348,7 @@ evaluation runs independently.
 - [Current language direction](docs/current-language-direction.md)
 - [Changes and atomic post-state proposal](docs/changes-proposal.md)
 - [Relation value expression in Changes proposal](docs/relation-value-expression-proposal.md)
+- [Numeric addition in Changes proposal](docs/numeric-addition-expression-proposal.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)

@@ -182,44 +182,79 @@ func (b *acceptanceBuilder) addChangeFacts(action IRAction, ref *IRActionRef) er
 	if err != nil {
 		return err
 	}
-	valueEntity, valueField, valueRelationField, err := b.resolveChangeValue(entity, change)
+	value, err := b.resolveChangeValueExpression(entity, change.Value)
 	if err != nil {
 		return err
 	}
 	for _, source := range action.Sources {
-		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, valueEntity, valueField, valueRelationField, action, change, ref, source))
+		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, value, action, change, ref, source))
 		for _, invariant := range targetEntity.Invariants {
 			if !containsSemanticID(invariantFieldReferences(invariant), targetField.ID) {
 				continue
 			}
-			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, invariant, ref, source))
+			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, value, action, change, invariant, ref, source))
 		}
 		if relationField != nil {
-			b.add(changeTargetUnavailableFact(entity, targetEntity, *relationField, valueEntity, valueRelationField, action, change, ref, source))
+			b.add(changeTargetUnavailableFact(entity, targetEntity, *relationField, value, action, change, ref, source))
 		}
-		if valueRelationField != nil && (relationField == nil || valueRelationField.ID != relationField.ID) {
-			b.add(changeValueUnavailableFact(entity, targetEntity, relationField, valueEntity, *valueRelationField, action, change, ref, source))
+		for _, relation := range distinctChangeValueRelations(value.leaves, relationField) {
+			b.add(changeValueUnavailableFact(entity, targetEntity, relationField, value, relation, action, change, ref, source))
 		}
 	}
 	return nil
 }
 
-func (b *acceptanceBuilder) resolveChangeValue(entity IREntity, change IRActionChange) (IREntity, IRField, *IRField, error) {
-	valueEntity := entity
-	var relationField *IRField
-	if len(change.Value.RelationPath) == 1 {
-		field, ok := findIRFieldByID(entity, change.Value.RelationPath[0])
-		if !ok || field.Relation == nil {
-			return IREntity{}, IRField{}, nil, fmt.Errorf("build Acceptance Facts: change %s has invalid relation value", change.ID)
+type resolvedChangeValue struct {
+	expression IRExpression
+	leaves     []changeValueLeaf
+}
+
+type changeValueLeaf struct {
+	expression IRExpression
+	entity     IREntity
+	field      IRField
+	relation   *IRField
+}
+
+func (b *acceptanceBuilder) resolveChangeValueExpression(entity IREntity, expression IRExpression) (resolvedChangeValue, error) {
+	result := resolvedChangeValue{expression: cloneIRExpression(expression)}
+	for _, node := range expressionFieldReferenceNodes(expression) {
+		valueEntity := entity
+		var relationField *IRField
+		if len(node.RelationPath) == 1 {
+			field, ok := findIRFieldByID(entity, node.RelationPath[0])
+			if !ok || field.Relation == nil {
+				return resolvedChangeValue{}, fmt.Errorf("build Acceptance Facts: change value %s has invalid relation value", node.ID)
+			}
+			relationField = &field
+			valueEntity = b.entities[field.Relation.Entity]
 		}
-		relationField = &field
-		valueEntity = b.entities[field.Relation.Entity]
+		valueField, ok := findIRFieldByID(valueEntity, node.Field)
+		if !ok {
+			return resolvedChangeValue{}, fmt.Errorf("build Acceptance Facts: change value %s has missing value field", node.ID)
+		}
+		result.leaves = append(result.leaves, changeValueLeaf{expression: node, entity: valueEntity, field: valueField, relation: relationField})
 	}
-	valueField, ok := findIRFieldByID(valueEntity, change.Value.Field)
-	if !ok {
-		return IREntity{}, IRField{}, nil, fmt.Errorf("build Acceptance Facts: change %s has missing value field", change.ID)
+	if len(result.leaves) == 0 {
+		return resolvedChangeValue{}, fmt.Errorf("build Acceptance Facts: change value %s has no field references", expression.ID)
 	}
-	return valueEntity, valueField, relationField, nil
+	return result, nil
+}
+
+func distinctChangeValueRelations(leaves []changeValueLeaf, targetRelation *IRField) []changeValueLeaf {
+	byID := map[SemanticID]changeValueLeaf{}
+	for _, leaf := range leaves {
+		if leaf.relation == nil || targetRelation != nil && leaf.relation.ID == targetRelation.ID {
+			continue
+		}
+		byID[leaf.relation.ID] = leaf
+	}
+	result := make([]changeValueLeaf, 0, len(byID))
+	for _, leaf := range byID {
+		result = append(result, leaf)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].relation.ID < result[j].relation.ID })
+	return result
 }
 
 func (b *acceptanceBuilder) resolveChangeTarget(entity IREntity, change IRActionChange) (IREntity, IRField, *IRField, error) {
@@ -244,21 +279,19 @@ func changeAcceptedFact(
 	entity, targetEntity IREntity,
 	targetField IRField,
 	relationField *IRField,
-	valueEntity IREntity,
-	valueField IRField,
-	valueRelationField *IRField,
+	value resolvedChangeValue,
 	action IRAction,
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, ref, source)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "")
 	return AcceptanceFact{
 		ID: factID(subject, "changes", "accepted", "from", source), Kind: kind + "accepted", Subject: subject,
 		Setup: input.setup, Input: &FactInput{Action: input.action, Invariants: invariantInputs(targetEntity, input.targetHandle, "")},
 		Expected: FactExpectation{
 			Outcome: "accepted", Atomicity: "all-changes-committed", AppliedMutations: 2,
-			Enforcement: "authoritative", Subjects: changeCommittedSubjects(entity, targetField, valueField, action, input.targetHandle, input.valueHandle),
+			Enforcement: "authoritative", Subjects: changeCommittedSubjects(entity, targetField, value, action, input.targetHandle, input.bindings),
 		},
 		SourceNodes: append(sources, invariantSources(targetEntity)...),
 	}
@@ -267,15 +300,14 @@ func changeAcceptedFact(
 func changeInvariantRejectedFact(
 	entity, targetEntity IREntity,
 	relationField *IRField,
-	valueEntity IREntity,
-	valueRelationField *IRField,
+	value resolvedChangeValue,
 	action IRAction,
 	change IRActionChange,
 	violated IRInvariant,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, ref, source)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "")
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"invalid"}
@@ -296,98 +328,54 @@ func changeInvariantRejectedFact(
 func changeValueUnavailableFact(
 	entity, targetEntity IREntity,
 	targetRelation *IRField,
-	valueEntity IREntity,
-	valueRelation IRField,
+	value resolvedChangeValue,
+	unavailable changeValueLeaf,
 	action IRAction,
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject := action.ID
-	kind := "changes-value-unavailable"
-	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
-	sources := []SemanticID{
-		entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field,
-		change.Value.ID, change.Value.Field, valueRelation.ID, valueEntity.ID,
-	}
-	setup := &FactSetup{Subjects: []FactSubjectSetup{{
-		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source},
-	}}}
-	targetHandle := "subject/action"
-	if targetRelation != nil {
-		targetHandle = "subject/target"
-		setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: targetHandle, Identity: targetEntity.ID})
-		setup.Relations = append(setup.Relations, FactRelationSetup{
-			Source: "subject/action", Field: targetRelation.ID, Target: targetHandle, Condition: "resolved",
-		})
-		sources = append(sources, targetRelation.ID, targetEntity.ID)
-	}
-	setup.Relations = append(setup.Relations, FactRelationSetup{
-		Source: "subject/action", Field: valueRelation.ID, Condition: "value-unavailable",
-	})
-	if ref != nil {
-		subject = ref.ID
-		kind = "action-changes-value-unavailable"
-		actionInput.Reference = ref.ID
-		sources = append(sources, ref.ID)
-	}
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, targetRelation, value, action, change, ref, source, unavailable.relation.ID)
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"failure"}
 	}
 	return AcceptanceFact{
-		ID: factID(subject, "changes", "value-unavailable", "from", source), Kind: kind, Subject: subject,
-		Setup: setup, Input: &FactInput{Action: actionInput},
+		ID: factID(subject, "changes", "value-unavailable", "via", unavailable.relation.Name, "from", source), Kind: kind + "value-unavailable", Subject: subject,
+		Setup: input.setup, Input: &FactInput{Action: input.action},
 		Expected: FactExpectation{
 			Outcome: "rejected", Reason: "value-unavailable", Feedback: feedback,
 			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
-			Subjects: unchangedChangeSubjects(entity, action, source, targetHandle),
+			Subjects: unchangedChangeSubjects(entity, action, source, input.targetHandle),
 		},
-		SourceNodes: canonicalSemanticIDs(sources),
+		SourceNodes: sources,
 	}
 }
 
 func changeTargetUnavailableFact(
 	entity, targetEntity IREntity,
 	relation IRField,
-	valueEntity IREntity,
-	valueRelation *IRField,
+	value resolvedChangeValue,
 	action IRAction,
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject := action.ID
-	kind := "changes-target-unavailable"
-	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
-	sources := []SemanticID{
-		entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field,
-		change.Value.ID, change.Value.Field, relation.ID, targetEntity.ID, valueEntity.ID,
-	}
-	if valueRelation != nil {
-		sources = append(sources, valueRelation.ID)
-	}
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, &relation, value, action, change, ref, source, relation.ID)
 	var feedback []string
 	if ref != nil {
-		subject = ref.ID
-		kind = "action-changes-target-unavailable"
-		actionInput.Reference = ref.ID
-		sources = append(sources, ref.ID)
 		feedback = []string{"failure"}
 	}
 	return AcceptanceFact{
-		ID: factID(subject, "changes", "target-unavailable", "from", source), Kind: kind, Subject: subject,
-		Setup: &FactSetup{
-			Subjects:  []FactSubjectSetup{{Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source}}},
-			Relations: []FactRelationSetup{{Source: "subject/action", Field: relation.ID, Condition: "target-unavailable"}},
-		},
-		Input: &FactInput{Action: actionInput},
+		ID: factID(subject, "changes", "target-unavailable", "from", source), Kind: kind + "target-unavailable", Subject: subject,
+		Setup: input.setup,
+		Input: &FactInput{Action: input.action},
 		Expected: FactExpectation{
 			Outcome: "rejected", Reason: "target-unavailable", Feedback: feedback,
 			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
 			Subjects: []FactSubjectExpectation{{Handle: "subject/action", State: &IRStateValueRef{State: entity.State.ID, Value: source}, Unchanged: true}},
 		},
-		SourceNodes: canonicalSemanticIDs(sources),
+		SourceNodes: sources,
 	}
 }
 
@@ -395,43 +383,64 @@ type changeFactInput struct {
 	setup        *FactSetup
 	action       *FactActionInput
 	targetHandle string
-	valueHandle  string
+	bindings     []FactExpressionBinding
 }
 
 func changeFactBase(
 	entity, targetEntity IREntity,
 	targetRelation *IRField,
-	valueEntity IREntity,
-	valueRelation *IRField,
+	value resolvedChangeValue,
 	action IRAction,
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
+	unavailableRelation SemanticID,
 ) (SemanticID, string, changeFactInput, []SemanticID) {
 	subject := action.ID
 	kind := "changes-"
 	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
-	sources := []SemanticID{entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Value.ID, change.Value.Field, change.Target.Field}
+	sources := []SemanticID{entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field}
+	sources = append(sources, expressionSemanticIDs(value.expression)...)
 	setup := &FactSetup{Subjects: []FactSubjectSetup{{
 		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source},
 	}}}
 	targetHandle := "subject/action"
 	if targetRelation != nil {
 		targetHandle = "subject/target"
-		setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: "subject/target", Identity: targetEntity.ID})
-		setup.Relations = append(setup.Relations, FactRelationSetup{Source: "subject/action", Field: targetRelation.ID, Target: "subject/target", Condition: "resolved"})
+		relationSetup := FactRelationSetup{Source: "subject/action", Field: targetRelation.ID, Target: "subject/target", Condition: "resolved"}
+		if unavailableRelation == targetRelation.ID {
+			relationSetup.Target = ""
+			relationSetup.Condition = "target-unavailable"
+		} else {
+			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: "subject/target", Identity: targetEntity.ID})
+		}
+		setup.Relations = append(setup.Relations, relationSetup)
 		sources = append(sources, targetRelation.ID, targetEntity.ID)
 	}
-	valueHandle := "subject/action"
-	if valueRelation != nil {
-		if targetRelation != nil && valueRelation.ID == targetRelation.ID {
-			valueHandle = targetHandle
+	for _, relation := range distinctChangeValueRelations(value.leaves, targetRelation) {
+		handle := "subject/value/" + relation.relation.Name
+		relationSetup := FactRelationSetup{Source: "subject/action", Field: relation.relation.ID, Target: handle, Condition: "resolved"}
+		if unavailableRelation == relation.relation.ID {
+			relationSetup.Target = ""
+			relationSetup.Condition = "value-unavailable"
 		} else {
-			valueHandle = "subject/value"
-			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: valueHandle, Identity: valueEntity.ID})
-			setup.Relations = append(setup.Relations, FactRelationSetup{Source: "subject/action", Field: valueRelation.ID, Target: valueHandle, Condition: "resolved"})
+			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: handle, Identity: relation.entity.ID})
 		}
-		sources = append(sources, valueRelation.ID, valueEntity.ID)
+		setup.Relations = append(setup.Relations, relationSetup)
+		sources = append(sources, relation.relation.ID, relation.entity.ID)
+	}
+	bindings := make([]FactExpressionBinding, 0, len(value.leaves))
+	for _, leaf := range value.leaves {
+		handle := "subject/action"
+		if leaf.relation != nil {
+			if targetRelation != nil && leaf.relation.ID == targetRelation.ID {
+				handle = targetHandle
+			} else {
+				handle = "subject/value/" + leaf.relation.Name
+			}
+		}
+		bindings = append(bindings, FactExpressionBinding{Node: leaf.expression.ID, Subject: handle})
+		sources = append(sources, leaf.entity.ID)
 	}
 	if ref != nil {
 		subject = ref.ID
@@ -439,15 +448,24 @@ func changeFactBase(
 		actionInput.Reference = ref.ID
 		sources = append(sources, ref.ID)
 	}
-	return subject, kind, changeFactInput{setup: setup, action: actionInput, targetHandle: targetHandle, valueHandle: valueHandle}, canonicalSemanticIDs(sources)
+	sort.Slice(setup.Subjects, func(i, j int) bool { return setup.Subjects[i].Handle < setup.Subjects[j].Handle })
+	sort.Slice(setup.Relations, func(i, j int) bool {
+		if setup.Relations[i].Source != setup.Relations[j].Source {
+			return setup.Relations[i].Source < setup.Relations[j].Source
+		}
+		return setup.Relations[i].Field < setup.Relations[j].Field
+	})
+	return subject, kind, changeFactInput{setup: setup, action: actionInput, targetHandle: targetHandle, bindings: bindings}, canonicalSemanticIDs(sources)
 }
 
-func changeCommittedSubjects(entity IREntity, targetField, valueField IRField, action IRAction, targetHandle, valueHandle string) []FactSubjectExpectation {
+func changeCommittedSubjects(entity IREntity, targetField IRField, value resolvedChangeValue, action IRAction, targetHandle string, bindings []FactExpressionBinding) []FactSubjectExpectation {
 	subject := FactSubjectExpectation{
 		Handle: "subject/action", State: &IRStateValueRef{State: entity.State.ID, Value: action.Destination},
 	}
 	field := FactFieldExpectation{
-		Field: targetField.ID, Stored: "value-source", ValueSubject: valueHandle, ValueField: valueField.ID,
+		Field: targetField.ID, Stored: "expression-result", Expression: &FactExpressionExpectation{
+			Tree: cloneIRExpression(value.expression), Evaluation: "pre-state", Bindings: append([]FactExpressionBinding(nil), bindings...),
+		},
 	}
 	if targetHandle == "subject/action" {
 		subject.Fields = []FactFieldExpectation{field}

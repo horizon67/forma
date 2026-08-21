@@ -1,6 +1,9 @@
 package compiler
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 func (c *checker) checkActionChanges(action *ActionDecl, entity *EntityDecl) {
 	if !action.HasBody {
@@ -20,23 +23,93 @@ func (c *checker) checkActionChanges(action *ActionDecl, entity *EntityDecl) {
 	if !ok {
 		return
 	}
-	valueEntity, valueRelations, valueField, ok := c.resolveChangeValue(entity, assignment.Value)
+	valueType, ok := c.resolveChangeValueExpression(entity, assignment.Value)
 	if !ok {
 		return
 	}
-	if targetField.Type.Name.Text != valueField.Type.Name.Text {
-		c.error(assignment.Span, "F2806", fmt.Sprintf("change assigns `%s` to `%s`", valueField.Type.Name.Text, targetField.Type.Name.Text), "assign a required self field with the same nominal scalar type as the target")
+	if targetField.Type.Name.Text != valueType.Name {
+		c.error(assignment.Span, "F2806", fmt.Sprintf("change assigns `%s` to `%s`", valueType.Name, targetField.Type.Name.Text), "assign an expression with the same nominal scalar type as the target")
 		return
+	}
+	if assignment.Value.Binary != nil {
+		if hasFieldModifier(targetField, "unique") {
+			c.error(targetField.Name.Span, "F2809", fmt.Sprintf("numeric change target `%s.%s` is unique", targetEntity.Name.Text, targetField.Name.Text), "use a non-unique numeric target; unique result collisions are outside the first addition slice")
+			return
+		}
+		if !c.additionTypeIsClosed(targetField.Type.Name.Text, assignment.Value.Span) {
+			return
+		}
 	}
 	c.resolvedChanges[assignment] = resolvedChange{
 		ActionEntity:       entity,
 		TargetEntity:       targetEntity,
 		TargetRelationPath: relations,
 		TargetField:        targetField,
-		ValueEntity:        valueEntity,
-		ValueRelationPath:  valueRelations,
-		ValueField:         valueField,
 	}
+}
+
+func (c *checker) resolveChangeValueExpression(entity *EntityDecl, expression *Expression) (resolvedExpressionType, bool) {
+	if expression == nil {
+		return resolvedExpressionType{}, false
+	}
+	if expression.Kind == "field" {
+		_, _, field, ok := c.resolveChangeValue(entity, expression)
+		if !ok {
+			return resolvedExpressionType{}, false
+		}
+		resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
+		return resolvedExpressionType{Name: field.Type.Name.Text, Kind: resolved.Kind, Base: resolved.Base, Valid: true}, true
+	}
+	if expression.Kind != "binary" || expression.Binary == nil || expression.Binary.Operator != "add" ||
+		expression.Binary.Left == nil || expression.Binary.Left.Kind != "field" ||
+		expression.Binary.Right == nil || expression.Binary.Right.Kind != "field" {
+		c.error(expression.Span, "F2807", "change value is outside the first numeric expression slice", "use one required field reference or exactly two required field references joined by one `+`")
+		return resolvedExpressionType{}, false
+	}
+	left, leftOK := c.resolveChangeValueExpression(entity, expression.Binary.Left)
+	right, rightOK := c.resolveChangeValueExpression(entity, expression.Binary.Right)
+	if !leftOK || !rightOK {
+		return resolvedExpressionType{}, false
+	}
+	if left.Name != right.Name || left.Kind != "scalar" || right.Kind != "scalar" ||
+		(left.Base != "Int" && left.Base != "Decimal") || right.Base != left.Base {
+		c.error(expression.Span, "F2808", fmt.Sprintf("operator `+` cannot add `%s` and `%s`", left.Name, right.Name), "add required fields with the same nominal Int- or Decimal-based type")
+		return resolvedExpressionType{}, false
+	}
+	c.expressionTypes[expression] = left.Name
+	return left, true
+}
+
+func (c *checker) additionTypeIsClosed(name string, span Span) bool {
+	if name == "Int" || name == "Decimal" {
+		return true
+	}
+	decl := c.types[name]
+	if decl == nil || decl.Base == nil || (decl.Base.Text != "Int" && decl.Base.Text != "Decimal") {
+		c.error(span, "F2809", fmt.Sprintf("numeric type `%s` does not directly declare an Int or Decimal base", name), "use a builtin numeric type or a named type declared directly from `Int` or `Decimal`")
+		return false
+	}
+	var minValue, maxValue *big.Rat
+	for _, mod := range decl.Mods {
+		if mod.Kind != "min" && mod.Kind != "max" {
+			continue
+		}
+		value, ok := new(big.Rat).SetString(mod.Value)
+		if !ok {
+			return false
+		}
+		if mod.Kind == "min" {
+			minValue = value
+		} else {
+			maxValue = value
+		}
+	}
+	zero := new(big.Rat)
+	if (minValue != nil && minValue.Cmp(zero) < 0) || (maxValue != nil && maxValue.Cmp(zero) > 0) {
+		c.error(span, "F2809", fmt.Sprintf("numeric type `%s` is not closed under addition", name), "use an unbounded type, a non-negative lower-bounded type without a positive maximum, or a non-positive upper-bounded type without a negative minimum")
+		return false
+	}
+	return true
 }
 
 func (c *checker) resolveChangeTarget(actionEntity *EntityDecl, assignment *ChangeAssignmentDecl) (*EntityDecl, []*FieldDecl, *FieldDecl, bool) {

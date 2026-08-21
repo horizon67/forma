@@ -625,7 +625,7 @@ func (p *parser) parseChangesDecl() *ChangesDecl {
 		}
 		targetExpression := p.parseFieldExpression("as the change target")
 		p.consume(tokenEqual, "`=` after the change target")
-		value := p.parseFieldExpression("as the change value")
+		value := p.parseChangeValueExpression()
 		decl.Assignments = append(decl.Assignments, &ChangeAssignmentDecl{
 			Target: targetExpression.Field,
 			Value:  value,
@@ -637,6 +637,25 @@ func (p *parser) parseChangesDecl() *ChangesDecl {
 	decl.Span = mergeSpan(start, end.Span)
 	p.consumeOptionalNewline()
 	return decl
+}
+
+func (p *parser) parseChangeValueExpression() *Expression {
+	left := p.parseFieldExpression("as the change value")
+	for p.match(tokenPlus) {
+		right := p.parseFieldExpression("after `+` in the change value")
+		span := mergeSpan(left.Span, right.Span)
+		left = &Expression{
+			Kind: "binary",
+			Binary: &BinaryExpression{
+				Operator: "add",
+				Left:     left,
+				Right:    right,
+				Span:     span,
+			},
+			Span: span,
+		}
+	}
+	return left
 }
 
 func (p *parser) parsePageDecl() *PageDecl {

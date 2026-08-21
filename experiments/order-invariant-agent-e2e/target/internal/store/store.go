@@ -31,7 +31,7 @@ type Store struct {
 	replays      map[string]replay
 
 	// afterReservationSnapshotForTest lets a repository test alter the backing
-	// value source after the action has captured its pre-state. Production
+	// operand sources after the action has captured its pre-state. Production
 	// construction leaves it nil.
 	afterReservationSnapshotForTest func()
 }
@@ -324,8 +324,12 @@ func (store *Store) CommitStockReservation(id string, principal domain.Principal
 	if store.afterReservationSnapshotForTest != nil {
 		store.afterReservationSnapshotForTest()
 	}
+	reserved, ok := checkedAddInt(stock.Reserved, plan.ApprovedReserved)
+	if !ok {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrNumericRepresentation
+	}
 	wantStock := stock
-	wantStock.Reserved = plan.ApprovedReserved
+	wantStock.Reserved = reserved
 	if err := domain.ValidateStock(wantStock); err != nil {
 		return domain.StockReservation{}, domain.StockItem{}, err
 	}
@@ -336,6 +340,15 @@ func (store *Store) CommitStockReservation(id string, principal domain.Principal
 	store.reservations[id] = wantReservation
 	store.stockItems[stock.ID] = wantStock
 	return wantReservation, wantStock, nil
+}
+
+func checkedAddInt(left, right int) (int, bool) {
+	maximum := int(^uint(0) >> 1)
+	minimum := -maximum - 1
+	if right > 0 && left > maximum-right || right < 0 && left < minimum-right {
+		return 0, false
+	}
+	return left + right, true
 }
 
 func (store *Store) RemoveStockItem(id string) {

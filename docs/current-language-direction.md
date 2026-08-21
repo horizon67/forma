@@ -78,9 +78,9 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
 必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
 実装し、続いてChangesをaction-attachedな同時代入とatomic post-stateとして実装した。通常のGo applicationを使う
-repository E2Eで278/278 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity write authorization、
-cross-entity value-read authorizationの4 Review Requirementsは人間確認待ちである。Changes右辺のrequired relation valueを
-1 hopだけ読むsliceも[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)どおり実装した。Occurrence以降は未決定である。
+repository E2Eで278/278 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity write/value-read authorization、
+exact numeric enforcementの5 Review Requirementsは人間確認待ちである。Changes右辺のrequired relation value 1 hopと、
+field reference 2個のexact binary `+`も各proposalどおり実装した。Action Precondition以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -116,8 +116,8 @@ semantic graphへ解決されることを意味する。
 - global overviewは編集可能な`flow`正本ではなく、navigation/flow projectionから得る。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
-`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.10`、Source Map `v0.6`、
-Acceptance Facts `v0alpha8`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.11`、Source Map `v0.6`、
+Acceptance Facts `v0alpha9`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -137,10 +137,11 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 1. Expression coreとInvariant（最初のslice完了）
 2. Changesとatomic post-state（最初のslice完了）
 3. Changes RHSのrequired relation value（最初のslice完了）
-4. numeric `+`、Action Precondition、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
-5. Derived Valueを独立したExpression consumerとして検証
-6. Occurrence
-7. Effect binding / delivery contract
+4. numeric `+`（最初のslice完了）
+5. Action Precondition、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
+6. Derived Valueを独立したExpression consumerとして検証
+7. Occurrence
+8. Effect binding / delivery contract
 
 これは一般的な機能階層ではなく、実例を分離して検証する実装順序である。bounded Changesは既存field valueだけで
 atomicityを検査できるため、Derived Valueや算術を先に一般化しない。
@@ -166,6 +167,16 @@ cross-entity valueの利用とdownstream disclosureは`cross-entity-value-read-a
 人間へ提示する。共有`IRExpression`の拡張時にはself-only Invariant validatorも同時更新し、relation-reading Invariantを
 tampered Resolved Intentから持ち込めないようにした。repository E2Eではdistinct target/value relation、relation先とselfの
 異なる値、`value-unavailable`、HTTP feedback、無部分commitを既存`StockReservation.commit`へ統合した。
+
+次の[`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)では、同じactionを
+`stock.reserved = stock.reserved + plan.approvedReserved`へ進める。`+`はfield reference 2個の間の1回だけに限定し、
+同一nominal numeric type、consistent pre-state、target/value relation identity共有を維持する。複数operandを単一
+`valueSubject`へ潰さず、Expression treeと全leafのruntime subject bindingをAcceptance Factsへ運ぶ。Int／Decimalの
+wrap・rounding防止はtarget固有representationを伴うため、machine Factを捏造せず独立Review Requirementでも確認する。
+current compilerはchained named typeのinherited constraintをまだ合成しないため、最初のsliceはbuiltinを直接baseにする
+numeric typeへ限定した。immediate declared baseとclosure判定に使うeffective boundsをIRへ残し、validatorが同じboundsを
+再計算する。Expression treeと全leaf bindingをFactsへ運び、repository E2Eでは2+6=8、同一snapshot、overflow failure、
+無部分commitを実測した。次はAction Preconditionを独立sliceとして扱う。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

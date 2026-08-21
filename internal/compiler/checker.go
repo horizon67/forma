@@ -41,9 +41,6 @@ type resolvedChange struct {
 	TargetEntity       *EntityDecl
 	TargetRelationPath []*FieldDecl
 	TargetField        *FieldDecl
-	ValueEntity        *EntityDecl
-	ValueRelationPath  []*FieldDecl
-	ValueField         *FieldDecl
 }
 
 type checker struct {

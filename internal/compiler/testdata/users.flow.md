@@ -1,8 +1,8 @@
 # Forma flow projection
 
 - Schema: `forma/flow-projection/v0alpha3`
-- Intent: `forma/resolved-intent/v0.10`
-- Inputs: navigation `forma/navigation-projection/v0alpha2`; outcomes `forma/outcome-projection/v0alpha3`; states `forma/domain-state-projection/v0alpha1`
+- Intent: `forma/resolved-intent/v0.11`
+- Inputs: navigation `forma/navigation-projection/v0alpha2`; outcomes `forma/outcome-projection/v0alpha4`; states `forma/domain-state-projection/v0alpha1`
 - Default entry: `unspecified` (not inferred)
 - Navigation: 4 pages; 13 edges
 - Outcomes linked to edges: 17/21 groups; 102/120 cases
