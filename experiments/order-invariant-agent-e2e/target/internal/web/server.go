@@ -308,7 +308,7 @@ func (server *Server) reservations(writer http.ResponseWriter, request *http.Req
 		return
 	}
 	var body strings.Builder
-	body.WriteString("<h1>Reservations</h1><div data-fields=\"code stock reservedAfter status\"></div><div data-actions=\"commit\"></div>")
+	body.WriteString("<h1>Reservations</h1><div data-fields=\"code stock plan requestedReserved status\"></div><div data-actions=\"commit\"></div>")
 	if len(items) == 0 {
 		body.WriteString("<p role=status>empty</p>")
 	}
@@ -414,7 +414,7 @@ func (server *Server) actionError(writer http.ResponseWriter, err error) {
 		feedback(writer, http.StatusUnprocessableEntity, "invalid", nil)
 		return
 	}
-	if errors.Is(err, domain.ErrTargetUnavailable) {
+	if errors.Is(err, domain.ErrTargetUnavailable) || errors.Is(err, domain.ErrValueUnavailable) {
 		feedback(writer, http.StatusInternalServerError, "failure", nil)
 		return
 	}

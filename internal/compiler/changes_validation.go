@@ -101,14 +101,25 @@ func validateChangeValueExpression(
 	wantID SemanticID,
 	types map[string]IRType,
 ) (IRField, error) {
-	if expression.ID != wantID || expression.Kind != "field-reference" || expression.Binding != "self" ||
-		expression.Field == "" || expression.Operator != "" || expression.Left != nil || expression.Right != nil {
-		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s is not a canonical self field reference", expression.ID)
+	canonical := IRExpression{
+		ID: wantID, Kind: "field-reference", ResultType: expression.ResultType, Binding: "self",
+		RelationPath: append([]SemanticID(nil), expression.RelationPath...), Field: expression.Field,
+	}
+	if expression.Field == "" || len(expression.RelationPath) > 1 || !reflect.DeepEqual(expression, canonical) {
+		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s is not a canonical field reference", expression.ID)
+	}
+	owner := entity.ID
+	if len(expression.RelationPath) == 1 {
+		relation, ok := fields[expression.RelationPath[0]]
+		if !ok || fieldOwners[relation.ID] != entity.ID || relation.Collection || !relation.Required || relation.Relation == nil {
+			return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s does not traverse one required to-one relation", expression.ID)
+		}
+		owner = entityID(relation.Relation.Entity)
 	}
 	field, ok := fields[expression.Field]
-	if !ok || fieldOwners[field.ID] != entity.ID || !field.Required || field.Collection || field.Relation != nil ||
+	if !ok || fieldOwners[field.ID] != owner || !field.Required || field.Collection || field.Relation != nil ||
 		!isIRScalar(field.Type, types) || expression.ResultType != field.Type {
-		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s does not reference a required self scalar field", expression.ID)
+		return IRField{}, fmt.Errorf("validate Resolved Intent: change value %s does not reference a required scalar field on its resolved owner", expression.ID)
 	}
 	return field, nil
 }

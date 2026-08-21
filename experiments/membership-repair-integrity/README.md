@@ -343,7 +343,7 @@ feedbackを残せば、`forma verify`はそのfileを読んで85/85を報告し�
 ## 記録したhash
 
 ```text
-retry-baseline.json（このworking tree、repository外）  751ee7366f939e32c121a1693f0f14b462a6699db5836baa07ebd4725afa03d4
+retry-baseline.json（このworking tree、repository外）  9600d35ea0e14ccfce3072f01168743452e4b6133237e078cce20198d107c2a3
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
 weakening-coverage.patch             d26940cb7904dba18a488bf3bafda4465774c4de7a7f31812c50e15f80b2565d

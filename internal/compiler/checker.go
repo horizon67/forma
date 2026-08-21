@@ -37,11 +37,13 @@ type viewInfo struct {
 }
 
 type resolvedChange struct {
-	ActionEntity *EntityDecl
-	TargetEntity *EntityDecl
-	RelationPath []*FieldDecl
-	TargetField  *FieldDecl
-	ValueField   *FieldDecl
+	ActionEntity       *EntityDecl
+	TargetEntity       *EntityDecl
+	TargetRelationPath []*FieldDecl
+	TargetField        *FieldDecl
+	ValueEntity        *EntityDecl
+	ValueRelationPath  []*FieldDecl
+	ValueField         *FieldDecl
 }
 
 type checker struct {
@@ -54,13 +56,15 @@ type checker struct {
 	actions    map[string]*ActionDecl
 	identities map[string]*IdentityDecl
 
-	resolvedTypes    map[string]resolvedType
-	resolving        map[string]bool
-	cycleReported    map[string]bool
-	entityLabels     map[string]string
-	expressionFields map[*Expression]*FieldDecl
-	expressionTypes  map[*Expression]string
-	resolvedChanges  map[*ChangeAssignmentDecl]resolvedChange
+	resolvedTypes           map[string]resolvedType
+	resolving               map[string]bool
+	cycleReported           map[string]bool
+	entityLabels            map[string]string
+	expressionFields        map[*Expression]*FieldDecl
+	expressionFieldOwners   map[*Expression]*EntityDecl
+	expressionRelationPaths map[*Expression][]*FieldDecl
+	expressionTypes         map[*Expression]string
+	resolvedChanges         map[*ChangeAssignmentDecl]resolvedChange
 
 	viewInfo   map[*ViewDecl]*viewInfo
 	createForm map[string][]*viewInfo
@@ -78,6 +82,7 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 		identities:    map[string]*IdentityDecl{},
 		resolvedTypes: map[string]resolvedType{}, resolving: map[string]bool{}, cycleReported: map[string]bool{},
 		entityLabels: map[string]string{}, expressionFields: map[*Expression]*FieldDecl{},
+		expressionFieldOwners: map[*Expression]*EntityDecl{}, expressionRelationPaths: map[*Expression][]*FieldDecl{},
 		expressionTypes: map[*Expression]string{}, resolvedChanges: map[*ChangeAssignmentDecl]resolvedChange{}, viewInfo: map[*ViewDecl]*viewInfo{},
 		createForm: map[string][]*viewInfo{}, editForm: map[string][]*viewInfo{},
 		details: map[string][]*viewInfo{}, lists: map[string][]*viewInfo{},

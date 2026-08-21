@@ -567,13 +567,17 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 5. Generation RequestへExpression treeを含むFactsとReview Requirementを渡す。追加時のsemantic diffまで
    **実装済み**。
    coding agentがrepository固有testと保存境界へ実装できるかも、通常のGo applicationで当初**172/172 Factsを実測済み**。
-   後続Changes統合後のcurrent artifactは275/275である。
-6. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
-7. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
-8. 同じExpression treeをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
-9. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
-10. relationを読むInvariantのdependency/revalidation contractを設計する。
-11. collection、Action Precondition、Effect Binding、Occurrence Predicateをそれぞれの実例で拡張する。
+   後続Changes relation value統合後のcurrent artifactは278/278である。
+6. [`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)に従い、同じExpression treeをChanges右辺で
+   再利用し、requiredなto-one relation traversal 1 hopを追加する。共有IR fieldの追加と同時に、relation traversalを
+   許さないself-only Invariant validatorのclosed shapeも更新する。**実装済み**。
+7. Changesの実例で二項`+`を追加する。二項`-`を同時に入れる場合はv0 lexerの符号付きnumberも移行する。
+8. Action Preconditionの実例が要求する比較、等価、boolean、括弧と左結合binary normalizationを追加する。
+9. multiple assignment、collection binding、record creationを分離し、full Order approvalのatomic coreまで進める。
+10. 同じExpression treeをDerived Value proposalで再利用し、保存／再計算／dependency semanticsを独立に決める。
+11. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
+12. relationを読むInvariantのdependency/revalidation contractを設計する。
+13. Effect BindingとOccurrence Predicateをそれぞれの実例で拡張する。
 
 最初のacceptance caseは次である。
 
@@ -597,8 +601,8 @@ entity StockItem {
 `invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
 `invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
 解決済みExpression tree、`post-state`評価、authoritative enforcement、
-`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha7`へ固定する。
-concurrencyはcurrent `forma/review-requirements/v0alpha3`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
+`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha8`へ固定する。
+concurrencyはcurrent `forma/review-requirements/v0alpha4`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
 将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。coding agentによるrepository固有testと
 保存境界の実測は、[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で完了した。
 targetはForma runtimeを持たない通常のGo applicationで、Invariant単独時は39 testsへ172 Factsを明示対応付けした。98 access Factsは
@@ -607,7 +611,7 @@ pureなrole判定testではなく、それぞれのpage、form submit、action�
 invalid post-stateの
 全変更拒否と、競合する在庫予約をmutex内で評価・commitするtestも通る。後者のarchitecture判断はReview Requirementとして
 人間確認待ちであり、機械Factへ偽装しない。その後general functionやcollectionを先回りで足さず、Changesと
-atomic post-stateの次のvertical sliceへ進み、current targetでは52 tests / 275 Factsまで統合した。最小sliceは
+atomic post-stateとrelation valueのvertical sliceへ進み、current targetでは52 tests / 278 Factsまで統合した。最小sliceは
 [`changes-proposal.md`](changes-proposal.md)に分離し、最初のvalue expressionをaction entity自身のrequired field参照に
-限定した。Effect syntaxはOccurrenceとの境界が
+限定した後、[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)でrequired to-one relation 1 hopまで拡張した。Effect syntaxはOccurrenceとの境界が
 定まるまで追加しない。

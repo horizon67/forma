@@ -1,5 +1,5 @@
 domain state projection forma/domain-state-projection/v0alpha1
-intent forma/resolved-intent/v0.9
+intent forma/resolved-intent/v0.10
 machines 1
 
 state User.status [entity/User/state/status]

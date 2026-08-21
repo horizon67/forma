@@ -1,6 +1,9 @@
 package compiler
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+)
 
 // validateInvariantSemantics protects the closed first expression slice after
 // parsing. Resolved Intent can cross a process boundary, so the request
@@ -21,9 +24,14 @@ func validateInvariantSemantics(intent *ResolvedIntent) error {
 			}
 			predicate := invariant.Predicate
 			wantPredicateID := semanticID(string(invariant.ID), "expression")
-			if predicate.ID != wantPredicateID || predicate.Kind != "binary-expression" ||
-				predicate.ResultType != "Bool" || predicate.Operator != "less-than-or-equal" ||
-				predicate.Binding != "" || predicate.Field != "" || predicate.Left == nil || predicate.Right == nil {
+			if predicate.Left == nil || predicate.Right == nil {
+				return fmt.Errorf("validate Resolved Intent: invariant %s is not the supported self-only <= predicate", invariant.ID)
+			}
+			canonicalPredicate := IRExpression{
+				ID: wantPredicateID, Kind: "binary-expression", ResultType: "Bool", Operator: "less-than-or-equal",
+				Left: predicate.Left, Right: predicate.Right,
+			}
+			if !reflect.DeepEqual(predicate, canonicalPredicate) {
 				return fmt.Errorf("validate Resolved Intent: invariant %s is not the supported self-only <= predicate", invariant.ID)
 			}
 			left, err := validateInvariantFieldReference(entity, fields, *predicate.Left, semanticID(string(wantPredicateID), "left"))
@@ -43,8 +51,10 @@ func validateInvariantSemantics(intent *ResolvedIntent) error {
 }
 
 func validateInvariantFieldReference(entity IREntity, fields map[SemanticID]IRField, expression IRExpression, wantID SemanticID) (IRField, error) {
-	if expression.ID != wantID || expression.Kind != "field-reference" || expression.Binding != "self" ||
-		expression.Field == "" || expression.Operator != "" || expression.Left != nil || expression.Right != nil {
+	canonical := IRExpression{
+		ID: wantID, Kind: "field-reference", ResultType: expression.ResultType, Binding: "self", Field: expression.Field,
+	}
+	if expression.Field == "" || !reflect.DeepEqual(expression, canonical) {
 		return IRField{}, fmt.Errorf("validate Resolved Intent: invariant expression %s is not a canonical self field reference", expression.ID)
 	}
 	field, ok := fields[expression.Field]

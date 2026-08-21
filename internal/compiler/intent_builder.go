@@ -118,9 +118,9 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 			assignment := action.Changes[0].Assignments[0]
 			resolved, ok := c.resolvedChanges[assignment]
 			if ok {
-				targetPath := make([]string, 0, len(resolved.RelationPath)+1)
-				relationPath := make([]SemanticID, 0, len(resolved.RelationPath))
-				for _, relation := range resolved.RelationPath {
+				targetPath := make([]string, 0, len(resolved.TargetRelationPath)+1)
+				relationPath := make([]SemanticID, 0, len(resolved.TargetRelationPath))
+				for _, relation := range resolved.TargetRelationPath {
 					targetPath = append(targetPath, relation.Name.Text)
 					relationPath = append(relationPath, semanticID(string(entityID(resolved.ActionEntity.Name.Text)), "field", relation.Name.Text))
 				}
@@ -209,8 +209,15 @@ func (c *checker) buildExpressionIR(entity *EntityDecl, expression *Expression, 
 	case "field":
 		item.Kind = "field-reference"
 		item.Binding = "self"
+		for _, relation := range c.expressionRelationPaths[expression] {
+			item.RelationPath = append(item.RelationPath, semanticID(string(entityID(entity.Name.Text)), "field", relation.Name.Text))
+		}
 		if field := c.expressionFields[expression]; field != nil {
-			item.Field = semanticID(string(entityID(entity.Name.Text)), "field", field.Name.Text)
+			owner := entity
+			if resolvedOwner := c.expressionFieldOwners[expression]; resolvedOwner != nil {
+				owner = resolvedOwner
+			}
+			item.Field = semanticID(string(entityID(owner.Name.Text)), "field", field.Name.Text)
 		}
 		sourceMap.add(id, "field-reference", expression.Span)
 	}

@@ -69,8 +69,8 @@ func TestEveryPageFactIsMeasuredThroughAnHTTPHandler(t *testing.T) {
 			t.Errorf("page Fact %s (%s) is not measured through an HTTP handler: %v", fact.ID, fact.Kind, references)
 		}
 	}
-	if pageFacts != 242 {
-		t.Fatalf("page Facts = %d, want 242", pageFacts)
+	if pageFacts != 243 {
+		t.Fatalf("page Facts = %d, want 243", pageFacts)
 	}
 	if accessFacts != 104 {
 		t.Fatalf("access Facts = %d, want 104", accessFacts)

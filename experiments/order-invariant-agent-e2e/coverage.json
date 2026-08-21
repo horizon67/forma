@@ -68,6 +68,9 @@
   "fact/action/StockReservation/commit/changes/target-unavailable/from/Pending": [
     "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
   ],
+  "fact/action/StockReservation/commit/changes/value-unavailable/from/Pending": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
   "fact/action/StockReservation/commit/transition/accepted/from/Pending": [
     "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
   ],
@@ -94,6 +97,9 @@
   ],
   "fact/entity/StockItem/invariant/stockAvailable/evaluation/violated": [
     "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+  ],
+  "fact/entity/StockReservation/field/plan/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
   ],
   "fact/entity/StockReservation/field/stock/relation/resolved": [
     "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
@@ -652,6 +658,9 @@
     "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
   ],
   "fact/page/Reservations/view/list/StockReservation/action/commit/changes/target-unavailable/from/Pending": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/value-unavailable/from/Pending": [
     "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
   ],
   "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/accepted": [

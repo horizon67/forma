@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha7"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha8"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -455,6 +455,7 @@ func (b *acceptanceBuilder) addInvariantFacts(invariant IRInvariant) {
 
 func cloneIRExpression(expression IRExpression) IRExpression {
 	result := expression
+	result.RelationPath = append([]SemanticID(nil), expression.RelationPath...)
 	if expression.Left != nil {
 		left := cloneIRExpression(*expression.Left)
 		result.Left = &left

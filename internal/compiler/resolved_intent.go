@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.9"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.10"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -94,14 +94,15 @@ type IRInvariant struct {
 }
 
 type IRExpression struct {
-	ID         SemanticID    `json:"id"`
-	Kind       string        `json:"kind"`
-	ResultType string        `json:"resultType"`
-	Operator   string        `json:"operator,omitempty"`
-	Binding    string        `json:"binding,omitempty"`
-	Field      SemanticID    `json:"field,omitempty"`
-	Left       *IRExpression `json:"left,omitempty"`
-	Right      *IRExpression `json:"right,omitempty"`
+	ID           SemanticID    `json:"id"`
+	Kind         string        `json:"kind"`
+	ResultType   string        `json:"resultType"`
+	Operator     string        `json:"operator,omitempty"`
+	Binding      string        `json:"binding,omitempty"`
+	RelationPath []SemanticID  `json:"relationPath,omitempty"`
+	Field        SemanticID    `json:"field,omitempty"`
+	Left         *IRExpression `json:"left,omitempty"`
+	Right        *IRExpression `json:"right,omitempty"`
 }
 
 type IRAction struct {

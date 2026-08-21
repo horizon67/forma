@@ -16,6 +16,7 @@ var (
 	ErrConfirmationNeeded = errors.New("confirmation required")
 	ErrInvariant          = errors.New("stock availability invariant violated")
 	ErrTargetUnavailable  = errors.New("change target unavailable")
+	ErrValueUnavailable   = errors.New("change value unavailable")
 )
 
 type Role string
@@ -115,15 +116,24 @@ const (
 )
 
 type StockReservation struct {
-	ID            string
-	Code          string
-	StockID       string
-	ReservedAfter int
-	Status        ReservationStatus
-	Version       int
+	ID                string
+	Code              string
+	StockID           string
+	PlanID            string
+	RequestedReserved int
+	Status            ReservationStatus
+	Version           int
 }
 
 func (reservation StockReservation) Label() string { return reservation.Code }
+
+type ReservationPlan struct {
+	ID               string
+	Code             string
+	ApprovedReserved int
+}
+
+func (plan ReservationPlan) Label() string { return plan.Code }
 
 func ValidateOrder(order Order) error {
 	if strings.TrimSpace(order.Number) == "" {

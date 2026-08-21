@@ -81,7 +81,7 @@ func run() error {
 
 	feedback := agentrequest.Feedback{
 		Schema: agentrequest.FeedbackSchema, Stage: "test", Status: "succeeded", Command: feedbackCommand,
-		Summary: "The AI-generated order, inventory, and stock-reservation application passed every repository-native test mapped to the 275 Acceptance Facts.",
+		Summary: fmt.Sprintf("The AI-generated order, inventory, and stock-reservation application passed every repository-native test mapped to the %d Acceptance Facts.", len(request.AcceptanceFacts.Facts)),
 	}
 	for _, fact := range request.AcceptanceFacts.Facts {
 		references := coverage[fact.ID]

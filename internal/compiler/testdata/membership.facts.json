@@ -1,6 +1,6 @@
 {
-  "version": "forma/acceptance-facts/v0alpha7",
-  "intentVersion": "forma/resolved-intent/v0.9",
+  "version": "forma/acceptance-facts/v0alpha8",
+  "intentVersion": "forma/resolved-intent/v0.10",
   "facts": [
     {
       "id": "fact/action/User/activate/transition/accepted/from/Pending",

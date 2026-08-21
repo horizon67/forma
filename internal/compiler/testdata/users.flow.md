@@ -1,7 +1,7 @@
 # Forma flow projection
 
 - Schema: `forma/flow-projection/v0alpha3`
-- Intent: `forma/resolved-intent/v0.9`
+- Intent: `forma/resolved-intent/v0.10`
 - Inputs: navigation `forma/navigation-projection/v0alpha2`; outcomes `forma/outcome-projection/v0alpha3`; states `forma/domain-state-projection/v0alpha1`
 - Default entry: `unspecified` (not inferred)
 - Navigation: 4 pages; 13 edges

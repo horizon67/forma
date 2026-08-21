@@ -244,19 +244,21 @@ Forma is in an early design phase and has no compiler release yet. The current
 Go front end partially implements the design draft v0.4 grammar, parser, name
 resolution, type checking, semantic validation, stable identities, Resolved
 Intent, and Source Maps. It also implements a minimal admin-flow Acceptance
-Facts and Generation Request slice and an exploratory non-v0 self-only
-Invariant slice and a bounded action-owned Changes slice.
+Facts and Generation Request slice and exploratory non-v0 self-only Invariant,
+bounded action-owned Changes, and one-hop relation-value expression slices.
 
 The first Invariant vertical slice emits two entity-level Acceptance Facts for
 satisfied and violated post-state predicates, plus an authoritative rejection
 Fact for each form submit that edits a referenced field. It carries the resolved
 Expression tree and atomic outcome into a Generation Request and exposes
 concurrent enforcement as a separate human Review Requirement. The
-repository-specific coding-agent run now passes all 275 Acceptance Facts in a
+repository-specific coding-agent run now passes all 278 Acceptance Facts in a
 standalone Go application across 52 mapped tests. The same target implements
 `StockReservation.commit`: its implicit transition and related StockItem write
-commit atomically from one pre-state snapshot. Three concurrency, atomicity,
-and cross-entity authorization Review Requirements await human review.
+commit atomically from one pre-state snapshot, with the stored value read from
+a distinct required ReservationPlan relation. Four concurrency, atomicity,
+cross-entity write authorization, and cross-entity value-read authorization
+Review Requirements await human review.
 
 In the first controlled agent run, a Generation Request produced from Forma was
 given to an AI coding agent, which implemented an admin interface in a
@@ -317,7 +319,7 @@ explicit index. The diagram is not editable application meaning and does not
 infer layout. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
-through Stage D: current artifacts use Resolved Intent v0.9, Source Map v0.6, 85 Acceptance Facts,
+through Stage D: current artifacts use Resolved Intent v0.10, Source Map v0.6, 85 Acceptance Facts,
 and three Review Requirements are verified in the existing admin target. The
 first bounded P2 automated-repair probe is also complete. Separate fresh agent
 processes repaired a controlled test failure and build failure in one attempt
@@ -326,11 +328,13 @@ unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
 human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
-members on their source pages. P3 is now in progress: self-only Invariant and
-the first bounded Changes/atomic-post-state slice reach the Parser, Resolved
-Intent, Acceptance Facts, Generation Request, and a 275/275 repository E2E in
-an ordinary Go application. Three human Review Requirements remain pending;
-Occurrence and Effect follow only after this boundary is reviewed. Projection readability
+members on their source pages. P3 is now in progress: self-only Invariant, the
+first bounded Changes/atomic-post-state slice, and one required to-one relation
+value on a Changes RHS reach the Parser, Resolved Intent, Acceptance Facts,
+Generation Request, and a 278/278 repository E2E in an ordinary Go application.
+Arithmetic and collections remain later slices. Four human Review Requirements
+remain pending; Occurrence and Effect follow only after the full Order approval boundary is
+fixed. Projection readability
 evaluation runs independently.
 
 ## Design documents
@@ -343,6 +347,7 @@ evaluation runs independently.
 - [Language design principles](docs/language-design-principles.md)
 - [Current language direction](docs/current-language-direction.md)
 - [Changes and atomic post-state proposal](docs/changes-proposal.md)
+- [Relation value expression in Changes proposal](docs/relation-value-expression-proposal.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)

@@ -23,17 +23,23 @@ type Store struct {
 	customers    map[string]domain.Customer
 	products     map[string]domain.Product
 	stockItems   map[string]domain.StockItem
+	plans        map[string]domain.ReservationPlan
 	orders       map[string]domain.Order
 	orderLines   map[string]domain.OrderLine
 	reservations map[string]domain.StockReservation
 	orderNumbers map[string]string
 	replays      map[string]replay
+
+	// afterReservationSnapshotForTest lets a repository test alter the backing
+	// value source after the action has captured its pre-state. Production
+	// construction leaves it nil.
+	afterReservationSnapshotForTest func()
 }
 
 func New() *Store {
 	return &Store{
 		customers: map[string]domain.Customer{}, products: map[string]domain.Product{},
-		stockItems: map[string]domain.StockItem{}, orders: map[string]domain.Order{},
+		stockItems: map[string]domain.StockItem{}, plans: map[string]domain.ReservationPlan{}, orders: map[string]domain.Order{},
 		orderLines: map[string]domain.OrderLine{}, reservations: map[string]domain.StockReservation{}, orderNumbers: map[string]string{},
 		replays: map[string]replay{},
 	}
@@ -257,10 +263,24 @@ func (store *Store) ReserveStock(id string, quantity int) (domain.StockItem, err
 	return want, nil
 }
 
+func (store *Store) PutReservationPlan(plan domain.ReservationPlan) (domain.ReservationPlan, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if strings.TrimSpace(plan.Code) == "" || plan.ApprovedReserved < 0 {
+		return domain.ReservationPlan{}, domain.ErrInvalid
+	}
+	if plan.ID == "" {
+		plan.ID = store.next("plan")
+	}
+	store.plans[plan.ID] = plan
+	return plan, nil
+}
+
 func (store *Store) PutStockReservation(reservation domain.StockReservation) (domain.StockReservation, error) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	if strings.TrimSpace(reservation.Code) == "" || reservation.ReservedAfter < 0 || store.stockItems[reservation.StockID].ID == "" {
+	if strings.TrimSpace(reservation.Code) == "" || reservation.RequestedReserved < 0 ||
+		store.stockItems[reservation.StockID].ID == "" || store.plans[reservation.PlanID].ID == "" {
 		return domain.StockReservation{}, domain.ErrInvalid
 	}
 	if reservation.ID == "" {
@@ -275,8 +295,8 @@ func (store *Store) PutStockReservation(reservation domain.StockReservation) (do
 }
 
 // CommitStockReservation implements one action-owned atomic boundary. The
-// source state, relation target, candidate StockItem invariant, and both
-// commits are evaluated while holding the same lock.
+// source state, relation target, distinct relation value, candidate StockItem
+// invariant, and both commits are evaluated while holding the same lock.
 func (store *Store) CommitStockReservation(id string, principal domain.Principal, confirmed bool) (domain.StockReservation, domain.StockItem, error) {
 	if !domain.Allowed(principal, domain.ReservationCommit) {
 		return domain.StockReservation{}, domain.StockItem{}, domain.ErrDenied
@@ -297,8 +317,15 @@ func (store *Store) CommitStockReservation(id string, principal domain.Principal
 	if !ok {
 		return domain.StockReservation{}, domain.StockItem{}, domain.ErrTargetUnavailable
 	}
+	plan, ok := store.plans[reservation.PlanID]
+	if !ok {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrValueUnavailable
+	}
+	if store.afterReservationSnapshotForTest != nil {
+		store.afterReservationSnapshotForTest()
+	}
 	wantStock := stock
-	wantStock.Reserved = reservation.ReservedAfter
+	wantStock.Reserved = plan.ApprovedReserved
 	if err := domain.ValidateStock(wantStock); err != nil {
 		return domain.StockReservation{}, domain.StockItem{}, err
 	}
@@ -315,6 +342,12 @@ func (store *Store) RemoveStockItem(id string) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	delete(store.stockItems, id)
+}
+
+func (store *Store) RemoveReservationPlan(id string) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	delete(store.plans, id)
 }
 
 func (store *Store) replay(kind, token string) (replay, bool) {
@@ -377,6 +410,16 @@ func (store *Store) StockReservation(id string) (domain.StockReservation, error)
 	item, ok := store.reservations[id]
 	if !ok {
 		return domain.StockReservation{}, domain.ErrNotFound
+	}
+	return item, nil
+}
+
+func (store *Store) ReservationPlan(id string) (domain.ReservationPlan, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	item, ok := store.plans[id]
+	if !ok {
+		return domain.ReservationPlan{}, domain.ErrNotFound
 	}
 	return item, nil
 }

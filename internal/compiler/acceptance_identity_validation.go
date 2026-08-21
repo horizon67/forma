@@ -643,7 +643,7 @@ func validateFactSetupHandles(setup *FactSetup) error {
 		}
 	}
 	for _, relation := range setup.Relations {
-		if !subjects[relation.Source] || relation.Field == "" || !oneOf(relation.Condition, "resolved", "target-unavailable") {
+		if !subjects[relation.Source] || relation.Field == "" || !oneOf(relation.Condition, "resolved", "target-unavailable", "value-unavailable") {
 			return fmt.Errorf("relation setup has invalid source or condition")
 		}
 		if relation.Condition == "resolved" {

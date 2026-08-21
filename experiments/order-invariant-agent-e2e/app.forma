@@ -1,5 +1,5 @@
 // Order approval and inventory, using the ten Forma v0 primitives plus the
-// experimental self-only Invariant slice.
+// experimental self-only Invariant, bounded Changes, and relation-value slices.
 
 role admin
 role staff
@@ -42,11 +42,17 @@ entity OrderLine {
 }
 
 entity StockReservation {
-    code          String required unique label
-    stock         StockItem required
-    reservedAfter Quantity required
+    code              String required unique label
+    stock             StockItem required
+    plan              ReservationPlan required
+    requestedReserved Quantity required
 
     state status Pending | Committed initial Pending
+}
+
+entity ReservationPlan {
+    code             String required unique label
+    approvedReserved Quantity required
 }
 
 action Order.submit:  Draft     -> Submitted
@@ -56,7 +62,7 @@ action Order.ship:    Approved  -> Shipped  allow staff
 
 action StockReservation.commit: Pending -> Committed confirm allow staff {
     changes {
-        stock.reserved = reservedAfter
+        stock.reserved = plan.approvedReserved
     }
 }
 
@@ -135,7 +141,7 @@ page Reservations {
     allow staff
 
     list StockReservation {
-        columns code, stock, reservedAfter, status
+        columns code, stock, plan, requestedReserved, status
         actions commit
     }
 }

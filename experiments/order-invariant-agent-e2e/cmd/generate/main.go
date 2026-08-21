@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	expectedFacts   = 275
-	expectedReviews = 3
+	expectedFacts   = 278
+	expectedReviews = 4
 )
 
 func main() {
@@ -135,9 +135,9 @@ func coverageForFact(fact compiler.AcceptanceFact) ([]string, error) {
 			return []string{webTests + "TestReservationCommitConfirmationAndCrossEntityAuthorization"}, nil
 		}
 		return []string{webTests + "TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"}, nil
-	case "changes-accepted", "changes-invariant-rejected", "changes-target-unavailable":
+	case "changes-accepted", "changes-invariant-rejected", "changes-target-unavailable", "changes-value-unavailable":
 		return []string{storeTests + "TestStockReservationCommitIsAtomicAcrossReservationAndStock"}, nil
-	case "action-changes-accepted", "action-changes-invariant-rejected", "action-changes-target-unavailable":
+	case "action-changes-accepted", "action-changes-invariant-rejected", "action-changes-target-unavailable", "action-changes-value-unavailable":
 		return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
 	case "action-observable-feedback":
 		if strings.Contains(subject, "StockReservation") {

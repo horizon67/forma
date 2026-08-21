@@ -78,8 +78,9 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
 必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
 実装し、続いてChangesをaction-attachedな同時代入とatomic post-stateとして実装した。通常のGo applicationを使う
-repository E2Eで275/275 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity authorizationの
-3 Review Requirementsは人間確認待ちである。Occurrence以降は未決定である。
+repository E2Eで278/278 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity write authorization、
+cross-entity value-read authorizationの4 Review Requirementsは人間確認待ちである。Changes右辺のrequired relation valueを
+1 hopだけ読むsliceも[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)どおり実装した。Occurrence以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -115,8 +116,8 @@ semantic graphへ解決されることを意味する。
 - global overviewは編集可能な`flow`正本ではなく、navigation/flow projectionから得る。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
-`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.9`、Source Map `v0.6`、
-Acceptance Facts `v0alpha7`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.10`、Source Map `v0.6`、
+Acceptance Facts `v0alpha8`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -135,9 +136,11 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 
 1. Expression coreとInvariant（最初のslice完了）
 2. Changesとatomic post-state（最初のslice完了）
-3. full Order approvalに必要なDerived Value / Action Precondition / Expression拡張
-4. Occurrence
-5. Effect binding / delivery contract
+3. Changes RHSのrequired relation value（最初のslice完了）
+4. numeric `+`、Action Precondition、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
+5. Derived Valueを独立したExpression consumerとして検証
+6. Occurrence
+7. Effect binding / delivery contract
 
 これは一般的な機能階層ではなく、実例を分離して検証する実装順序である。bounded Changesは既存field valueだけで
 atomicityを検査できるため、Derived Valueや算術を先に一般化しない。
@@ -152,7 +155,17 @@ requiredなto-one relationへの1 assignmentとimplicit state transitionに分�
 atomic Facts、Review Requirementsをreference compilerへ実装した。v0が要求しながら現compilerに無かったdomain actionの
 source precondition、遷移後state Fact、明示`confirm` actionと標準`delete`のconfirmation Fact、action拒否時のsurface
 feedbackも同じsliceで追加した。cross-entity writeの認可はactionが所有し、target entityの別surface accessは継承しない。
-通常applicationでは52 mapped testsから275/275 Factsを測定し、その差とatomic boundaryは人間Review Requirementへ提示する。
+通常applicationでは52 mapped testsから278/278 Factsを測定し、その差とatomic boundaryは人間Review Requirementへ提示する。
+
+続く[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)では、relation traversalの最初のconsumerを
+Derived ValueではなくChanges右辺に置いた。Changesには評価時点、pre-state、atomic boundary、failure outcomeが既にあり、
+Derived Valueの保存／再計算／dependency semanticsを同時に発明せずrelation readだけを検査できるためである。最初は
+selfまたはrequired relation 1 hop先のrequired scalar field referenceだけを受理し、targetとは別のvalue relationが
+runtimeで解決不能な場合を`value-unavailable`として全変更拒否へ閉じる。actionのallowが実行認可を所有する一方、
+cross-entity valueの利用とdownstream disclosureは`cross-entity-value-read-authorization` Review Requirementとして
+人間へ提示する。共有`IRExpression`の拡張時にはself-only Invariant validatorも同時更新し、relation-reading Invariantを
+tampered Resolved Intentから持ち込めないようにした。repository E2Eではdistinct target/value relation、relation先とselfの
+異なる値、`value-unavailable`、HTTP feedback、無部分commitを既存`StockReservation.commit`へ統合した。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

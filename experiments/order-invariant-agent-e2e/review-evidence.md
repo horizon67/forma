@@ -6,6 +6,7 @@ Review Requirements:
 review/entity/StockItem/invariant/stockAvailable/concurrent-invariant-enforcement
 review/action/StockReservation/commit/atomic-changes-enforcement
 review/action/StockReservation/commit/cross-entity-write-authorization
+review/action/StockReservation/commit/cross-entity-value-read-authorization
 ```
 
 Status: awaiting human review. This document records evidence; it does not convert the requirement into machine-verified Fact coverage.
@@ -25,20 +26,22 @@ The pure `domain.Allowed` role-matrix tests remain useful repository tests but r
 
 ## Authoritative mutation boundary inventory
 
-`StockItem` storage is private to `internal/store.Store`. The target contains three write paths:
+`StockItem` storage is private to `internal/store.Store`. The target contains four write paths:
 
 | Boundary | Fields changed | Enforcement |
 | --- | --- | --- |
 | `PutStockItem` | initial `product`, `location`, `onHand`, `reserved` | holds `Store.mu`, calls `domain.ValidateStock` before insertion |
 | `UpdateStockItem` | form-editable `product`, `location`, `onHand`, `reserved` | holds `Store.mu` across read, post-state construction, `ValidateStock`, and commit |
 | `ReserveStock` | increments `reserved` | holds `Store.mu` across read, increment, `ValidateStock`, and commit |
-| `CommitStockReservation` | sets `StockReservation.status` and related `StockItem.reserved` | holds `Store.mu` across source-state check, target resolution, pre-state value read, candidate validation, and both commits |
+| `CommitStockReservation` | sets `StockReservation.status` and related `StockItem.reserved` | holds `Store.mu` across source-state check, StockItem target resolution, ReservationPlan value resolution and pre-state read, candidate validation, and both commits |
 
 No other package can write the private `stockItems` map. The HTTP handler calls `UpdateStockItem`; it does not own or duplicate the invariant.
 
 ## Atomic Changes evidence
 
-`internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock` observes accepted, invariant-rejected, target-unavailable, and source-state-rejected outcomes. Every rejected case rereads both entities and asserts that neither changed. `TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant` starts valid and invalid commits together; the valid pair commits, the invalid reservation remains Pending, and stock remains within the invariant.
+`internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock` observes accepted, invariant-rejected, target-unavailable, value-unavailable, and source-state-rejected outcomes. Every rejected case rereads the source and resolved target and asserts that neither changed. `TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant` starts valid and invalid commits together; the valid pair commits, the invalid reservation remains Pending, and stock remains within the invariant.
+
+The same store test changes the backing ReservationPlan through an unexported test synchronization hook after the action has captured its pre-state but before candidate construction. The committed stock must retain the captured value, not the later backing-map value. Replacing the local snapshot read with a late `store.plans[...]` reread makes this case fail.
 
 `internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome` repeats those outcome checks through the shipped HTTP surface. `TestReservationCommitConfirmationAndCrossEntityAuthorization` additionally proves that declining confirmation dispatches zero repository calls while acceptance dispatches exactly once.
 
@@ -47,6 +50,12 @@ The implementation uses one mutex rather than a transaction framework because th
 ## Cross-entity authorization evidence
 
 The source page and `StockReservation.commit` are available to `staff`; the existing StockItem edit surface remains `admin`-only. `store.CommitStockReservation` checks the action-owned `ReservationCommit` capability and does not inherit roles from StockItemEdit. `internal/store/store_test.go#TestStockReservationCommitAuthorizationOwnsCrossEntityWritePath` and the HTTP confirmation/access test prove the intentional asymmetry: staff can commit the reservation, while an admin without the staff role is denied and neither entity changes.
+
+## Cross-entity value-read and disclosure evidence
+
+`StockReservation.commit` reads `ReservationPlan.approvedReserved` through the required `plan` relation. The fixture deliberately sets the reservation's self field `requestedReserved` to 3 and the related plan value to 6; both the store and HTTP acceptance checks require `StockItem.reserved == 6` and explicitly reject 3. Removing the ReservationPlan produces `value-unavailable`/`failure` and leaves both reservation and stock unchanged, so an implementation cannot silently fall back to the self field or a zero value.
+
+The action remains staff-owned. ReservationPlan has no direct page in this bounded target, while the derived `StockItem.reserved` value is presented by the admin/staff StockItems surfaces and the plan relation itself is named on the staff Reservations list. The source author therefore permits staff to use the plan value and disclose the resulting reserved amount through those surfaces; no ReservationPlan page role is inferred as extra action authorization. This is the application-specific judgment recorded for human review, not a machine Fact.
 
 ## Evidence that enforcement is not UI-only
 
@@ -69,4 +78,5 @@ The test would expose a stale-read implementation in which both operations valid
 - Is enforcement independent of HTTP/UI validation?
 - Do source-page access, action access, and destination behavior remain composed without inheriting the StockItemEdit role?
 - Are target identity resolution and all pre-state reads inside the same boundary as validation and both commits?
+- Is staff use of `ReservationPlan.approvedReserved`, and its downstream disclosure as `StockItem.reserved`, intentional without inheriting an undeclared ReservationPlan surface role?
 - Can cancellation, process failure, or an error after the first write leave only one entity changed?

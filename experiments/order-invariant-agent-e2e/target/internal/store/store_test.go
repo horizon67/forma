@@ -14,6 +14,7 @@ type fixture struct {
 	customer    domain.Customer
 	product     domain.Product
 	stock       domain.StockItem
+	plan        domain.ReservationPlan
 	reservation domain.StockReservation
 	order       domain.Order
 }
@@ -27,7 +28,13 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reservation, err := repository.PutStockReservation(domain.StockReservation{Code: "RES-100", StockID: stock.ID, ReservedAfter: 6})
+	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reservation, err := repository.PutStockReservation(domain.StockReservation{
+		Code: "RES-100", StockID: stock.ID, PlanID: plan.ID, RequestedReserved: 3,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +42,7 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return fixture{store: repository, customer: customer, product: product, stock: stock, reservation: reservation, order: order}
+	return fixture{store: repository, customer: customer, product: product, stock: stock, plan: plan, reservation: reservation, order: order}
 }
 
 func TestRelationsResolveToEntitiesAndLabels(t *testing.T) {
@@ -49,10 +56,11 @@ func TestRelationsResolveToEntitiesAndLabels(t *testing.T) {
 	stockProduct, _ := item.store.Product(item.stock.ProductID)
 	reservation, _ := item.store.StockReservation(item.reservation.ID)
 	reservationStock, _ := item.store.StockItem(reservation.StockID)
+	reservationPlan, _ := item.store.ReservationPlan(reservation.PlanID)
 	storedLine, _ := item.store.OrderLine(line.ID)
 	lineOrder, _ := item.store.Order(storedLine.OrderID)
 	lineProduct, _ := item.store.Product(storedLine.ProductID)
-	if customer.Label() != "Aster Labs" || stockProduct.Label() != "Widget" || reservationStock.Label() != "Tokyo" ||
+	if customer.Label() != "Aster Labs" || stockProduct.Label() != "Widget" || reservationStock.Label() != "Tokyo" || reservationPlan.Label() != "PLAN-100" ||
 		lineOrder.Label() != "ORD-100" || lineProduct.Label() != "Widget" || len(order.LineIDs) != 1 {
 		t.Fatalf("relations did not resolve: customer=%#v stockProduct=%#v line=%#v order=%#v", customer, stockProduct, storedLine, order)
 	}
@@ -219,15 +227,36 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 	t.Run("accepted", func(t *testing.T) {
 		item := newFixture(t)
 		reservation, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
-		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != item.reservation.ReservedAfter {
+		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
 			t.Fatalf("commit = %#v, %#v, %v", reservation, stock, err)
+		}
+	})
+
+	t.Run("accepted value is the captured pre-state", func(t *testing.T) {
+		item := newFixture(t)
+		item.store.afterReservationSnapshotForTest = func() {
+			changed := item.store.plans[item.plan.ID]
+			changed.ApprovedReserved = 9
+			item.store.plans[item.plan.ID] = changed
+		}
+		_, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
+		if err != nil || stock.Reserved != item.plan.ApprovedReserved {
+			t.Fatalf("commit reread the value source after its pre-state snapshot: stock=%#v error=%v", stock, err)
+		}
+		changedPlan, _ := item.store.ReservationPlan(item.plan.ID)
+		if changedPlan.ApprovedReserved == stock.Reserved {
+			t.Fatalf("test did not separate captured and later source values: plan=%#v stock=%#v", changedPlan, stock)
 		}
 	})
 
 	t.Run("invariant rejection preserves both entities", func(t *testing.T) {
 		item := newFixture(t)
+		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-INVALID", ApprovedReserved: item.stock.OnHand + 1})
+		if err != nil {
+			t.Fatal(err)
+		}
 		reservation, err := item.store.PutStockReservation(domain.StockReservation{
-			Code: "RES-INVALID", StockID: item.stock.ID, ReservedAfter: item.stock.OnHand + 1,
+			Code: "RES-INVALID", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -239,6 +268,19 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 		storedStock, _ := item.store.StockItem(item.stock.ID)
 		if storedReservation.Status != domain.ReservationPending || storedStock.Reserved != item.stock.Reserved {
 			t.Fatalf("partial commit after invariant rejection: reservation=%#v stock=%#v", storedReservation, storedStock)
+		}
+	})
+
+	t.Run("value unavailable preserves source and target", func(t *testing.T) {
+		item := newFixture(t)
+		item.store.RemoveReservationPlan(item.plan.ID)
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); !errors.Is(err, domain.ErrValueUnavailable) {
+			t.Fatalf("value-unavailable error = %v", err)
+		}
+		storedReservation, _ := item.store.StockReservation(item.reservation.ID)
+		storedStock, _ := item.store.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedReservation.Version != item.reservation.Version || storedStock != item.stock {
+			t.Fatalf("value-unavailable partially committed: reservation=%#v stock=%#v", storedReservation, storedStock)
 		}
 	})
 
@@ -287,11 +329,19 @@ func TestStockReservationCommitAuthorizationOwnsCrossEntityWritePath(t *testing.
 
 func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *testing.T) {
 	item := newFixture(t)
-	valid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-VALID", StockID: item.stock.ID, ReservedAfter: 8})
+	validPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-VALID", ApprovedReserved: 8})
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-INVALID", StockID: item.stock.ID, ReservedAfter: 11})
+	invalidPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-INVALID", ApprovedReserved: 11})
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-VALID", StockID: item.stock.ID, PlanID: validPlan.ID, RequestedReserved: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-INVALID", StockID: item.stock.ID, PlanID: invalidPlan.ID, RequestedReserved: 5})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,16 +14,17 @@ collection、複数assignment、record作成へ一般化する前のexperimental
 
 ## 実装結果（2026-08-21）
 
-Parser、checker、Resolved Intent `v0.9`、Source Map `v0.6`、Acceptance Facts `v0alpha7`、
+この最初のsliceはParser、checker、Resolved Intent `v0.9`、Source Map `v0.6`、Acceptance Facts `v0alpha7`、
 Outcome Projection `v0alpha3`、Review Requirements `v0alpha3`まで実装した。既存domain actionについても
 transition accepted/source rejected、confirmation accepted/declined、surface feedbackを導出し、Changes actionには
 atomic accepted、Invariant rejected、target unavailableのdomain/surface Factsを追加した。validatorはResolved Intentから
 このaction contractを再導出し、Factの欠落・捏造・result反転を拒否する。
 
 [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、Forma runtimeを持たない通常のGo applicationへ
-`StockReservation.commit`を実装し、275/275 Factsを52 repository testsで再測定した。implicit transitionとrelated
-StockItem updateは同じmutex内でのみcommitされ、Invariant違反、target欠落、source state不一致では両entityが不変である。
-atomicity、cross-entity authorization、既存Invariant concurrencyの3 Review Requirementsは人間確認待ちである。
+`StockReservation.commit`を実装した。後続relation value sliceまで統合したcurrent artifactは278/278 Factsを52 repository
+testsで再測定している。implicit transition、related StockItem update、distinct ReservationPlan value readは同じmutex内でのみ
+評価・commitされ、Invariant違反、target/value欠落、source state不一致ではsourceとresolved targetが不変である。
+atomicity、cross-entity write/value-read authorization、既存Invariant concurrencyの4 Review Requirementsは人間確認待ちである。
 
 ## 結論
 
@@ -485,15 +486,18 @@ control flow、順序、途中状態、target runtime例外をlanguage semantics
 10. `StockReservation.commit`を通常applicationへ実装するE2Eで、partial commit、target欠落、surface bypass、
    cross-entity access bypass、confirmation bypassのmutationを行う。
 
-このsliceが成立してから、次の順で広げる。
+このsliceが成立してから、次の順で広げる。直近のrequired relation readの詳細は
+[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)を正とする。
 
 ```text
-required relation value read
+required relation value read（relation-value-expression-proposal.mdどおり実装・E2E完了）
   -> numeric +
+  -> Action Precondition
   -> multiple assignmentsとruntime alias rule
   -> collection element binding / fan-out
   -> record creation（ApprovalAudit）
   -> full Order.approve
+  -> Derived Valueを独立consumerとして検証
 ```
 
 OccurrenceとEffectはfull Order.approveのatomic outcomeが定まるまで実装しない。

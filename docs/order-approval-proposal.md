@@ -18,8 +18,8 @@ selfのrequired field同士の`<=`、およびaction-ownedなbounded Changesを�
 
 このprobeから先行して切り出したself-only Invariantは、
 [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で通常のGo applicationへ実装した。続くbounded
-Changesも統合し、current 275/275 Acceptance Factsを実測した。concurrent invariant enforcement、atomic Changes、
-cross-entity authorizationの人間Review Requirementsは未完了である。本書に残るfull Changes、Occurrence、Effectの
+Changesとrequired relation valueも統合し、current 278/278 Acceptance Factsを実測した。concurrent invariant enforcement、
+atomic Changes、cross-entity write/value-read authorizationの人間Review Requirementsは未完了である。本書に残るfull Changes、Occurrence、Effectの
 候補は後続の設計入力であり、まだ採用済み構文ではない。
 
 Changesの最小sliceは[`changes-proposal.md`](changes-proposal.md)へ分離し実装した。最終対象は本書の`Order.approve`だが、
@@ -256,8 +256,9 @@ required to-one relation先へのabsolute value assignmentだけを許し、coll
 
 3と5は、「effectはすべて状態遷移に紐づければよい」という誤った一般化を防ぐために必ず含める。
 
-この比較が終わるまでは、`effect`、`on`、`emit`、式をEBNF、10 primitives、reference compilerへ
-追加しない。
+この比較が終わるまでは、`effect`、`on`、`emit`をEBNF、10 primitives、reference compilerへ追加しない。
+Expressionはself-only Invariant、bounded Changes、required relation valueまでexperimental sliceとして実装した。relation valueの
+範囲は[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)に記録する。
 
 ## Roadmapへの影響
 
@@ -266,10 +267,12 @@ Milestone 6の「最初の追加例候補」は本書と[`examples/orders.forma`
 
 ```text
 1. 式レイヤの最小形（self field参照とInvariant。実装済み）
-2. changesの事後条件semantics + invariant + atomic boundary（最小candidate選定済み、compiler未実装）
-3. full Order.approveに必要なrelation value参照、算術、collection traversal、record creation
-4. occurrence model（actionから導出するか、明示するか）
-5. effect / on proposal
+2. changesの事後条件semantics + invariant + atomic boundary（最小slice実装・repository E2E完了）
+3. Changes RHSのrequired relation value参照（最初のslice実装・repository E2E完了）
+4. full Order.approveに必要な算術、precondition、multiple assignment、collection traversal、record creation
+5. Derived Valueを独立consumerとして検証
+6. occurrence model（actionから導出するか、明示するか）
+7. effect / on proposal
 ```
 
 式レイヤを飛ばしてeffectを設計すると、bindingとpreconditionを書けないまま構文だけが決まる。

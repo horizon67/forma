@@ -182,19 +182,44 @@ func (b *acceptanceBuilder) addChangeFacts(action IRAction, ref *IRActionRef) er
 	if err != nil {
 		return err
 	}
+	valueEntity, valueField, valueRelationField, err := b.resolveChangeValue(entity, change)
+	if err != nil {
+		return err
+	}
 	for _, source := range action.Sources {
-		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, action, change, ref, source))
+		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, valueEntity, valueField, valueRelationField, action, change, ref, source))
 		for _, invariant := range targetEntity.Invariants {
 			if !containsSemanticID(invariantFieldReferences(invariant), targetField.ID) {
 				continue
 			}
-			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, action, change, invariant, ref, source))
+			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, invariant, ref, source))
 		}
 		if relationField != nil {
-			b.add(changeTargetUnavailableFact(entity, *relationField, action, change, ref, source))
+			b.add(changeTargetUnavailableFact(entity, targetEntity, *relationField, valueEntity, valueRelationField, action, change, ref, source))
+		}
+		if valueRelationField != nil && (relationField == nil || valueRelationField.ID != relationField.ID) {
+			b.add(changeValueUnavailableFact(entity, targetEntity, relationField, valueEntity, *valueRelationField, action, change, ref, source))
 		}
 	}
 	return nil
+}
+
+func (b *acceptanceBuilder) resolveChangeValue(entity IREntity, change IRActionChange) (IREntity, IRField, *IRField, error) {
+	valueEntity := entity
+	var relationField *IRField
+	if len(change.Value.RelationPath) == 1 {
+		field, ok := findIRFieldByID(entity, change.Value.RelationPath[0])
+		if !ok || field.Relation == nil {
+			return IREntity{}, IRField{}, nil, fmt.Errorf("build Acceptance Facts: change %s has invalid relation value", change.ID)
+		}
+		relationField = &field
+		valueEntity = b.entities[field.Relation.Entity]
+	}
+	valueField, ok := findIRFieldByID(valueEntity, change.Value.Field)
+	if !ok {
+		return IREntity{}, IRField{}, nil, fmt.Errorf("build Acceptance Facts: change %s has missing value field", change.ID)
+	}
+	return valueEntity, valueField, relationField, nil
 }
 
 func (b *acceptanceBuilder) resolveChangeTarget(entity IREntity, change IRActionChange) (IREntity, IRField, *IRField, error) {
@@ -219,18 +244,21 @@ func changeAcceptedFact(
 	entity, targetEntity IREntity,
 	targetField IRField,
 	relationField *IRField,
+	valueEntity IREntity,
+	valueField IRField,
+	valueRelationField *IRField,
 	action IRAction,
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, action, change, ref, source)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, ref, source)
 	return AcceptanceFact{
 		ID: factID(subject, "changes", "accepted", "from", source), Kind: kind + "accepted", Subject: subject,
 		Setup: input.setup, Input: &FactInput{Action: input.action, Invariants: invariantInputs(targetEntity, input.targetHandle, "")},
 		Expected: FactExpectation{
 			Outcome: "accepted", Atomicity: "all-changes-committed", AppliedMutations: 2,
-			Enforcement: "authoritative", Subjects: changeCommittedSubjects(entity, targetField, action, change, input.targetHandle),
+			Enforcement: "authoritative", Subjects: changeCommittedSubjects(entity, targetField, valueField, action, input.targetHandle, input.valueHandle),
 		},
 		SourceNodes: append(sources, invariantSources(targetEntity)...),
 	}
@@ -239,13 +267,15 @@ func changeAcceptedFact(
 func changeInvariantRejectedFact(
 	entity, targetEntity IREntity,
 	relationField *IRField,
+	valueEntity IREntity,
+	valueRelationField *IRField,
 	action IRAction,
 	change IRActionChange,
 	violated IRInvariant,
 	ref *IRActionRef,
 	source string,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, action, change, ref, source)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, valueEntity, valueRelationField, action, change, ref, source)
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"invalid"}
@@ -263,11 +293,80 @@ func changeInvariantRejectedFact(
 	}
 }
 
-func changeTargetUnavailableFact(entity IREntity, relation IRField, action IRAction, change IRActionChange, ref *IRActionRef, source string) AcceptanceFact {
+func changeValueUnavailableFact(
+	entity, targetEntity IREntity,
+	targetRelation *IRField,
+	valueEntity IREntity,
+	valueRelation IRField,
+	action IRAction,
+	change IRActionChange,
+	ref *IRActionRef,
+	source string,
+) AcceptanceFact {
+	subject := action.ID
+	kind := "changes-value-unavailable"
+	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
+	sources := []SemanticID{
+		entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field,
+		change.Value.ID, change.Value.Field, valueRelation.ID, valueEntity.ID,
+	}
+	setup := &FactSetup{Subjects: []FactSubjectSetup{{
+		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source},
+	}}}
+	targetHandle := "subject/action"
+	if targetRelation != nil {
+		targetHandle = "subject/target"
+		setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: targetHandle, Identity: targetEntity.ID})
+		setup.Relations = append(setup.Relations, FactRelationSetup{
+			Source: "subject/action", Field: targetRelation.ID, Target: targetHandle, Condition: "resolved",
+		})
+		sources = append(sources, targetRelation.ID, targetEntity.ID)
+	}
+	setup.Relations = append(setup.Relations, FactRelationSetup{
+		Source: "subject/action", Field: valueRelation.ID, Condition: "value-unavailable",
+	})
+	if ref != nil {
+		subject = ref.ID
+		kind = "action-changes-value-unavailable"
+		actionInput.Reference = ref.ID
+		sources = append(sources, ref.ID)
+	}
+	var feedback []string
+	if ref != nil {
+		feedback = []string{"failure"}
+	}
+	return AcceptanceFact{
+		ID: factID(subject, "changes", "value-unavailable", "from", source), Kind: kind, Subject: subject,
+		Setup: setup, Input: &FactInput{Action: actionInput},
+		Expected: FactExpectation{
+			Outcome: "rejected", Reason: "value-unavailable", Feedback: feedback,
+			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
+			Subjects: unchangedChangeSubjects(entity, action, source, targetHandle),
+		},
+		SourceNodes: canonicalSemanticIDs(sources),
+	}
+}
+
+func changeTargetUnavailableFact(
+	entity, targetEntity IREntity,
+	relation IRField,
+	valueEntity IREntity,
+	valueRelation *IRField,
+	action IRAction,
+	change IRActionChange,
+	ref *IRActionRef,
+	source string,
+) AcceptanceFact {
 	subject := action.ID
 	kind := "changes-target-unavailable"
 	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
-	sources := []SemanticID{entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Value.ID, relation.ID}
+	sources := []SemanticID{
+		entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field,
+		change.Value.ID, change.Value.Field, relation.ID, targetEntity.ID, valueEntity.ID,
+	}
+	if valueRelation != nil {
+		sources = append(sources, valueRelation.ID)
+	}
 	var feedback []string
 	if ref != nil {
 		subject = ref.ID
@@ -288,7 +387,7 @@ func changeTargetUnavailableFact(entity IREntity, relation IRField, action IRAct
 			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
 			Subjects: []FactSubjectExpectation{{Handle: "subject/action", State: &IRStateValueRef{State: entity.State.ID, Value: source}, Unchanged: true}},
 		},
-		SourceNodes: sources,
+		SourceNodes: canonicalSemanticIDs(sources),
 	}
 }
 
@@ -296,9 +395,19 @@ type changeFactInput struct {
 	setup        *FactSetup
 	action       *FactActionInput
 	targetHandle string
+	valueHandle  string
 }
 
-func changeFactBase(entity, targetEntity IREntity, relationField *IRField, action IRAction, change IRActionChange, ref *IRActionRef, source string) (SemanticID, string, changeFactInput, []SemanticID) {
+func changeFactBase(
+	entity, targetEntity IREntity,
+	targetRelation *IRField,
+	valueEntity IREntity,
+	valueRelation *IRField,
+	action IRAction,
+	change IRActionChange,
+	ref *IRActionRef,
+	source string,
+) (SemanticID, string, changeFactInput, []SemanticID) {
 	subject := action.ID
 	kind := "changes-"
 	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
@@ -307,11 +416,22 @@ func changeFactBase(entity, targetEntity IREntity, relationField *IRField, actio
 		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source},
 	}}}
 	targetHandle := "subject/action"
-	if relationField != nil {
+	if targetRelation != nil {
 		targetHandle = "subject/target"
 		setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: "subject/target", Identity: targetEntity.ID})
-		setup.Relations = []FactRelationSetup{{Source: "subject/action", Field: relationField.ID, Target: "subject/target", Condition: "resolved"}}
-		sources = append(sources, relationField.ID, targetEntity.ID)
+		setup.Relations = append(setup.Relations, FactRelationSetup{Source: "subject/action", Field: targetRelation.ID, Target: "subject/target", Condition: "resolved"})
+		sources = append(sources, targetRelation.ID, targetEntity.ID)
+	}
+	valueHandle := "subject/action"
+	if valueRelation != nil {
+		if targetRelation != nil && valueRelation.ID == targetRelation.ID {
+			valueHandle = targetHandle
+		} else {
+			valueHandle = "subject/value"
+			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: valueHandle, Identity: valueEntity.ID})
+			setup.Relations = append(setup.Relations, FactRelationSetup{Source: "subject/action", Field: valueRelation.ID, Target: valueHandle, Condition: "resolved"})
+		}
+		sources = append(sources, valueRelation.ID, valueEntity.ID)
 	}
 	if ref != nil {
 		subject = ref.ID
@@ -319,15 +439,15 @@ func changeFactBase(entity, targetEntity IREntity, relationField *IRField, actio
 		actionInput.Reference = ref.ID
 		sources = append(sources, ref.ID)
 	}
-	return subject, kind, changeFactInput{setup: setup, action: actionInput, targetHandle: targetHandle}, sources
+	return subject, kind, changeFactInput{setup: setup, action: actionInput, targetHandle: targetHandle, valueHandle: valueHandle}, canonicalSemanticIDs(sources)
 }
 
-func changeCommittedSubjects(entity IREntity, targetField IRField, action IRAction, change IRActionChange, targetHandle string) []FactSubjectExpectation {
+func changeCommittedSubjects(entity IREntity, targetField, valueField IRField, action IRAction, targetHandle, valueHandle string) []FactSubjectExpectation {
 	subject := FactSubjectExpectation{
 		Handle: "subject/action", State: &IRStateValueRef{State: entity.State.ID, Value: action.Destination},
 	}
 	field := FactFieldExpectation{
-		Field: targetField.ID, Stored: "value-source", ValueSubject: "subject/action", ValueField: change.Value.Field,
+		Field: targetField.ID, Stored: "value-source", ValueSubject: valueHandle, ValueField: valueField.ID,
 	}
 	if targetHandle == "subject/action" {
 		subject.Fields = []FactFieldExpectation{field}

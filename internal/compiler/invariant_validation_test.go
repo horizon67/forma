@@ -54,6 +54,20 @@ func TestResolvedInvariantValidationRejectsUnsupportedOrTamperedIR(t *testing.T)
 			},
 			want: "does not reference a required local scalar field",
 		},
+		{
+			name: "relation path injected",
+			mutate: func(intent *ResolvedIntent) {
+				intent.Entities[0].Invariants[0].Predicate.Left.RelationPath = []SemanticID{"entity/StockItem/field/location"}
+			},
+			want: "not a canonical self field reference",
+		},
+		{
+			name: "relation path injected into predicate root",
+			mutate: func(intent *ResolvedIntent) {
+				intent.Entities[0].Invariants[0].Predicate.RelationPath = []SemanticID{"entity/StockItem/field/location"}
+			},
+			want: "not the supported self-only <= predicate",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -64,5 +78,39 @@ func TestResolvedInvariantValidationRejectsUnsupportedOrTamperedIR(t *testing.T)
 				t.Fatalf("validation error = %v, want %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestResolvedInvariantValidationRejectsARealRelationOperand(t *testing.T) {
+	const source = `type Quantity = Int min 0
+
+entity StockThreshold {
+    limit Quantity required
+}
+
+entity StockItem {
+    onHand    Quantity required
+    reserved  Quantity required
+    threshold StockThreshold required
+    invariant stockAvailable: reserved <= onHand
+}
+`
+	result := Compile([]SourceFile{NewSourceFile("relation-invariant-tamper.forma", source)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	var stock *IREntity
+	for index := range result.Intent.Entities {
+		if result.Intent.Entities[index].Name == "StockItem" {
+			stock = &result.Intent.Entities[index]
+		}
+	}
+	if stock == nil || len(stock.Invariants) != 1 {
+		t.Fatal("missing StockItem invariant")
+	}
+	stock.Invariants[0].Predicate.Left.RelationPath = []SemanticID{"entity/StockItem/field/threshold"}
+	stock.Invariants[0].Predicate.Left.Field = "entity/StockThreshold/field/limit"
+	if err := ValidateResolvedIntent(result.Intent); err == nil || !strings.Contains(err.Error(), "not a canonical self field reference") {
+		t.Fatalf("validation error = %v", err)
 	}
 }

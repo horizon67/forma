@@ -20,7 +20,7 @@ func (c *checker) checkActionChanges(action *ActionDecl, entity *EntityDecl) {
 	if !ok {
 		return
 	}
-	valueField, ok := c.resolveChangeValue(entity, assignment.Value)
+	valueEntity, valueRelations, valueField, ok := c.resolveChangeValue(entity, assignment.Value)
 	if !ok {
 		return
 	}
@@ -29,11 +29,13 @@ func (c *checker) checkActionChanges(action *ActionDecl, entity *EntityDecl) {
 		return
 	}
 	c.resolvedChanges[assignment] = resolvedChange{
-		ActionEntity: entity,
-		TargetEntity: targetEntity,
-		RelationPath: relations,
-		TargetField:  targetField,
-		ValueField:   valueField,
+		ActionEntity:       entity,
+		TargetEntity:       targetEntity,
+		TargetRelationPath: relations,
+		TargetField:        targetField,
+		ValueEntity:        valueEntity,
+		ValueRelationPath:  valueRelations,
+		ValueField:         valueField,
 	}
 }
 
@@ -96,32 +98,58 @@ func (c *checker) resolveChangeTarget(actionEntity *EntityDecl, assignment *Chan
 	return targetEntity, []*FieldDecl{relation}, target, true
 }
 
-func (c *checker) resolveChangeValue(entity *EntityDecl, expression *Expression) (*FieldDecl, bool) {
+func (c *checker) resolveChangeValue(entity *EntityDecl, expression *Expression) (*EntityDecl, []*FieldDecl, *FieldDecl, bool) {
 	if expression == nil || expression.Field == nil || len(expression.Field.Path) == 0 {
-		return nil, false
+		return nil, nil, nil, false
 	}
-	if len(expression.Field.Path) != 1 {
-		c.error(expression.Span, "F2805", "change value traverses a relation", "the first Changes slice accepts one required scalar field on the action entity")
-		return nil, false
+	path := expression.Field.Path
+	if len(path) > 2 {
+		c.error(expression.Span, "F2805", "change value traverses more than one relation", "use a required self scalar or one required to-one relation followed by a required scalar field")
+		return nil, nil, nil, false
 	}
-	name := expression.Field.Path[0]
-	field, isState := declaredField(entity, name.Text)
+	valueEntity := entity
+	var relations []*FieldDecl
+	if len(path) == 2 {
+		relation, isState := declaredField(entity, path[0].Text)
+		if relation == nil {
+			kind := "field"
+			if isState {
+				kind = "state"
+			}
+			c.error(path[0].Span, "F2805", fmt.Sprintf("change value binding `%s.%s` is not a required to-one relation %s", entity.Name.Text, path[0].Text, kind), "use one required to-one relation from the action entity")
+			return nil, nil, nil, false
+		}
+		resolvedRelation := c.resolveType(relation.Type.Name.Text, relation.Type.Name.Span)
+		if relation.Type.Collection || resolvedRelation.Kind != "entity" || !hasFieldModifier(relation, "required") {
+			c.error(path[0].Span, "F2805", fmt.Sprintf("change value binding `%s.%s` is not a required to-one relation", entity.Name.Text, path[0].Text), "use one required to-one relation from the action entity")
+			return nil, nil, nil, false
+		}
+		valueEntity = c.entities[resolvedRelation.Name]
+		if valueEntity == nil {
+			return nil, nil, nil, false
+		}
+		relations = []*FieldDecl{relation}
+	}
+	name := path[len(path)-1]
+	field, isState := declaredField(valueEntity, name.Text)
 	if field == nil {
 		kind := "field"
 		if isState {
 			kind = "state"
 		}
-		c.error(name.Span, "F2805", fmt.Sprintf("change value `%s.%s` is not a required self scalar %s", entity.Name.Text, name.Text, kind), "use a required scalar field declared by the action entity")
-		return nil, false
+		c.error(name.Span, "F2805", fmt.Sprintf("change value `%s.%s` is not a required scalar %s", valueEntity.Name.Text, name.Text, kind), "use a required scalar field on self or one required to-one relation")
+		return nil, nil, nil, false
 	}
 	resolved := c.resolveType(field.Type.Name.Text, field.Type.Name.Span)
 	if field.Type.Collection || resolved.Kind != "scalar" || !hasFieldModifier(field, "required") {
-		c.error(name.Span, "F2805", fmt.Sprintf("change value `%s.%s` is not a required self scalar field", entity.Name.Text, name.Text), "use a required scalar field declared by the action entity")
-		return nil, false
+		c.error(name.Span, "F2805", fmt.Sprintf("change value `%s.%s` is not a required scalar field", valueEntity.Name.Text, name.Text), "use a required scalar field on self or one required to-one relation")
+		return nil, nil, nil, false
 	}
 	c.expressionFields[expression] = field
+	c.expressionFieldOwners[expression] = valueEntity
+	c.expressionRelationPaths[expression] = relations
 	c.expressionTypes[expression] = field.Type.Name.Text
-	return field, true
+	return valueEntity, relations, field, true
 }
 
 func (c *checker) mutableChangeScalar(field *FieldDecl) bool {

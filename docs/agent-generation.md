@@ -77,9 +77,9 @@ Forma coreはframework別generator、capability matrix、共通runtime adapter�
 repositoryの事実と失敗したcommandをfeedbackとして返す。
 
 この境界は[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)でも維持された。Formaは
-275 Acceptance Factsと3 Review Requirementsを持つGeneration Requestを生成し、coding agentはFormaをimportしない
+278 Acceptance Factsと4 Review Requirementsを持つGeneration Requestを生成し、coding agentはFormaをimportしない
 standard-library Go application、保存境界、HTTP surface、52 repository testsを実装した。experiment側の測定processが
-実際の`go test -json`結果と明示的coverage mapを照合し、275/275 Factsをfeedbackとして返す。application runtimeで
+実際の`go test -json`結果と明示的coverage mapを照合し、278/278 Factsをfeedbackとして返す。application runtimeで
 experiment commandやForma verifierが動く構成ではない。
 
 ## Resolved Intent
@@ -122,7 +122,7 @@ Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromp
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
 各factは少なくとも次を持つ。現在のkindは
-`forma/acceptance-facts/v0alpha7`として実装し、admin flow、Identity専用29 Facts、application entry、
+`forma/acceptance-facts/v0alpha8`として実装し、admin flow、Identity専用29 Facts、application entry、
 surface-only transition、self-only Invariant、domain action transition/confirmation、experimental Changesを扱う。Invariantはentity単位の成立・違反に加え、
 参照fieldを入力に含むform submitごとにauthoritativeな拒否Factを導出する。各Factは他のrequirementを満たした
 隔離scenarioとして、解決済みExpression tree、post-state評価、authoritative enforcement、atomic commit結果を
@@ -155,16 +155,17 @@ Identityでの具体的なcandidate shapeは
 現在のcompilerが`fixture-fidelity`を導出するsubjectはIdentityだけである。
 [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、Identityを持たないsurface access Factsを
 pureなrole関数へだけ対応付けるとHTTP認可を迂回できることが分かったため、当時の98 access Factsすべてを実HTTP handler testへ
-対応付けた。続くChanges sliceでもこの条件をaccess kindに限定せず、`page/...`をsubjectに持つcurrent 242 Factsすべてが
+対応付けた。続くChanges sliceでもこの条件をaccess kindに限定せず、`page/...`をsubjectに持つcurrent 243 Factsすべてが
 実HTTP testを参照する回帰条件へ広げた。一般のapplication／surface単位Review Requirementは必要性が確認できたが、
 Resolved Intentにapplication root nodeがなく、review完了の範囲もまだ定義していない。既存Identity requirementへ暗黙に
 混ぜず、target-neutralなsubjectとsourceNodesを設計してからcompiler-owned requirementへ一般化する。
 
-人間確認が必要な境界は`forma/review-requirements/v0alpha3`としてAcceptance Factsから分離する。Identityごとに
+人間確認が必要な境界は`forma/review-requirements/v0alpha4`としてAcceptance Factsから分離する。Identityごとに
 `secret-redaction`、`secret-storage`、`fixture-fidelity`の3件を、Invariantごとに
 `concurrent-invariant-enforcement`をstable ID付きで導出する。後者は、同じpredicateを参照するauthoritativeな
 mutation境界がconcurrent operationでも違反post-stateをcommitしないことを確認させる。Changes actionごとに
-`atomic-changes-enforcement`と、cross-entity writeがある場合の`cross-entity-write-authorization`も導出する。instructionはcompiler所有の
+`atomic-changes-enforcement`と、cross-entity writeがある場合の`cross-entity-write-authorization`、relation value readがある場合の
+`cross-entity-value-read-authorization`も導出する。instructionはcompiler所有の
 固定文であり、agent feedbackへreview coverageや完了statusを追加しない。`forma verify`のexit 0は機械検査の成功だけを
 意味し、これらの要件は成功出力にも必ず表示される。
 

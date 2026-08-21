@@ -21,6 +21,7 @@ type webFixture struct {
 	product     domain.Product
 	order       domain.Order
 	stock       domain.StockItem
+	plan        domain.ReservationPlan
 	reservation domain.StockReservation
 }
 
@@ -33,7 +34,13 @@ func newWebFixture(t *testing.T) webFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reservation, err := repository.PutStockReservation(domain.StockReservation{Code: "RES-100", StockID: stockItem.ID, ReservedAfter: 6})
+	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reservation, err := repository.PutStockReservation(domain.StockReservation{
+		Code: "RES-100", StockID: stockItem.ID, PlanID: plan.ID, RequestedReserved: 3,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +50,7 @@ func newWebFixture(t *testing.T) webFixture {
 	}
 	return webFixture{
 		repository: repository, handler: New(repository), customer: customer,
-		product: product, order: order, stock: stockItem, reservation: reservation,
+		product: product, order: order, stock: stockItem, plan: plan, reservation: reservation,
 	}
 }
 
@@ -522,7 +529,7 @@ func TestReservationsSurfaceFieldsActionsFeedbackAndAccess(t *testing.T) {
 	item := newWebFixture(t)
 	response := request(t, item.handler, http.MethodGet, "/reservations", "staff", nil)
 	assertResponse(t, response, http.StatusOK,
-		"data-fields=\"code stock reservedAfter status\"", "data-actions=\"commit\"", "RES-100",
+		"data-fields=\"code stock plan requestedReserved status\"", "data-actions=\"commit\"", "RES-100",
 		"data-action=\"commit\" data-confirm=\"required\" action=\"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true\"")
 	for _, roles := range []string{"admin", ""} {
 		denied := request(t, item.handler, http.MethodGet, "/reservations", roles, nil)
@@ -544,15 +551,19 @@ func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
 		}
 		reservation, _ := item.repository.StockReservation(item.reservation.ID)
 		stock, _ := item.repository.StockItem(item.stock.ID)
-		if reservation.Status != domain.ReservationCommitted || stock.Reserved != item.reservation.ReservedAfter {
+		if reservation.Status != domain.ReservationCommitted || stock.Reserved != item.plan.ApprovedReserved || stock.Reserved == item.reservation.RequestedReserved {
 			t.Fatalf("accepted surface state = reservation %#v stock %#v", reservation, stock)
 		}
 	})
 
 	t.Run("invariant rejected without partial commit", func(t *testing.T) {
 		item := newWebFixture(t)
+		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-INVALID", ApprovedReserved: item.stock.OnHand + 1})
+		if err != nil {
+			t.Fatal(err)
+		}
 		reservation, err := item.repository.PutStockReservation(domain.StockReservation{
-			Code: "RES-HTTP-INVALID", StockID: item.stock.ID, ReservedAfter: item.stock.OnHand + 1,
+			Code: "RES-HTTP-INVALID", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -564,6 +575,19 @@ func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
 		stock, _ := item.repository.StockItem(item.stock.ID)
 		if storedReservation.Status != domain.ReservationPending || stock.Reserved != item.stock.Reserved {
 			t.Fatalf("invariant surface partially committed: reservation %#v stock %#v", storedReservation, stock)
+		}
+	})
+
+	t.Run("value unavailable", func(t *testing.T) {
+		item := newWebFixture(t)
+		item.repository.RemoveReservationPlan(item.plan.ID)
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusInternalServerError, "failure")
+		storedReservation, _ := item.repository.StockReservation(item.reservation.ID)
+		stock, _ := item.repository.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || stock != item.stock {
+			t.Fatalf("value unavailable partially committed: reservation %#v stock %#v", storedReservation, stock)
 		}
 	})
 
