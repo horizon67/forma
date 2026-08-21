@@ -42,7 +42,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、current 85/85 Facts、3 Review Requirementsを検証した |
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → current 85/85と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
-| Expression以降 | **P3 in progress** | self-only Invariant、bounded Changes、required relation value、exact binary numeric `+`、named Action Preconditionを通常のGo applicationで280/280 Factsまで実測。次はmultiple assignment／collection binding |
+| Expression以降 | **P3 alpha cut到達** | self-only Invariant、bounded Changes、required relation value、exact binary numeric `+`、named Action Preconditionを通常のGo applicationで280/280 Factsまで実測。multiple assignmentはdesign review反映済み・未実装でpost-alphaへ保留 |
+| 最速alpha | **current priority** | current executable semanticsをfreezeし、install、quickstart、clean-environment E2E、external dogfood、`v0.1.0-alpha.1` releaseへ進む |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -52,8 +53,9 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 同じtarget repositoryを壊さずに変更する最初のprobeも成功した。Formaは一度きりの詳しいpromptではなく、
 applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dと最初のbounded
 repair loopと、membership flowで確認したdefault entry / surface-only transitionのbounded probeも完了した。
-次はCRUD/state transitionを越えるapplication semanticsを検証する。projectionの人間評価は並行して進め、
-P3をblockしない。
+CRUD/state transitionを越えるcurrent executable semanticsはAction Preconditionまででalpha cutに十分なE2E根拠を得た。
+次は言語研究を一時freezeし、第三者が実際にinstallして使える最速alphaを作る。projectionの人間評価とpost-alpha P3は
+alpha releaseをblockしない。
 
 ## 3. 優先順位
 
@@ -65,7 +67,9 @@ P3をblockしない。
 | **P1 / Stage D completed** | Signup/signin + Identity | public user flowに必要な意味をtarget-neutralに記述できるか |
 | **P2 / first bounded loop completed** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
 | **P1 follow-up / completed** | Entry + surface-only transition | application entryとoperationを伴わないnavigationを一意に記述できるか |
-| **P3 / Next main milestone** | Expression → Changes → Occurrence → Effect | CRUD/state transitionを越えるdomain behaviorを記述できるか |
+| **P3 / alpha cut reached** | Expression → Changes → Precondition | CRUD/state transitionを越える最初のdomain behaviorを記述できるか |
+| **Alpha / current** | `v0.1.0-alpha.1` distribution cut | current subsetを第三者がclean environmentでinstall・実行・検証できるか |
+| **P3 / post-alpha** | multiple assignment → collection → Occurrence → Effect | 実利用で表面化した不足をbounded sliceで追加できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
 
 この順序は、実装が簡単なものではなく、**中心仮説を強く否定し得る実験**を先に置く。各Milestoneを
@@ -553,6 +557,7 @@ bounded Changesはaction entityのrequired field valueだけでatomicityを検�
 - [`relation-value-expression-proposal.md`](relation-value-expression-proposal.md): Changes右辺でrequired relationを1 hop読み、target/value binding共有、value-unavailable、cross-entity value disclosure reviewを定めて実装したslice
 - [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md): Changes右辺の二項`+`、複数field-reference leafのruntime subject binding、exact Int/Decimal semantics、relation別value-unavailableとrepresentation reviewを定めて実装したslice
 - [`action-precondition-proposal.md`](action-precondition-proposal.md): source stateとpost-state Invariantから独立したnamed predicate、pre-state評価、拒否理由、surface feedback、concurrent enforcementを定めて実装したslice
+- [`multiple-assignment-proposal.md`](multiple-assignment-proposal.md): 1 block／最大2 assignments、全RHSの同一pre-state評価、type-disjointな複数targetのatomic candidateを定め、design reviewを反映したpost-alpha未実装slice
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
 - [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
 - [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで280/280 Factsと52 repository testsを実測。concurrency、atomicity、cross-entity write/value-read authorization、exact numeric enforcement、concurrent Precondition enforcementの6 Review Requirementsは人間確認待ち
@@ -586,7 +591,12 @@ Review Requirementでも確認する。current compilerがinherited constraint�
 numeric typeだけを受理し、declared baseと判定boundsをIRへ残してvalidatorが再計算する。Action Preconditionは
 [`action-precondition-proposal.md`](action-precondition-proposal.md)へ分離し、source state → relation binding → exact pre-state
 predicate → Changes → post-state Invariantの順序、`precondition-unsatisfied`／`invalid`、concurrent enforcementを定めた。
-compiler／Fact／Outcome／Review Requirementとrepository E2Eまで実装した。multiple assignmentとcollectionは引き続き後続へ分離する。
+compiler／Fact／Outcome／Review Requirementとrepository E2Eまで実装した。multiple assignmentは次の独立proposal、collectionはその後へ分離する。
+次の[`multiple-assignment-proposal.md`](multiple-assignment-proposal.md)は、collectionへ進む前にsource上のtarget集合を最大2件へ固定し、
+全RHSの同時評価、target grouping、same-type distinct targetの静的拒否、全fieldを1件へまとめるatomic Factを設計する。Order fixtureでは
+`stockReservedBeforeCommit = stock.reserved`を2件目に置き、stockを8へ更新した後にRHSを再読込する逐次実装が8を記録して落ちるようにする。
+design reviewの観測限界とsame-type target境界を反映済みだが、compiler実装と280/280 baseline更新はまだ行っていない。
+設計はpost-alpha backlogとして保持する。
 
 ### 選別基準
 
@@ -604,11 +614,145 @@ compiler／Fact／Outcome／Review Requirementとrepository E2Eまで実装し�
 - effectのemissionとdeliveryを分離し、stable emission identityを導出できる
 - 各追加概念から正常系・拒否系Acceptance Factsを作れる
 
+上はP3全体のexit criteriaであり、alphaのblockerではない。Occurrence／Effectを実装してから初めて利用者へ渡すのではなく、
+current subsetをalphaとして先に使い、実applicationでどのgapが先に現れるかを次のP3入力にする。
+
+## Fastest alpha cut — `v0.1.0-alpha.1`（current priority）
+
+### 目的
+
+言語研究の完了版を作ることではなく、current reference front-endを第三者がclean environmentへ導入し、Forma sourceから
+Generation Requestを作り、外部AI coding agentが通常のrepositoryへ実装し、そのrepository-native feedbackを
+`forma verify`で検査する一周を再現可能にする。
+
+alphaは「現在のlanguageが完成した」という宣言ではない。実利用から次のsemantic needとUX gapを得るためのdistribution cutである。
+
+### freezeするexecutable baseline
+
+alphaのlanguage／artifact baselineは、Action Precondition sliceを実装したcurrent `main`とする。
+
+| Component | Alpha baseline |
+| --- | --- |
+| Resolved Intent | `forma/resolved-intent/v0.12` |
+| Source Map | `forma/source-map/v0.6` |
+| Acceptance Facts | `forma/acceptance-facts/v0alpha10` |
+| Outcome Projection | `forma/outcome-projection/v0alpha5` |
+| Review Requirements | `forma/review-requirements/v0alpha6` |
+| Generation Request | `forma/generation-request/v0alpha4` |
+| Generation Feedback | current `v0alpha2` feedback contract |
+| Membership evidence | 85/85 Facts、3 policies、3 Reviews |
+| Order evidence | 280/280 Facts、52 mapped tests、6 Reviews |
+
+alpha準備中はsecurity／correctness bug以外のlanguage featureとschema shapeを増やさない。breaking fixが不可避ならversionを上げ、
+古いversionを無言で受理しない。
+
+### alphaへ含めるもの
+
+- `forma check`: source収集、parse、name／type／semantic diagnostics
+- `forma resolve`: canonical Resolved Intent JSON
+- `forma request`: Source Map、Acceptance Facts、Review Requirements、Implementation Policy、incremental diffを含むGeneration Request
+- `forma project navigation|outcomes|states|flow`: read-onlyな人間向けprojection
+- `forma verify`: request／feedback／repository evidence、policy coverage、human Review Requirementsの検査
+- admin CRUD、Identity／membership、entry／surface-only transition、state transition
+- experimental self-only Invariant、1-assignment Changes、required relation value、exact binary numeric `+`、1 named Action Precondition
+- existing admin、membership、order examplesとgolden／negative tests
+- AI agentはForma core外で実装主体になる、という責任境界
+
+alpha binaryがAI modelを内蔵・呼び出すことは要件にしない。quickstartは`forma request`のartifactをCodex等の外部agentへ渡し、
+agentがrepository-native code／testsとGeneration Feedbackを返す手順を示す。framework別generatorや汎用feedback adapterを
+Forma coreへ追加しない。
+
+### alpha後へ明示的に送るもの
+
+- [`multiple-assignment-proposal.md`](multiple-assignment-proposal.md)のcompiler／E2E実装
+- collection binding／fan-out、record creation、full Order approval
+- Derived Value、Occurrence、Effect
+- rename、削除、data migrationの一般model
+- inherited constraint合成等、alpha profile外のv0未実装semantics
+- `forma fmt`、`forma explain`の完成
+- editor／LSP integration
+- schema migration／long-term compatibilityのstable guarantee
+- framework generator、target profile、built-in AI runner
+
+未実装項目を黙って推測・部分受理しない。alpha profile外のsourceはdiagnosticで拒否し、known limitationsへ記載する。
+
+### 実施package
+
+#### A. Alpha profileとversion boundary（1–2 working days）
+
+- [ ] `docs/alpha-language-profile.md`を追加し、受理するsyntax／semantics、experimental部分、known limitationsを列挙する。
+- [ ] normative v0全体の完成を装わず、reference front-endとの差分をprofileから辿れるようにする。
+- [ ] binary／CLIへ`v0.1.0-alpha.1`候補のversion表示を追加する。
+- [ ] artifact version mismatch、unsupported intent、unknown commandのexit codeとmessageを固定する。
+- [ ] experiment専用orchestrator／generatorをalpha distributionに含めないことを明記する。
+
+#### B. Installとrelease engineering（2–3 working days）
+
+- [ ] cleanなmacOS／Linuxで`go install github.com/horizon67/forma/cmd/forma@<tag>`を検証する。
+- [ ] GitHub Release用のversioned binariesとchecksumを作るCI workflowを追加する。
+- [ ] root test、vet、race、format、`git diff --check`、example compileをrelease gateにする。
+- [ ] tag、binary version、README quickstartのversionが一致しなければreleaseを止める。
+- [ ] rollback可能なpre-release tagとして公開し、stable互換性を約束しないことを表示する。
+
+#### C. End-user quickstart（2 working days）
+
+- [ ] 最小だがtoy CRUDだけではない`alpha-quickstart.forma`を用意する。
+- [ ] `check -> project -> request -> external AI implementation -> repository tests -> feedback -> verify`を一つの手順にする。
+- [ ] AIへ渡すinstruction templateと、requestを弱めない／target testを直接注入しない規則を提供する。
+- [ ] target repository側のfeedback command／coverage mappingのreference exampleを1つ提供するが、core protocolへframeworkを固定しない。
+- [ ] 実行結果として何がForma保証、機械test、human Review Requirementなのかを画面出力と文書で区別する。
+
+#### D. Reliabilityとsecurity boundary（2–3 working days）
+
+- [ ] temporary clean environmentからinstallし、admin／membership／order sourceをcheck／resolve／request／projectできるtestを作る。
+- [ ] requestとprojectionのdeterminism、Source Map coverage、schema validator、historical request codecをrelease gateで再確認する。
+- [ ] `forma`本体がrepository commandやAI processを自動実行しないcurrent境界をsecurity noteへ記録する。
+- [ ] secret／credential valueをGeneration Requestへ含めないこと、repository scan対象、symlink／path boundaryをreviewする。
+- [ ] known limitations、data lossを起こし得るunsupported workflow、untrusted repository実行責任を明記する。
+
+#### E. External dogfoodとrelease（1–2 working days + review）
+
+- [ ] repository内の既存experimentを手順の成功証明として流用せず、fresh target repositoryでquickstartを一周する。
+- [ ] 少なくとも1回、別task／clean contextのcoding agentへ文書だけを渡し、不足した暗黙知を記録・修正する。
+- [ ] request、agent変更、repository tests、Generation Feedback、`forma verify`のevidenceを保存する。
+- [ ] blockerを修正し、`v0.1.0-alpha.1` tagとGitHub Releaseを作る。
+- [ ] release後に実applicationで見つかったgapをlanguage、tooling、documentationへ分類してpost-alpha backlogへ戻す。
+
+### 実施順と見積り
+
+```text
+scope/profile freeze
+  -> CLI version + install/release path
+  -> quickstart + external-agent handoff
+  -> clean-environment reliability/security gate
+  -> fresh repository dogfood
+  -> v0.1.0-alpha.1 pre-release
+```
+
+集中して進める場合は**8–12 working days**、これまでと同じ外部review roundを含めて**2–3 calendar weeks**を目安とする。
+新しいlanguage featureを途中でalpha blockerへ戻すとこの見積りは無効になる。multiple assignmentを含める場合は別に実装／E2E／reviewが
+必要なため、alpha cutを少なくとも1 review cycle後ろへ動かす。
+
+### Alpha exit criteria
+
+- cleanなmacOS／Linuxでversioned binaryをinstallできる。
+- documented commandだけでexampleをcheck／resolve／project／requestでき、outputがbyte-deterministicである。
+- external AI agentがfresh targetへ通常のapplication codeとrepository-native testsを実装できる。
+- feedback commandから得たartifactを`forma verify`がaccepted／blockedで正しく判定する。
+- unsupported syntax、schema mismatch、missing evidenceを無言で受理しない。
+- alpha profile、known limitations、security boundary、human reviewの残りが公開文書から分かる。
+- release gateがroot tests、vet、race、format、examples、clean install E2Eを通す。
+- `v0.1.0-alpha.1` tag、checksum付きbinary、quickstart、再現evidenceが同じcommitを指す。
+
+Alpha release後は、先にmultiple assignmentを機械的に実装すると固定しない。最初の実application利用で表現不能になった意味を確認し、
+既にreview済みのmultiple assignment、collection、Occurrence／Effectのどれを次に開くかを決める。
+
 ## Milestone 7 — v0 hardening and release（P4）
 
 ### 目的
 
 実験で残った最小言語とfront-end boundaryを、第三者が再現・利用できるreleaseへする。
+これはfastest alphaより後のstable v0 boundaryであり、以下をalpha.1へ前倒ししてblockerにはしない。
 
 ### 実装する
 

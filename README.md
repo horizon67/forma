@@ -335,9 +335,9 @@ value, one exact binary numeric addition on a Changes RHS, and one named Action 
 Generation Request, and a 280/280 repository E2E in an ordinary Go application.
 The addition and Precondition slices carry the full expression trees and runtime-bound operands into Facts, reject unsupported type bounds and named-type chains, and detect repository integer overflow without partial commit. Six human Review Requirements
 remain pending. Action Precondition now separates source-state rejection,
-an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E; multiple assignment and collection binding remain before the full Order approval boundary, and Occurrence and Effect follow only after that boundary is
-fixed. Projection readability
-evaluation runs independently.
+an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline is now frozen for the fastest `v0.1.0-alpha.1` cut. The reviewed multiple-assignment design remains unimplemented and moves,
+together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now focuses on an installable CLI,
+an external-agent quickstart, clean-environment release gates, and fresh-repository dogfood. Projection readability evaluation runs independently.
 
 ## Design documents
 
@@ -352,6 +352,7 @@ evaluation runs independently.
 - [Relation value expression in Changes proposal](docs/relation-value-expression-proposal.md)
 - [Numeric addition in Changes proposal](docs/numeric-addition-expression-proposal.md)
 - [Action Precondition proposal](docs/action-precondition-proposal.md)
+- [Multiple assignment proposal](docs/multiple-assignment-proposal.md)
 - [Membership flow notation probe](docs/membership-flow-notation-probe.md)
 - [Membership flow human evaluation](docs/evaluations/membership-flow/README.md)
 - [Complete user-management example](examples/users.forma)

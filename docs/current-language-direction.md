@@ -131,7 +131,7 @@ source-onlyとsource+projectionの比較を実施する。これはprojectionの
 
 Candidate Cの完全な`flow` DSLを採用する判断には人間評価を使うが、最小surface transition semanticの必要性は既に確認済みである。
 
-### Track C — P3 Domain behavior（次の本線）
+### Track C — P3 Domain behavior（alpha cut到達、post-alphaで再開）
 
 Navigationのbounded probeが完了したため、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
 
@@ -139,7 +139,7 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 2. Changesとatomic post-state（最初のslice完了）
 3. Changes RHSのrequired relation value（最初のslice完了）
 4. numeric `+`（最初のslice完了）
-5. Action Precondition（最小slice完了）、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
+5. Action Precondition（最小slice完了）、fixed 2件のmultiple assignment（design review反映済み・未実装）、collection binding、record creationをfull Order approvalまで段階化
 6. Derived Valueを独立したExpression consumerとして検証
 7. Occurrence
 8. Effect binding / delivery contract
@@ -180,7 +180,24 @@ numeric typeへ限定した。immediate declared baseとclosure判定に使うef
 無部分commitを実測した。[`action-precondition-proposal.md`](action-precondition-proposal.md)の実装では、named predicateを
 source stateとpost-state Invariantから分離し、required relationを共有するexact pre-state評価、
 `precondition-unsatisfied`／`invalid`、relation unavailableとの優先順位、concurrent enforcementを最小sliceとして実装・実測した。
-compiler実装はこのproposalのdesign review後に行う。
+[`multiple-assignment-proposal.md`](multiple-assignment-proposal.md)では、collection fan-outより先に1 block／最大2 assignmentsへ
+閉じ、全RHSの同一pre-state評価、target grouping、same-type distinct targetの静的拒否、全fieldを一つに束ねるatomic Acceptance Factを設計した。
+design reviewではOrder fixtureが逆順の逐次評価を値で区別できない限界を明記し、write前materializationをhuman reviewへ移した。
+repository E2Eでenforceしないruntime alias outcomeは作らず、same-type distinct targetをcompile errorへ閉じた。設計は保存するが、
+compiler／Order E2E実装は最速alpha後へ送る。
+
+### Track D — Fastest alpha distribution（現在の本線）
+
+Action Preconditionまでのcurrent executable semanticsをalpha scopeとしてfreezeする。Resolved Intent `v0.12`、Source Map `v0.6`、
+Acceptance Facts `v0alpha10`、Outcome Projection `v0alpha5`、Review Requirements `v0alpha6`と、membership 85/85、Order 280/280を
+配布baselineにする。
+
+[`roadmap.md`](roadmap.md)のFastest alpha cutに従い、次はlanguage feature追加ではなく、alpha profile、CLI version、install／release、
+quickstart、external AI handoff、clean-environment E2E、security boundary、fresh repository dogfoodを進める。multiple assignment、collection、
+record creation、Derived Value、Occurrence、Effect、`forma fmt`／`forma explain`完成はalpha blockerにしない。
+
+目標は`v0.1.0-alpha.1`を8–12 working days、review込み2–3 calendar weeksで公開することとする。alphaはlanguage完成宣言ではなく、
+実application利用からpost-alpha P3の優先順位を決めるためのdistribution cutである。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。
@@ -210,5 +227,5 @@ ChangesとOccurrenceの境界が必要だからである。
 
 ## 次の更新条件
 
-Track Aのsyntax probe、人間評価、P3の各vertical sliceが完了するたび、この文書の「現在地」「実施順序」「採らないもの」を更新する。
+Track Aのsyntax probe、人間評価、P3の各vertical slice、alpha release packageが完了するたび、この文書の「現在地」「実施順序」「採らないもの」を更新する。
 実験結果と設計判断を分け、未実測の期待を「検証済み」と書かない。

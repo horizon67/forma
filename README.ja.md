@@ -281,7 +281,9 @@ bounded Changes、required relation value、field reference 2個のexact binary 
 通常のGo applicationによる280/280 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
 保持し、integer overflowは部分commitなしの`failure`になります。Action Preconditionはsource state、exactなpre-state predicate、
 post-state Invariantを分離し、false時のauthoritativeな無変更拒否とconcurrent enforcementまで実測しました。
-6 Review Requirementsは人間確認待ちです。次はmultiple assignmentとcollection bindingを経てfull Order approvalへ進み、その後Occurrence → Effectを扱います。
+6 Review Requirementsは人間確認待ちです。この実行可能baselineを最速`v0.1.0-alpha.1`のscopeとしてfreezeします。
+review済みのmultiple assignment設計は未実装のまま保存し、collection、record creation、Occurrence、Effectとともにpost-alphaへ送ります。
+alphaではinstall可能なCLI、external AI handoffのquickstart、clean-environment release gate、fresh repository dogfoodを優先します。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料
@@ -297,6 +299,7 @@ projectionの人間評価は独立して進めます。
 - [Changesのrelation value expression案](docs/relation-value-expression-proposal.md)
 - [Changesのnumeric addition案](docs/numeric-addition-expression-proposal.md)
 - [Action Precondition案](docs/action-precondition-proposal.md)
+- [Multiple assignment案](docs/multiple-assignment-proposal.md)
 - [会員登録flowのnotation比較](docs/membership-flow-notation-probe.md)
 - [会員登録flowの人間評価](docs/evaluations/membership-flow/README.md)
 - [ユーザー管理の完全例](examples/users.forma)
