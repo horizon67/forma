@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	expectedFacts   = 172
-	expectedReviews = 1
+	expectedFacts   = 275
+	expectedReviews = 3
 )
 
 func main() {
@@ -112,6 +112,48 @@ func coverageForFact(fact compiler.AcceptanceFact) ([]string, error) {
 			storeTests + "TestStockValidationAndInvariantRejectAtomically",
 			webTests + "TestStockItemEditSurfaceValidationInvariantAndNavigation",
 		}, nil
+	case "transition-accepted", "transition-source-rejected":
+		if strings.Contains(subject, "StockReservation") {
+			return []string{storeTests + "TestStockReservationCommitIsAtomicAcrossReservationAndStock"}, nil
+		}
+		name, ok := orderActionTest(subject, "Store")
+		if !ok {
+			break
+		}
+		return []string{storeTests + name}, nil
+	case "action-transition-accepted", "action-transition-source-rejected":
+		if strings.Contains(subject, "StockReservation") {
+			return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
+		}
+		name, ok := orderActionTest(subject, "HTTP")
+		if !ok {
+			break
+		}
+		return []string{webTests + name}, nil
+	case "confirmation-required":
+		if strings.Contains(subject, "StockReservation") {
+			return []string{webTests + "TestReservationCommitConfirmationAndCrossEntityAuthorization"}, nil
+		}
+		return []string{webTests + "TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"}, nil
+	case "changes-accepted", "changes-invariant-rejected", "changes-target-unavailable":
+		return []string{storeTests + "TestStockReservationCommitIsAtomicAcrossReservationAndStock"}, nil
+	case "action-changes-accepted", "action-changes-invariant-rejected", "action-changes-target-unavailable":
+		return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
+	case "action-observable-feedback":
+		if strings.Contains(subject, "StockReservation") {
+			return []string{
+				webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome",
+				webTests + "TestReservationCommitConfirmationAndCrossEntityAuthorization",
+			}, nil
+		}
+		if strings.Contains(subject, "/delete") {
+			return []string{webTests + "TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"}, nil
+		}
+		name, ok := orderActionTest(subject, "HTTP")
+		if !ok {
+			break
+		}
+		return []string{webTests + name}, nil
 	case "list-search", "list-filter", "list-sort", "list-page-boundary":
 		if strings.Contains(subject, "page/Orders/") {
 			return []string{
@@ -164,6 +206,9 @@ func coverageForFact(fact compiler.AcceptanceFact) ([]string, error) {
 			}, nil
 		}
 	case "navigation":
+		if strings.Contains(subject, "StockReservation") {
+			return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
+		}
 		if strings.Contains(subject, "OrderCreate") {
 			return []string{webTests + "TestOrderCreateSurfaceValidationMutationAndNavigation"}, nil
 		}
@@ -188,35 +233,46 @@ func coverageForFact(fact compiler.AcceptanceFact) ([]string, error) {
 	return nil, fmt.Errorf("no repository test covers %s (%s, subject %s)", fact.ID, fact.Kind, fact.Subject)
 }
 
+func orderActionTest(subject, boundary string) (string, bool) {
+	for _, action := range []string{"submit", "approve", "reject", "ship"} {
+		if strings.HasSuffix(subject, "/"+action) {
+			return "TestOrder" + strings.ToUpper(action[:1]) + action[1:] + "TransitionFactsAt" + boundary + "Boundary", true
+		}
+	}
+	return "", false
+}
+
 func accessTest(subject string) (string, bool) {
 	result := map[string]string{
-		"page/Orders/view/list/Order":                            "TestOrdersHTTPAccess",
-		"page/Orders/view/list/Order/action/create":              "TestOrderCreateActionHTTPAccess",
-		"page/OrderCreate/view/form/create/Order":                "TestOrderCreateFormHTTPAccess",
-		"page/OrderCreate/view/form/create/Order/submit":         "TestOrderCreateSubmitHTTPAccess",
-		"page/Orders/view/list/Order/action/view":                "TestOrderDetailActionHTTPAccess",
-		"page/OrderDetail/view/detail/Order":                     "TestOrderDetailHTTPAccess",
-		"page/Orders/view/list/Order/action/edit":                "TestOrderEditActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/edit":         "TestOrderEditActionsHTTPAccess",
-		"page/OrderEdit/view/form/edit/Order":                    "TestOrderEditFormHTTPAccess",
-		"page/OrderEdit/view/form/edit/Order/submit":             "TestOrderEditSubmitHTTPAccess",
-		"page/Orders/view/list/Order/action/delete":              "TestOrderDeleteActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/delete":       "TestOrderDeleteActionsHTTPAccess",
-		"page/Orders/view/list/Order/action/submit":              "TestOrderSubmitActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/submit":       "TestOrderSubmitActionsHTTPAccess",
-		"page/Orders/view/list/Order/action/approve":             "TestOrderApproveActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/approve":      "TestOrderApproveActionsHTTPAccess",
-		"page/Orders/view/list/Order/action/reject":              "TestOrderRejectActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/reject":       "TestOrderRejectActionsHTTPAccess",
-		"page/Orders/view/list/Order/action/ship":                "TestOrderShipActionsHTTPAccess",
-		"page/OrderDetail/view/detail/Order/action/ship":         "TestOrderShipActionsHTTPAccess",
-		"page/StockItems/view/list/StockItem":                    "TestStockItemsHTTPAccess",
-		"page/StockItems/view/list/StockItem/action/view":        "TestStockItemDetailActionHTTPAccess",
-		"page/StockItemDetail/view/detail/StockItem":             "TestStockItemDetailHTTPAccess",
-		"page/StockItems/view/list/StockItem/action/edit":        "TestStockItemEditActionsHTTPAccess",
-		"page/StockItemDetail/view/detail/StockItem/action/edit": "TestStockItemEditActionsHTTPAccess",
-		"page/StockItemEdit/view/form/edit/StockItem":            "TestStockItemEditFormHTTPAccess",
-		"page/StockItemEdit/view/form/edit/StockItem/submit":     "TestStockItemEditSubmitHTTPAccess",
+		"page/Orders/view/list/Order":                                "TestOrdersHTTPAccess",
+		"page/Orders/view/list/Order/action/create":                  "TestOrderCreateActionHTTPAccess",
+		"page/OrderCreate/view/form/create/Order":                    "TestOrderCreateFormHTTPAccess",
+		"page/OrderCreate/view/form/create/Order/submit":             "TestOrderCreateSubmitHTTPAccess",
+		"page/Orders/view/list/Order/action/view":                    "TestOrderDetailActionHTTPAccess",
+		"page/OrderDetail/view/detail/Order":                         "TestOrderDetailHTTPAccess",
+		"page/Orders/view/list/Order/action/edit":                    "TestOrderEditActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/edit":             "TestOrderEditActionsHTTPAccess",
+		"page/OrderEdit/view/form/edit/Order":                        "TestOrderEditFormHTTPAccess",
+		"page/OrderEdit/view/form/edit/Order/submit":                 "TestOrderEditSubmitHTTPAccess",
+		"page/Orders/view/list/Order/action/delete":                  "TestOrderDeleteActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/delete":           "TestOrderDeleteActionsHTTPAccess",
+		"page/Orders/view/list/Order/action/submit":                  "TestOrderSubmitActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/submit":           "TestOrderSubmitActionsHTTPAccess",
+		"page/Orders/view/list/Order/action/approve":                 "TestOrderApproveActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/approve":          "TestOrderApproveActionsHTTPAccess",
+		"page/Orders/view/list/Order/action/reject":                  "TestOrderRejectActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/reject":           "TestOrderRejectActionsHTTPAccess",
+		"page/Orders/view/list/Order/action/ship":                    "TestOrderShipActionsHTTPAccess",
+		"page/OrderDetail/view/detail/Order/action/ship":             "TestOrderShipActionsHTTPAccess",
+		"page/StockItems/view/list/StockItem":                        "TestStockItemsHTTPAccess",
+		"page/StockItems/view/list/StockItem/action/view":            "TestStockItemDetailActionHTTPAccess",
+		"page/StockItemDetail/view/detail/StockItem":                 "TestStockItemDetailHTTPAccess",
+		"page/StockItems/view/list/StockItem/action/edit":            "TestStockItemEditActionsHTTPAccess",
+		"page/StockItemDetail/view/detail/StockItem/action/edit":     "TestStockItemEditActionsHTTPAccess",
+		"page/StockItemEdit/view/form/edit/StockItem":                "TestStockItemEditFormHTTPAccess",
+		"page/StockItemEdit/view/form/edit/StockItem/submit":         "TestStockItemEditSubmitHTTPAccess",
+		"page/Reservations/view/list/StockReservation":               "TestReservationsSurfaceFieldsActionsFeedbackAndAccess",
+		"page/Reservations/view/list/StockReservation/action/commit": "TestReservationCommitConfirmationAndCrossEntityAuthorization",
 	}[subject]
 	return result, result != ""
 }
@@ -230,6 +286,7 @@ func surfaceTest(subject string) (string, bool) {
 		"page/StockItems/":      "TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback",
 		"page/StockItemDetail/": "TestStockItemDetailSurfaceFieldsActionsEmptyAndFailure",
 		"page/StockItemEdit/":   "TestStockItemEditSurfaceValidationInvariantAndNavigation",
+		"page/Reservations/":    "TestReservationsSurfaceFieldsActionsFeedbackAndAccess",
 	} {
 		if strings.Contains(subject, marker) {
 			return test, true

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha2"
+const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha3"
 
 // OutcomeProjection is a deterministic review view over observable Acceptance
 // Facts. It splits multi-case facts into rows but does not add outcomes that
@@ -94,7 +94,7 @@ func isOutcomeFact(fact AcceptanceFact) bool {
 		return false
 	}
 	expected := fact.Expected
-	if expected.Outcome != "" || len(expected.Feedback) > 0 || expected.AppliedMutations > 0 ||
+	if expected.Outcome != "" || expected.Reason != "" || expected.Dispatch != "" || len(expected.Subjects) > 0 || len(expected.Feedback) > 0 || expected.AppliedMutations > 0 ||
 		expected.Enforcement != "" || expected.Atomicity != "" || expected.Stored != "" || len(expected.PreserveInput) > 0 || expected.Navigation != nil {
 		return true
 	}
@@ -316,6 +316,17 @@ func summarizeOutcomeRow(row OutcomeRow) ([]string, []string) {
 	if value.Outcome != "" {
 		addExpected("outcome=" + value.Outcome)
 	}
+	if value.Reason != "" {
+		addExpected("reason=" + value.Reason)
+	}
+	if value.Violated != "" {
+		addExpected("violated=" + outcomeSemanticLabel(value.Violated))
+	}
+	if value.Dispatch == "none" {
+		addProhibited("action dispatched")
+	} else if value.Dispatch != "" {
+		addExpected("dispatch=" + value.Dispatch)
+	}
 	if len(value.Feedback) > 0 {
 		addExpected("feedback=" + strings.Join(value.Feedback, ","))
 	}
@@ -339,6 +350,18 @@ func summarizeOutcomeRow(row OutcomeRow) ([]string, []string) {
 	}
 	if len(value.PreserveInput) > 0 {
 		addExpected("preserve-input=" + outcomeSemanticLabels(value.PreserveInput))
+	}
+	for _, subject := range value.Subjects {
+		prefix := subject.Handle
+		if subject.State != nil {
+			addExpected(prefix + ".state=" + outcomeStateLabel(*subject.State))
+		}
+		if subject.Unchanged {
+			addExpected(prefix + " unchanged")
+		}
+		for _, field := range subject.Fields {
+			addExpected(prefix + "." + outcomeSemanticLabel(field.Field) + "=" + field.ValueSubject + "." + outcomeSemanticLabel(field.ValueField))
+		}
 	}
 	appendNavigationSummary(value.Navigation, addExpected)
 

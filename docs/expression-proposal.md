@@ -566,7 +566,8 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
    **実装済み**。
 5. Generation RequestへExpression treeを含むFactsとReview Requirementを渡す。追加時のsemantic diffまで
    **実装済み**。
-   coding agentがrepository固有testと保存境界へ実装できるかも、通常のGo applicationで**172/172 Factsを実測済み**。
+   coding agentがrepository固有testと保存境界へ実装できるかも、通常のGo applicationで当初**172/172 Factsを実測済み**。
+   後続Changes統合後のcurrent artifactは275/275である。
 6. 比較、等価、boolean、括弧と、左結合binary normalizationを追加する。
 7. v0 lexerの符号付きnumberを移行して二項`+`、二項`-`を追加する。
 8. 同じExpression treeをDerived Value proposalで再利用し、そこでrequiredなto-one relation traversalを追加する。
@@ -596,16 +597,17 @@ entity StockItem {
 `invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
 `invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
 解決済みExpression tree、`post-state`評価、authoritative enforcement、
-`all-changes-committed` / `no-changes-committed`を`forma/acceptance-facts/v0alpha6`へ固定する。
-concurrencyは`forma/review-requirements/v0alpha2`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
+`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha7`へ固定する。
+concurrencyはcurrent `forma/review-requirements/v0alpha3`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
 将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。coding agentによるrepository固有testと
 保存境界の実測は、[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で完了した。
-targetはForma runtimeを持たない通常のGo applicationで、39 testへ172 Factsを明示対応付けした。98 access Factsは
+targetはForma runtimeを持たない通常のGo applicationで、Invariant単独時は39 testsへ172 Factsを明示対応付けした。98 access Factsは
 pureなrole判定testではなく、それぞれのpage、form submit、actionを通るHTTP testへ対応付ける。さらに、
 `page/...`をsubjectに持つ全165 FactsへHTTP testを要求し、form mutationとlist queryがsurfaceを迂回する経路も閉じた。
 invalid post-stateの
 全変更拒否と、競合する在庫予約をmutex内で評価・commitするtestも通る。後者のarchitecture判断はReview Requirementとして
-人間確認待ちであり、機械Factへ偽装しない。その確認後はgeneral functionやcollectionを先回りで足さず、Changesと
-atomic post-stateの次のvertical sliceへ進む。最小candidateは[`changes-proposal.md`](changes-proposal.md)に分離し、
-最初のvalue expressionをaction entity自身のrequired field参照に限定した。Effect syntaxはOccurrenceとの境界が
+人間確認待ちであり、機械Factへ偽装しない。その後general functionやcollectionを先回りで足さず、Changesと
+atomic post-stateの次のvertical sliceへ進み、current targetでは52 tests / 275 Factsまで統合した。最小sliceは
+[`changes-proposal.md`](changes-proposal.md)に分離し、最初のvalue expressionをaction entity自身のrequired field参照に
+限定した。Effect syntaxはOccurrenceとの境界が
 定まるまで追加しない。

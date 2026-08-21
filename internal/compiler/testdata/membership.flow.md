@@ -1,11 +1,11 @@
 # Forma flow projection
 
 - Schema: `forma/flow-projection/v0alpha3`
-- Intent: `forma/resolved-intent/v0.8`
-- Inputs: navigation `forma/navigation-projection/v0alpha2`; outcomes `forma/outcome-projection/v0alpha2`; states `forma/domain-state-projection/v0alpha1`
+- Intent: `forma/resolved-intent/v0.9`
+- Inputs: navigation `forma/navigation-projection/v0alpha2`; outcomes `forma/outcome-projection/v0alpha3`; states `forma/domain-state-projection/v0alpha1`
 - Default entry: `unspecified` (not inferred)
 - Navigation: 10 pages; 12 edges
-- Outcomes linked to edges: 10/17 groups; 60/83 cases
+- Outcomes linked to edges: 10/18 groups; 60/87 cases
 - Domain state linked to edges: 5/5 elements; 5 edge annotations
 
 ```mermaid
@@ -74,8 +74,9 @@ flowchart LR
 
 Items below are still available in the detailed projections. They are listed here so the overview cannot imply complete outcome or state coverage.
 
-### Outcomes not attached to a navigation edge (7)
+### Outcomes not attached to a navigation edge (8)
 
+- `User.activate`: 4 cases (`action/User/activate`)
 - `UserAccount.password`: 1 cases, 1 with explicit must-not guarantees (`identity/UserAccount/credential/password`)
 - `UserAccount.self`: 3 cases (`identity/UserAccount/ownership/self`)
 - `Profile:User.detail`: 2 cases (`page/Profile/view/detail/User`)

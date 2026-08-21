@@ -11,17 +11,22 @@ import (
 )
 
 const (
-	adminTests      = "internal/web/server_test.go#"
-	memberTests     = "internal/web/membership_e2e_test.go#"
-	storeTests      = "internal/store/store_test.go#"
-	identityTests   = "internal/identity/identity_test.go#"
-	submissionTests = "internal/web/submission_test.go#"
-	executableTests = "cmd/server/main_test.go#"
+	adminTests         = "internal/web/server_test.go#"
+	memberTests        = "internal/web/membership_e2e_test.go#"
+	storeTests         = "internal/store/store_test.go#"
+	identityTests      = "internal/identity/identity_test.go#"
+	identityStoreTests = "internal/store/identity_test.go#"
+	submissionTests    = "internal/web/submission_test.go#"
+	executableTests    = "cmd/server/main_test.go#"
 )
 
 // coverage lists the tests that observe each fact. Keys are fact IDs with the
 // leading "fact/" removed.
 var coverage = map[string][]string{
+	"action/User/activate/transition/accepted/from/Pending":   {identityStoreTests + "TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"},
+	"action/User/activate/transition/rejected/from/Active":    {identityStoreTests + "TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"},
+	"action/User/activate/transition/rejected/from/Confirmed": {identityStoreTests + "TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"},
+	"action/User/activate/transition/rejected/from/Suspended": {identityStoreTests + "TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"},
 	// --- Admin surfaces, unchanged from the baseline application ---
 	"entity/User/field/team/relation/resolved":                             {adminTests + "TestRelationUsesTeamLabel"},
 	"page/Users/view/list/User/access/allowed/admin":                       {adminTests + "TestAdminList"},
@@ -154,7 +159,7 @@ var policyEvidence = map[string]implementationpolicy.Coverage{
 	},
 }
 
-const coverageFingerprintLocked = "341f1f8042fa16b528704c494ca17e126a7fc2f6ee08059b622f24b23392c7f9"
+const coverageFingerprintLocked = "5413385c879192430e4fce3f4ff0e3763afbf7fd357a3b57257394eed4b56e07"
 
 func coverageFingerprint() string {
 	keys := make([]string, 0, len(coverage))

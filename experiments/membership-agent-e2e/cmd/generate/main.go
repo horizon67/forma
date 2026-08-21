@@ -89,8 +89,8 @@ func run() error {
 }
 
 const (
-	expectedFacts                    = 81
-	expectedFactChanges              = 38
+	expectedFacts                    = 85
+	expectedFactChanges              = 42
 	expectedUnchangedFacts           = 43
 	expectedReviewRequirementChanges = 3
 )

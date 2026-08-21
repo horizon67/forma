@@ -19,7 +19,7 @@ Forma coreへagent APIやschedulerは追加しない。今回のcommandは
 前の3つのprobeで、次は個別に実測済みだった。
 
 - test failureとbuild failureをstructured Generation Feedbackへできる
-- implementation-only repairで81/81へ戻せる
+- implementation-only repairで85/85へ戻せる
 - test、coverage map、requestを弱めるretryをprebuilt guardで止められる
 
 まだ開いていた問いはこれである。
@@ -46,7 +46,7 @@ compileしない**。
 固定対象はそのrunで使うbinaryだけではない。次のrunがtrusted binaryへcompileする`cmd/forma`、
 `internal/agentrequest`、`internal/compiler`、`internal/implementationpolicy`、orchestrator自身、
 および`go.mod` / `go.sum`もretry baselineへ含める。agentが今のrunのprebuilt verifierを回避できなくても、
-改変sourceを残して次のrunでtrustへ昇格させる経路を閉じる。baselineは73 pathsと8 directory listingsを持つ。
+改変sourceを残して次のrunでtrustへ昇格させる経路を閉じる。current baselineは78 pathsと8 directory listingsを持つ。
 
 ```text
 trusted orchestrator process starts
@@ -137,13 +137,13 @@ go run ./experiments/membership-automated-repair-loop/cmd/orchestrate \
 
 ```text
 initial measurement     test / failed
-Fact results            80 passed, 1 failed, 0 not-run
+Fact results            84 passed, 1 failed, 0 not-run
 failed Fact             fact/identity/UserAccount/operation/register/identifier/duplicate
 repair process          fresh codex exec --ephemeral
 repair                  target/internal/store/identity.goからcredential overwrite 5行を除去
 guard                   retry baseline intact
 final measurement       test / succeeded
-forma verify            81/81, 40 distinct tests, 3 policies, 3 review requirements
+forma verify            85/85, 41 distinct tests, 3 policies, 3 review requirements
 attempts                1
 ```
 
@@ -156,13 +156,13 @@ repair processはtest、coverage map、request、manifest、orchestration code�
 
 ```text
 initial measurement     build / failed
-Fact results            0 passed, 0 failed, 81 not-run
+Fact results            4 passed, 0 failed, 81 not-run
 diagnostic              too many arguments in call to stored.Matches
 repair process          別のfresh codex exec --ephemeral
 repair                  target/internal/web/membership.goのcallを1行修正
 guard                   retry baseline intact
 final measurement       test / succeeded
-forma verify            81/81, 40 distinct tests, 3 policies, 3 review requirements
+forma verify            85/85, 41 distinct tests, 3 policies, 3 review requirements
 attempts                1
 ```
 
@@ -192,7 +192,7 @@ attempts                1
 
 orchestratorはdecisionだけで停止せず、同じfailureがtrusted measurementで再現したこととrepository contentが
 不変であることを確認してからhandoffを発行した。[`generation-feedback.blocked-intent-gap.json`](generation-feedback.blocked-intent-gap.json)
-はそのartifact本体で、testが実行された事実を`stage: test`、実際のtest command、80 passed / 1 failedの
+はそのartifact本体で、testが実行された事実を`stage: test`、実際のtest command、84 passed / 1 failedの
 Fact coverageとして保持する。`status: blocked`だけが、人間なしではloopを続けられない結果を表す。
 `forma verify`はshapeを検証した後、blocked statusによりexit 1となる。人間がForma source、protected test、
 または変更要求を判断するまで自動loopを閉じる。
@@ -200,12 +200,12 @@ Fact coverageとして保持する。`status: blocked`だけが、人間なし�
 成功時feedbackは両runとも元のStage D artifactへbyte-identicalに戻った。
 
 ```text
-generation-feedback.json  2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb
+generation-feedback.json  fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51
 test fault.patch           36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 build fault.patch          948146752688b546d68235daaed6d5a94ea62fbd2e3668c76acbfd221c56f339
 intent-gap.patch           9cab340a4d8af9cbeea1fff59d6cf7aef3011e578c4d894645baed18ea1b64df
 intent-gap-decision.json   f3dc4d7eefcf0e5064260bdbe22e3b09988cd036b1e521f8ecc02369ca2983de
-blocked handoff feedback   5cef5d4322ba555d96f109ee7754e4b0b34e5bbbde3f3c3f5e0368c29164feb9
+blocked handoff feedback   fd9f788579c8a78e020757d174fe283bf8adabb1c35617a3f3823d3bc8cdb168
 ```
 
 faultを含むimplementationも最終treeへ残していない。
@@ -246,7 +246,7 @@ faultを含むimplementationも最終treeへ残していない。
 
 ## このprobeが証明したこと
 
-- test failureとbuild failureの両方を、fresh agent process 1回で自動修復して81/81へ戻せた
+- test failureとbuild failureの両方を、fresh agent process 1回で自動修復して85/85へ戻せた
 - retryの順序、attempt上限、guard停止、feedback更新、最終verifyを1つのtrusted processが所有できる
 - repair agentの自己申告を合否に使わず、固定済みrepository testとverifierで決定できる
 - guardだけでなくfeedback generatorとverifierもprebuildすることで、retry後にverification sourceを

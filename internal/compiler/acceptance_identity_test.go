@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -123,7 +124,14 @@ func TestValidateAcceptanceFactsAllowsSupportedIdentityKindSubset(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	facts.Facts = []AcceptanceFact{identityFactByKind(t, facts.Facts, "identity-inputs")}
+	subset := []AcceptanceFact{identityFactByKind(t, facts.Facts, "identity-inputs")}
+	for _, fact := range facts.Facts {
+		if !isIdentityFact(fact) {
+			subset = append(subset, fact)
+		}
+	}
+	sort.Slice(subset, func(i, j int) bool { return subset[i].ID < subset[j].ID })
+	facts.Facts = subset
 	if err := ValidateAcceptanceFacts(intent, facts); err != nil {
 		t.Fatalf("supported Identity Fact subset was rejected: %v", err)
 	}

@@ -15,6 +15,7 @@ var (
 	ErrInvalidTransition  = errors.New("invalid state transition")
 	ErrConfirmationNeeded = errors.New("confirmation required")
 	ErrInvariant          = errors.New("stock availability invariant violated")
+	ErrTargetUnavailable  = errors.New("change target unavailable")
 )
 
 type Role string
@@ -105,6 +106,24 @@ type OrderLine struct {
 	ProductID string
 	Quantity  int
 }
+
+type ReservationStatus string
+
+const (
+	ReservationPending   ReservationStatus = "Pending"
+	ReservationCommitted ReservationStatus = "Committed"
+)
+
+type StockReservation struct {
+	ID            string
+	Code          string
+	StockID       string
+	ReservedAfter int
+	Status        ReservationStatus
+	Version       int
+}
+
+func (reservation StockReservation) Label() string { return reservation.Code }
 
 func ValidateOrder(order Order) error {
 	if strings.TrimSpace(order.Number) == "" {

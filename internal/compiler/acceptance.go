@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha6"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha7"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -37,12 +37,31 @@ type FactPrincipal struct {
 }
 
 type FactInput struct {
-	Fields          []SemanticID        `json:"fields,omitempty"`
-	ExistingRecords int                 `json:"existingRecords,omitempty"`
-	Dispatches      int                 `json:"dispatches,omitempty"`
-	Violation       *FactViolation      `json:"violation,omitempty"`
-	Predicate       *FactPredicateInput `json:"predicate,omitempty"`
-	Identity        *IdentityFactInput  `json:"identity,omitempty"`
+	Fields          []SemanticID         `json:"fields,omitempty"`
+	ExistingRecords int                  `json:"existingRecords,omitempty"`
+	Dispatches      int                  `json:"dispatches,omitempty"`
+	Violation       *FactViolation       `json:"violation,omitempty"`
+	Predicate       *FactPredicateInput  `json:"predicate,omitempty"`
+	Action          *FactActionInput     `json:"action,omitempty"`
+	Invariants      []FactInvariantInput `json:"invariants,omitempty"`
+	Identity        *IdentityFactInput   `json:"identity,omitempty"`
+}
+
+type FactActionInput struct {
+	Action       SemanticID `json:"action,omitempty"`
+	Reference    SemanticID `json:"reference,omitempty"`
+	Subject      string     `json:"subject"`
+	Dispatches   int        `json:"dispatches,omitempty"`
+	Confirmation string     `json:"confirmation,omitempty"`
+}
+
+type FactInvariantInput struct {
+	Invariant         SemanticID   `json:"invariant"`
+	Subject           string       `json:"subject"`
+	Expression        IRExpression `json:"expression"`
+	Evaluation        string       `json:"evaluation"`
+	OtherRequirements string       `json:"otherRequirements"`
+	Result            bool         `json:"result"`
 }
 
 // FactPredicateInput describes one compiler-resolved expression evaluation.
@@ -63,6 +82,9 @@ type FactViolation struct {
 
 type FactExpectation struct {
 	Outcome          string                   `json:"outcome,omitempty"`
+	Reason           string                   `json:"reason,omitempty"`
+	Violated         SemanticID               `json:"violated,omitempty"`
+	Dispatch         string                   `json:"dispatch,omitempty"`
 	Fields           []SemanticID             `json:"fields,omitempty"`
 	Actions          []SemanticID             `json:"actions,omitempty"`
 	Feedback         []string                 `json:"feedback,omitempty"`
@@ -73,6 +95,7 @@ type FactExpectation struct {
 	Atomicity        string                   `json:"atomicity,omitempty"`
 	Stored           string                   `json:"stored,omitempty"`
 	PreserveInput    []SemanticID             `json:"preserveInput,omitempty"`
+	Subjects         []FactSubjectExpectation `json:"subjects,omitempty"`
 	Relation         *FactRelation            `json:"relation,omitempty"`
 	Sort             *FactSort                `json:"sort,omitempty"`
 	Navigation       *FactNavigation          `json:"navigation,omitempty"`
@@ -83,11 +106,12 @@ type FactExpectation struct {
 // handles have fact-local identity and never contain runtime credential,
 // evidence, or session values.
 type FactSetup struct {
-	Subjects []FactSubjectSetup  `json:"subjects,omitempty"`
-	Evidence []FactEvidenceSetup `json:"evidence,omitempty"`
-	Sessions []FactSessionSetup  `json:"sessions,omitempty"`
-	Clock    *FactClockSetup     `json:"clock,omitempty"`
-	Delivery *FactDeliverySetup  `json:"delivery,omitempty"`
+	Subjects  []FactSubjectSetup  `json:"subjects,omitempty"`
+	Relations []FactRelationSetup `json:"relations,omitempty"`
+	Evidence  []FactEvidenceSetup `json:"evidence,omitempty"`
+	Sessions  []FactSessionSetup  `json:"sessions,omitempty"`
+	Clock     *FactClockSetup     `json:"clock,omitempty"`
+	Delivery  *FactDeliverySetup  `json:"delivery,omitempty"`
 }
 
 type FactSubjectSetup struct {
@@ -95,6 +119,13 @@ type FactSubjectSetup struct {
 	Identity    SemanticID                   `json:"identity"`
 	State       *IRStateValueRef             `json:"state,omitempty"`
 	Credentials []FactCredentialBindingSetup `json:"credentials,omitempty"`
+}
+
+type FactRelationSetup struct {
+	Source    string     `json:"source"`
+	Field     SemanticID `json:"field"`
+	Target    string     `json:"target,omitempty"`
+	Condition string     `json:"condition"`
 }
 
 type FactCredentialBindingSetup struct {
@@ -186,9 +217,18 @@ type IdentityFactExpectation struct {
 }
 
 type FactSubjectExpectation struct {
-	Count     *int             `json:"count,omitempty"`
-	State     *IRStateValueRef `json:"state,omitempty"`
-	Unchanged bool             `json:"unchanged,omitempty"`
+	Handle    string                 `json:"handle,omitempty"`
+	Count     *int                   `json:"count,omitempty"`
+	State     *IRStateValueRef       `json:"state,omitempty"`
+	Unchanged bool                   `json:"unchanged,omitempty"`
+	Fields    []FactFieldExpectation `json:"fields,omitempty"`
+}
+
+type FactFieldExpectation struct {
+	Field        SemanticID `json:"field"`
+	Stored       string     `json:"stored"`
+	ValueSubject string     `json:"valueSubject,omitempty"`
+	ValueField   SemanticID `json:"valueField,omitempty"`
 }
 
 type FactCredentialExpectation struct {
@@ -254,20 +294,47 @@ type FactNavigation struct {
 // Resolved Intent. It deliberately contains no fixtures, routes, HTTP, DOM, or
 // test-framework vocabulary.
 func BuildAcceptanceFacts(intent *ResolvedIntent) (*AcceptanceFacts, error) {
+	result, err := buildAcceptanceFactsUnchecked(intent)
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateAcceptanceFacts(intent, result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// buildAcceptanceFactsUnchecked is the single canonical derivation used by
+// both the public builder and the independent completeness check. It must not
+// call ValidateAcceptanceFacts, otherwise validating an externally supplied
+// artifact would recurse through the public builder.
+func buildAcceptanceFactsUnchecked(intent *ResolvedIntent) (*AcceptanceFacts, error) {
 	if intent == nil {
 		return nil, fmt.Errorf("build Acceptance Facts: nil Resolved Intent")
 	}
 	if err := ValidateResolvedIntent(intent); err != nil {
 		return nil, err
 	}
+	return deriveAcceptanceFacts(intent)
+}
+
+// deriveAcceptanceFacts assumes its caller has selected the appropriate
+// semantic validator. The generic Acceptance Fact validator uses it for
+// compiler-owned action completeness even when validating a supported
+// compositional Identity subset that is intentionally outside Build's first
+// end-to-end Identity slice.
+func deriveAcceptanceFacts(intent *ResolvedIntent) (*AcceptanceFacts, error) {
 	b := acceptanceBuilder{
-		intent: intent, types: map[string]IRType{}, entities: map[string]IREntity{}, pages: map[string]IRPage{},
+		intent: intent, types: map[string]IRType{}, entities: map[string]IREntity{}, actions: map[SemanticID]IRAction{}, pages: map[string]IRPage{},
 	}
 	for _, item := range intent.Types {
 		b.types[item.Name] = item
 	}
 	for _, item := range intent.Entities {
 		b.entities[item.Name] = item
+	}
+	for _, item := range intent.Actions {
+		b.actions[item.ID] = item
 	}
 	for _, item := range intent.Pages {
 		b.pages[item.Name] = item
@@ -284,9 +351,6 @@ func BuildAcceptanceFacts(intent *ResolvedIntent) (*AcceptanceFacts, error) {
 	result := &AcceptanceFacts{
 		Version: AcceptanceFactsVersion, IntentVersion: intent.Version, Facts: b.facts,
 	}
-	if err := ValidateAcceptanceFacts(intent, result); err != nil {
-		return nil, err
-	}
 	return result, nil
 }
 
@@ -298,6 +362,7 @@ type acceptanceBuilder struct {
 	intent   *ResolvedIntent
 	types    map[string]IRType
 	entities map[string]IREntity
+	actions  map[SemanticID]IRAction
 	pages    map[string]IRPage
 	facts    []AcceptanceFact
 }
@@ -313,6 +378,14 @@ func (b *acceptanceBuilder) build() error {
 			Expected:    FactExpectation{Navigation: &FactNavigation{TargetPage: page.ID}},
 			SourceNodes: []SemanticID{b.intent.Entry.ID, page.ID},
 		})
+	}
+	for _, action := range b.intent.Actions {
+		if err := b.addTransitionFacts(action); err != nil {
+			return err
+		}
+		if err := b.addChangeFacts(action, nil); err != nil {
+			return err
+		}
 	}
 	for _, entity := range b.intent.Entities {
 		for _, invariant := range entity.Invariants {
@@ -499,7 +572,7 @@ func (b *acceptanceBuilder) addViewFacts(page IRPage, view IRView, entity IREnti
 			Expected: FactExpectation{Actions: actions}, SourceNodes: append([]SemanticID{view.ID}, actions...),
 		})
 		for _, action := range view.Actions {
-			if err := b.addActionFacts(action); err != nil {
+			if err := b.addActionFacts(page, view, entity, action); err != nil {
 				return err
 			}
 		}
@@ -590,9 +663,36 @@ func (b *acceptanceBuilder) addListFacts(view IRView, entity IREntity) error {
 	return nil
 }
 
-func (b *acceptanceBuilder) addActionFacts(action IRActionRef) error {
+func (b *acceptanceBuilder) addActionFacts(page IRPage, view IRView, entity IREntity, action IRActionRef) error {
 	if err := b.addAccessFacts(action.ID, action.Access, []SemanticID{action.ID, action.Access.ID}); err != nil {
 		return err
+	}
+	if len(action.InteractionStates) > 0 {
+		sources := []SemanticID{action.ID}
+		if action.Action != "" {
+			sources = append(sources, action.Action)
+		}
+		b.add(AcceptanceFact{
+			ID: factID(action.ID, "feedback"), Kind: "action-observable-feedback", Subject: action.ID,
+			Expected: FactExpectation{Feedback: append([]string(nil), action.InteractionStates...)}, SourceNodes: sources,
+		})
+	}
+	if action.Kind == "transition" {
+		resolved, ok := b.actions[action.Action]
+		if !ok {
+			return fmt.Errorf("build Acceptance Facts: action reference %s has missing action %s", action.ID, action.Action)
+		}
+		if err := b.addTransitionSurfaceFacts(entity, resolved, action); err != nil {
+			return err
+		}
+		if resolved.Confirm {
+			b.addConfirmationFacts(entity, &resolved, action)
+		}
+		if err := b.addChangeFacts(resolved, &action); err != nil {
+			return err
+		}
+	} else if action.Kind == "standard" && action.Name == "delete" {
+		b.addConfirmationFacts(entity, nil, action)
 	}
 	if action.TargetPage == "" && action.SuccessPage == "" {
 		return nil
@@ -805,6 +905,9 @@ func (b *acceptanceBuilder) addAccessFact(subject SemanticID, outcome string, pr
 func (b *acceptanceBuilder) add(fact AcceptanceFact) {
 	fact.SourceNodes = canonicalSemanticIDs(fact.SourceNodes)
 	canonicalizeFactSetup(fact.Setup)
+	if fact.Input != nil {
+		sort.Slice(fact.Input.Invariants, func(i, j int) bool { return fact.Input.Invariants[i].Invariant < fact.Input.Invariants[j].Invariant })
+	}
 	if fact.Input != nil && fact.Input.Identity != nil {
 		fact.Input.Identity.Observe = canonicalStrings(fact.Input.Identity.Observe)
 		for index := range fact.Input.Identity.Cases {
@@ -816,6 +919,12 @@ func (b *acceptanceBuilder) add(fact AcceptanceFact) {
 		fact.Expected.Identity.ExcludedCredentials = canonicalSemanticIDs(fact.Expected.Identity.ExcludedCredentials)
 		fact.Expected.Identity.Surfaces = canonicalSemanticIDs(fact.Expected.Identity.Surfaces)
 	}
+	sort.Slice(fact.Expected.Subjects, func(i, j int) bool { return fact.Expected.Subjects[i].Handle < fact.Expected.Subjects[j].Handle })
+	for index := range fact.Expected.Subjects {
+		sort.Slice(fact.Expected.Subjects[index].Fields, func(i, j int) bool {
+			return fact.Expected.Subjects[index].Fields[i].Field < fact.Expected.Subjects[index].Fields[j].Field
+		})
+	}
 	b.facts = append(b.facts, fact)
 }
 
@@ -824,6 +933,13 @@ func canonicalizeFactSetup(setup *FactSetup) {
 		return
 	}
 	sort.Slice(setup.Subjects, func(i, j int) bool { return setup.Subjects[i].Handle < setup.Subjects[j].Handle })
+	sort.Slice(setup.Relations, func(i, j int) bool {
+		left, right := setup.Relations[i], setup.Relations[j]
+		if left.Source != right.Source {
+			return left.Source < right.Source
+		}
+		return left.Field < right.Field
+	})
 	for index := range setup.Subjects {
 		sort.Slice(setup.Subjects[index].Credentials, func(i, j int) bool {
 			return setup.Subjects[index].Credentials[i].Handle < setup.Subjects[index].Credentials[j].Handle

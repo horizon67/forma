@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.8",
+  "version": "forma/resolved-intent/v0.9",
   "types": [
     {
       "id": "type/Email",

@@ -1,5 +1,5 @@
 navigation projection forma/navigation-projection/v0alpha2
-intent forma/resolved-intent/v0.8
+intent forma/resolved-intent/v0.9
 default entry: unspecified
 
 external entries:

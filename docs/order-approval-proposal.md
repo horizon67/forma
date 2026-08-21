@@ -10,20 +10,21 @@ transaction boundary、runtime由来fieldが、実例のどこで必要になる
 規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書に現れる`effect`、`on`、`emit`、
 Derived Value、Action Preconditionなどの式は現在のParserでは受理されず、最終的なlanguage designも
 未決定である。probe後、reference compilerには規範v0外のexperimental sliceとして、名前付きInvariantと
-selfのrequired field同士の`<=`だけを実装した。範囲と現在地は
-[Minimal Expression Layer Proposal](expression-proposal.md)に記録する。
+selfのrequired field同士の`<=`、およびaction-ownedなbounded Changesを実装した。範囲と現在地は
+[Minimal Expression Layer Proposal](expression-proposal.md)と[Changes Proposal](changes-proposal.md)に記録する。
 
 [`email-verified-membership-probe.md`](email-verified-membership-probe.md)がidentityの最初の実測probeであるのに対し、
 本書はeffectとoccurrenceのprobeである。両方に共通して必要なものだけをeffect proposalの対象とする。
 
 このprobeから先行して切り出したself-only Invariantは、
-[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で通常のGo applicationへ実装し、172/172 Acceptance
-Factsを実測した。concurrent invariant enforcementの人間Review Requirementは未完了である。本書に残るChanges、
-Occurrence、Effectの候補は、その確認後の設計入力であり、まだ採用済み構文ではない。
+[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で通常のGo applicationへ実装した。続くbounded
+Changesも統合し、current 275/275 Acceptance Factsを実測した。concurrent invariant enforcement、atomic Changes、
+cross-entity authorizationの人間Review Requirementsは未完了である。本書に残るfull Changes、Occurrence、Effectの
+候補は後続の設計入力であり、まだ採用済み構文ではない。
 
-Changesの最小candidateは[`changes-proposal.md`](changes-proposal.md)へ分離した。最終対象は本書の`Order.approve`だが、
+Changesの最小sliceは[`changes-proposal.md`](changes-proposal.md)へ分離し実装した。最終対象は本書の`Order.approve`だが、
 最初のcompiler sliceではcollectionと算術を避け、`StockReservation.commit`のstate transitionとrequired relation先の
-1 field assignmentを同じatomic post-stateにする。
+1 field assignmentを同じatomic post-stateにした。
 
 ## 対象とするflow
 

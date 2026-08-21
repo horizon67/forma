@@ -1,4 +1,79 @@
 {
+  "fact/action/Order/approve/transition/accepted/from/Submitted": [
+    "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/approve/transition/rejected/from/Approved": [
+    "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/approve/transition/rejected/from/Draft": [
+    "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/approve/transition/rejected/from/Rejected": [
+    "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/approve/transition/rejected/from/Shipped": [
+    "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/reject/transition/accepted/from/Submitted": [
+    "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/reject/transition/rejected/from/Approved": [
+    "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/reject/transition/rejected/from/Draft": [
+    "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/reject/transition/rejected/from/Rejected": [
+    "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/reject/transition/rejected/from/Shipped": [
+    "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/ship/transition/accepted/from/Approved": [
+    "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/ship/transition/rejected/from/Draft": [
+    "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/ship/transition/rejected/from/Rejected": [
+    "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/ship/transition/rejected/from/Shipped": [
+    "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/ship/transition/rejected/from/Submitted": [
+    "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/submit/transition/accepted/from/Draft": [
+    "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/submit/transition/rejected/from/Approved": [
+    "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/submit/transition/rejected/from/Rejected": [
+    "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/submit/transition/rejected/from/Shipped": [
+    "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/Order/submit/transition/rejected/from/Submitted": [
+    "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+  ],
+  "fact/action/StockReservation/commit/changes/accepted/from/Pending": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
+  "fact/action/StockReservation/commit/changes/invariant/entity/StockItem/invariant/stockAvailable/rejected/from/Pending": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
+  "fact/action/StockReservation/commit/changes/target-unavailable/from/Pending": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
+  "fact/action/StockReservation/commit/transition/accepted/from/Pending": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
+  "fact/action/StockReservation/commit/transition/rejected/from/Committed": [
+    "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+  ],
   "fact/entity/Order/field/customer/relation/resolved": [
     "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
   ],
@@ -19,6 +94,9 @@
   ],
   "fact/entity/StockItem/invariant/stockAvailable/evaluation/violated": [
     "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+  ],
+  "fact/entity/StockReservation/field/stock/relation/resolved": [
+    "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
   ],
   "fact/page/OrderCreate/view/form/create/Order/access/allowed/staff": [
     "internal/web/server_test.go#TestOrderCreateFormHTTPAccess"
@@ -87,8 +165,32 @@
   "fact/page/OrderDetail/view/detail/Order/action/approve/access/denied/staff": [
     "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
   ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/confirmation/accepted": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/confirmation/declined": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/feedback": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/OrderDetail/view/detail/Order/action/approve/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/transition/accepted/from/Submitted": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/OrderDetail/view/detail/Order/action/delete/access/allowed/admin": [
     "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
@@ -101,6 +203,15 @@
   ],
   "fact/page/OrderDetail/view/detail/Order/action/delete/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/confirmation/accepted": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/confirmation/declined": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/delete/feedback": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
   ],
   "fact/page/OrderDetail/view/detail/Order/action/delete/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
@@ -132,8 +243,26 @@
   "fact/page/OrderDetail/view/detail/Order/action/reject/access/denied/staff": [
     "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
   ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/feedback": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/OrderDetail/view/detail/Order/action/reject/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/transition/accepted/from/Submitted": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/OrderDetail/view/detail/Order/action/ship/access/allowed/admin+staff": [
     "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
@@ -147,8 +276,26 @@
   "fact/page/OrderDetail/view/detail/Order/action/ship/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
   ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/feedback": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/OrderDetail/view/detail/Order/action/ship/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/transition/accepted/from/Approved": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Submitted": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/OrderDetail/view/detail/Order/action/submit/access/allowed/admin": [
     "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
@@ -159,8 +306,26 @@
   "fact/page/OrderDetail/view/detail/Order/action/submit/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
   ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/feedback": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/OrderDetail/view/detail/Order/action/submit/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/transition/accepted/from/Draft": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Submitted": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/OrderDetail/view/detail/Order/actions": [
     "internal/web/server_test.go#TestOrderDetailSurfaceFieldsActionsEmptyAndFailure"
@@ -241,8 +406,32 @@
   "fact/page/Orders/view/list/Order/action/approve/access/denied/staff": [
     "internal/web/server_test.go#TestOrderApproveActionsHTTPAccess"
   ],
+  "fact/page/Orders/view/list/Order/action/approve/confirmation/accepted": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/confirmation/declined": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/feedback": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/Orders/view/list/Order/action/approve/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/transition/accepted/from/Submitted": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/Orders/view/list/Order/action/create/access/allowed/admin+staff": [
     "internal/web/server_test.go#TestOrderCreateActionHTTPAccess"
@@ -267,6 +456,15 @@
   ],
   "fact/page/Orders/view/list/Order/action/delete/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/confirmation/accepted": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/confirmation/declined": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+  ],
+  "fact/page/Orders/view/list/Order/action/delete/feedback": [
+    "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
   ],
   "fact/page/Orders/view/list/Order/action/delete/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
@@ -298,8 +496,26 @@
   "fact/page/Orders/view/list/Order/action/reject/access/denied/staff": [
     "internal/web/server_test.go#TestOrderRejectActionsHTTPAccess"
   ],
+  "fact/page/Orders/view/list/Order/action/reject/feedback": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/Orders/view/list/Order/action/reject/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/transition/accepted/from/Submitted": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/Orders/view/list/Order/action/ship/access/allowed/admin+staff": [
     "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
@@ -313,8 +529,26 @@
   "fact/page/Orders/view/list/Order/action/ship/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderShipActionsHTTPAccess"
   ],
+  "fact/page/Orders/view/list/Order/action/ship/feedback": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/Orders/view/list/Order/action/ship/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/transition/accepted/from/Approved": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Draft": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Submitted": [
+    "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/Orders/view/list/Order/action/submit/access/allowed/admin": [
     "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
@@ -325,8 +559,26 @@
   "fact/page/Orders/view/list/Order/action/submit/access/denied/anonymous": [
     "internal/web/server_test.go#TestOrderSubmitActionsHTTPAccess"
   ],
+  "fact/page/Orders/view/list/Order/action/submit/feedback": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
   "fact/page/Orders/view/list/Order/action/submit/navigation": [
     "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/transition/accepted/from/Draft": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Approved": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Rejected": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Shipped": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+  ],
+  "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Submitted": [
+    "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
   ],
   "fact/page/Orders/view/list/Order/action/view/access/allowed/admin": [
     "internal/web/server_test.go#TestOrderDetailActionHTTPAccess"
@@ -374,6 +626,64 @@
   "fact/page/Orders/view/list/Order/sort": [
     "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
     "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/access/allowed/staff": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/access/denied/admin": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/access/denied/anonymous": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/access/allowed/staff": [
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/access/denied/admin": [
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/access/denied/anonymous": [
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/accepted/from/Pending": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/invariant/entity/StockItem/invariant/stockAvailable/rejected/from/Pending": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/changes/target-unavailable/from/Pending": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/accepted": [
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/declined": [
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/feedback": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome",
+    "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/navigation": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/transition/accepted/from/Pending": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/action/commit/transition/rejected/from/Committed": [
+    "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/actions": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/feedback": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/fields": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+  ],
+  "fact/page/Reservations/view/list/StockReservation/records/visible": [
+    "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
   ],
   "fact/page/StockItemDetail/view/detail/StockItem/access/allowed/admin": [
     "internal/web/server_test.go#TestStockItemDetailHTTPAccess"

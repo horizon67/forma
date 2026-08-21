@@ -26,7 +26,7 @@ func TestResolveCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &intent); err != nil {
 		t.Fatalf("resolve output is not JSON: %v\n%s", err, stdout.String())
 	}
-	if intent.Version != "forma/resolved-intent/v0.8" || len(intent.Pages) == 0 {
+	if intent.Version != "forma/resolved-intent/v0.9" || len(intent.Pages) == 0 {
 		t.Fatalf("resolved intent = %#v", intent)
 	}
 }
@@ -268,7 +268,7 @@ func TestVerifyIdentityRequestAlwaysDisplaysHumanReview(t *testing.T) {
 		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
 	}
 	output := stdout.String()
-	if !strings.Contains(output, "verified 38 acceptance facts: all passed") ||
+	if !strings.Contains(output, "verified 41 acceptance facts: all passed") ||
 		!strings.Contains(output, "human review required: 3 requirements are not machine-verified") {
 		t.Fatalf("review output = %q", output)
 	}

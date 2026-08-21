@@ -321,6 +321,13 @@ func ValidateRequest(request Request) error {
 					return fmt.Errorf("validate Generation Request: view %s contains implementation-shaped interaction state %q", view.ID, state)
 				}
 			}
+			for _, action := range view.Actions {
+				for _, state := range action.InteractionStates {
+					if !allowedStates[state] {
+						return fmt.Errorf("validate Generation Request: action reference %s contains implementation-shaped interaction state %q", action.ID, state)
+					}
+				}
+			}
 		}
 	}
 	return nil

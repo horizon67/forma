@@ -183,7 +183,7 @@ func TestB4LineageFromAppliedHistoricalAdminToIdentity(t *testing.T) {
 	if len(request.RequestedChange.ReviewRequirementChanges) != 3 || request.RequestedChange.UnchangedReviewRequirements != 0 {
 		t.Fatalf("B4 review requirement diff = %#v", request.RequestedChange)
 	}
-	if len(request.AcceptanceFacts.Facts) != 81 || len(request.RequestedChange.FactChanges) != 38 ||
+	if len(request.AcceptanceFacts.Facts) != 85 || len(request.RequestedChange.FactChanges) != 42 ||
 		request.RequestedChange.UnchangedFacts != 43 {
 		t.Fatalf("B4 fact lineage = %d total, %#v", len(request.AcceptanceFacts.Facts), request.RequestedChange)
 	}
@@ -230,7 +230,7 @@ func TestIdentityRequestKeepsHumanReviewOutsideFactCoverage(t *testing.T) {
 	if !reflect.DeepEqual(request.Verification.DisplayReviewRequirementIDs, wantReviewIDs) {
 		t.Fatalf("display review IDs = %v, want %v", request.Verification.DisplayReviewRequirementIDs, wantReviewIDs)
 	}
-	if len(request.AcceptanceFacts.Facts) != 38 || len(request.Verification.RequiredFactIDs) != 38 {
+	if len(request.AcceptanceFacts.Facts) != 41 || len(request.Verification.RequiredFactIDs) != 41 {
 		t.Fatalf("fact boundary = %d facts, %d required", len(request.AcceptanceFacts.Facts), len(request.Verification.RequiredFactIDs))
 	}
 	for _, id := range request.Verification.RequiredFactIDs {

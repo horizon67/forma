@@ -41,10 +41,24 @@ entity OrderLine {
     quantity Quantity required
 }
 
+entity StockReservation {
+    code          String required unique label
+    stock         StockItem required
+    reservedAfter Quantity required
+
+    state status Pending | Committed initial Pending
+}
+
 action Order.submit:  Draft     -> Submitted
 action Order.approve: Submitted -> Approved confirm allow admin
 action Order.reject:  Submitted -> Rejected allow admin
 action Order.ship:    Approved  -> Shipped  allow staff
+
+action StockReservation.commit: Pending -> Committed confirm allow staff {
+    changes {
+        stock.reserved = reservedAfter
+    }
+}
 
 page Orders {
     allow admin, staff
@@ -114,5 +128,14 @@ page StockItemEdit(item StockItem) {
     form item {
         fields location, product, onHand, reserved
         submit edit
+    }
+}
+
+page Reservations {
+    allow staff
+
+    list StockReservation {
+        columns code, stock, reservedAfter, status
+        actions commit
     }
 }

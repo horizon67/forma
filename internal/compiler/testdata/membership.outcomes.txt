@@ -1,7 +1,25 @@
-outcome projection forma/outcome-projection/v0alpha2
-intent forma/resolved-intent/v0.8
-facts forma/acceptance-facts/v0alpha6
-rows 83
+outcome projection forma/outcome-projection/v0alpha3
+intent forma/resolved-intent/v0.9
+facts forma/acceptance-facts/v0alpha7
+rows 87
+
+group User.activate [action/User/activate]
+  case transition-accepted / transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Active
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/accepted/from/Pending
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Active
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Confirmed
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Suspended
 
 group UserAccount.password [identity/UserAccount/credential/password]
   case credential-non-projectable / credential-non-projectable

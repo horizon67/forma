@@ -104,6 +104,11 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 				return err
 			}
 		}
+		if fact.Input != nil && fact.Input.Action != nil {
+			if err := validateActionFactHandles(fact); err != nil {
+				return err
+			}
+		}
 		invariantKind := fact.Kind == "invariant-satisfied" || fact.Kind == "invariant-violated" ||
 			fact.Kind == "invariant-validation-rejected"
 		invariantPayload := fact.Input != nil && fact.Input.Predicate != nil
@@ -137,7 +142,66 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 			return fmt.Errorf("validate Acceptance Facts: missing invariant mutation fact %s", expected.ID)
 		}
 	}
-	return validateVerificationRejectionReachability(facts.Facts)
+	if err := validateVerificationRejectionReachability(facts.Facts); err != nil {
+		return err
+	}
+	canonical, err := deriveActionContractFacts(intent)
+	if err != nil {
+		return err
+	}
+	return validateCanonicalActionFacts(facts, canonical)
+}
+
+func validateCanonicalActionFacts(actual *AcceptanceFacts, canonical []AcceptanceFact) error {
+	want := make(map[SemanticID]AcceptanceFact)
+	for _, fact := range canonical {
+		want[fact.ID] = fact
+	}
+	seen := make(map[SemanticID]bool, len(want))
+	for _, fact := range actual.Facts {
+		if !isActionContractFact(fact) {
+			continue
+		}
+		seen[fact.ID] = true
+		expected, ok := want[fact.ID]
+		if !ok {
+			return fmt.Errorf("validate Acceptance Facts: fact %s is not derived from Resolved Intent", fact.ID)
+		}
+		if !reflect.DeepEqual(fact, expected) {
+			return fmt.Errorf("validate Acceptance Facts: fact %s differs from its canonical derivation", fact.ID)
+		}
+	}
+	for id := range want {
+		if !seen[id] {
+			return fmt.Errorf("validate Acceptance Facts: missing compiler-derived fact %s", id)
+		}
+	}
+	return nil
+}
+
+func isActionContractFact(fact AcceptanceFact) bool {
+	return fact.Kind == "action-observable-feedback" || fact.Input != nil && fact.Input.Action != nil
+}
+
+func validateActionFactHandles(fact AcceptanceFact) error {
+	if err := validateFactSetupHandles(fact.Setup); err != nil {
+		return fmt.Errorf("validate action Fact %s: %w", fact.ID, err)
+	}
+	action := fact.Input.Action
+	if action.Subject == "" || !setupHasSubject(fact.Setup, action.Subject) {
+		return fmt.Errorf("validate action Fact %s: action subject handle %q is not established", fact.ID, action.Subject)
+	}
+	for _, subject := range fact.Expected.Subjects {
+		if !setupHasSubject(fact.Setup, subject.Handle) {
+			return fmt.Errorf("validate action Fact %s: expected subject handle %q is not established", fact.ID, subject.Handle)
+		}
+		for _, field := range subject.Fields {
+			if field.Stored != "value-source" || !setupHasSubject(fact.Setup, field.ValueSubject) || field.ValueField == "" {
+				return fmt.Errorf("validate action Fact %s: field expectation for %s is not closed", fact.ID, field.Field)
+			}
+		}
+	}
+	return nil
 }
 
 type invariantMutationFact struct {
@@ -549,6 +613,13 @@ func validateFactSetupHandles(setup *FactSetup) error {
 		return nil
 	}
 	if !sort.SliceIsSorted(setup.Subjects, func(i, j int) bool { return setup.Subjects[i].Handle < setup.Subjects[j].Handle }) ||
+		!sort.SliceIsSorted(setup.Relations, func(i, j int) bool {
+			left, right := setup.Relations[i], setup.Relations[j]
+			if left.Source != right.Source {
+				return left.Source < right.Source
+			}
+			return left.Field < right.Field
+		}) ||
 		!sort.SliceIsSorted(setup.Evidence, func(i, j int) bool { return setup.Evidence[i].Handle < setup.Evidence[j].Handle }) ||
 		!sort.SliceIsSorted(setup.Sessions, func(i, j int) bool { return setup.Sessions[i].Handle < setup.Sessions[j].Handle }) {
 		return fmt.Errorf("setup handles are not canonical")
@@ -569,6 +640,18 @@ func validateFactSetupHandles(setup *FactSetup) error {
 				return fmt.Errorf("invalid credential binding handle %q", credential.Handle)
 			}
 			handles[credential.Handle] = true
+		}
+	}
+	for _, relation := range setup.Relations {
+		if !subjects[relation.Source] || relation.Field == "" || !oneOf(relation.Condition, "resolved", "target-unavailable") {
+			return fmt.Errorf("relation setup has invalid source or condition")
+		}
+		if relation.Condition == "resolved" {
+			if !subjects[relation.Target] {
+				return fmt.Errorf("resolved relation target %q is not established", relation.Target)
+			}
+		} else if relation.Target != "" {
+			return fmt.Errorf("unavailable relation unexpectedly establishes target %q", relation.Target)
 		}
 	}
 	evidence := map[string]bool{}

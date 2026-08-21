@@ -40,7 +40,7 @@ Forma coreが会員登録runtime、framework別generator、画面flow engineを�
 | --- | --- | --- | --- |
 | Admin agent E2E | Formaの意味をAIへ渡して通常のapplicationを実装できるか | 43 Acceptance Factsを満たすGo applicationを生成・検証できた | あらゆるframeworkでの再現性 |
 | Incremental update | 既存repositoryを作り直さず変更できるか | 既存testを保ち、field/page-size変更を適用できた | rename、削除、migration全般 |
-| Identity / membership | CRUDを越えるsignup、verification、signin、ownershipをtarget-neutralに表せるか | 81 Facts、3 policies、3 human review requirementsまで検証できた | 任意のUX flow、任意の外部effect |
+| Identity / membership | CRUDを越えるsignup、verification、signin、ownershipをtarget-neutralに表せるか | current 85 Facts、3 policies、3 human review requirementsまで検証できた | 任意のUX flow、任意の外部effect |
 | Automated repair | AIの失敗を意味やtestを弱めず修復できるか | test/build failureのrepairとintent-gap handoffを実測した | 一般的なfailure分類の完全性 |
 | Navigation/outcome/state projection | 分散した意味を正本を増やさずreviewできるか | stable IDとSource Mapを保つ決定的viewを生成できた | 人間の読解性能 |
 | Visual flow projection | 3 viewを一つのoverviewで関連付けられるか | navigationを骨格にOutcome/Stateを型付きで結べた | この表示がsource-onlyより読みやすいという実測 |
@@ -77,9 +77,9 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
 必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
-実装し、通常のGo applicationを使うrepository E2Eで172/172 Factsを実測した。concurrent operationの
-Review Requirementは人間確認待ちである。Changesはaction-attachedな同時代入とatomic post-stateを最小候補に選び、
-compiler実装前のdesign review段階に進んだ。Occurrence以降は未決定である。
+実装し、続いてChangesをaction-attachedな同時代入とatomic post-stateとして実装した。通常のGo applicationを使う
+repository E2Eで275/275 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity authorizationの
+3 Review Requirementsは人間確認待ちである。Occurrence以降は未決定である。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -115,8 +115,8 @@ semantic graphへ解決されることを意味する。
 - global overviewは編集可能な`flow`正本ではなく、navigation/flow projectionから得る。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
-`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、Resolved Intent `v0.8`、Source Map `v0.5`、
-Acceptance Facts `v0alpha6`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.9`、Source Map `v0.6`、
+Acceptance Facts `v0alpha7`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -134,7 +134,7 @@ Candidate Cの完全な`flow` DSLを採用する判断には人間評価を使�
 Navigationのbounded probeが完了したため、[`expression-proposal.md`](expression-proposal.md)とroadmapに従い、次の順序で進める。
 
 1. Expression coreとInvariant（最初のslice完了）
-2. Changesとatomic post-state
+2. Changesとatomic post-state（最初のslice完了）
 3. full Order approvalに必要なDerived Value / Action Precondition / Expression拡張
 4. Occurrence
 5. Effect binding / delivery contract
@@ -146,15 +146,13 @@ Expressionの最初のvertical sliceでは、`StockItem.stockAvailable`の`reser
 正常系・否定系2 Factsに加え、参照fieldを編集するform submitのauthoritativeな拒否Factを導出した。
 post-stateでの全commit／無commitをGeneration Requestへ運び、concurrent operationの保証は独立Review Requirementとして
 人間へ表示する。[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、このrequestを
-Formaに依存しない通常のGo applicationのauthoritative mutation境界と39 repository testへ落とし、172/172 Factsを
-検証した。mutex内の競合更新testを含むReview Requirementの人間確認後、operator集合を先に広げずChangesとatomic
-post-stateの設計へ進んだ。[`changes-proposal.md`](changes-proposal.md)では、最終対象を`Order.approve`の在庫引当に
-保ちつつ、最初のsliceをrequiredなto-one relationへの1 assignmentとimplicit state transitionに分離した。
-design reviewでこの境界を確認した後、bounded syntax、Resolved Intent、atomic Facts、Review Requirementを
-reference compilerへ実装する。このsliceには、v0が要求しながら現compilerに無いdomain actionのsource precondition、
-遷移後state Fact、明示`confirm` actionと標準`delete`のconfirmation Fact、action拒否時のsurface feedbackも先に含める。
-cross-entity writeの認可はactionが所有し、target entityの別surface accessは継承しないが、その差はReview Requirementとして
-人間へ提示する。
+Formaに依存しない通常のGo applicationのauthoritative mutation境界へ落とした。続く
+[`changes-proposal.md`](changes-proposal.md)では、最終対象を`Order.approve`の在庫引当に保ちつつ、最初のsliceを
+requiredなto-one relationへの1 assignmentとimplicit state transitionに分離し、bounded syntax、Resolved Intent、
+atomic Facts、Review Requirementsをreference compilerへ実装した。v0が要求しながら現compilerに無かったdomain actionの
+source precondition、遷移後state Fact、明示`confirm` actionと標準`delete`のconfirmation Fact、action拒否時のsurface
+feedbackも同じsliceで追加した。cross-entity writeの認可はactionが所有し、target entityの別surface accessは継承しない。
+通常applicationでは52 mapped testsから275/275 Factsを測定し、その差とatomic boundaryは人間Review Requirementへ提示する。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

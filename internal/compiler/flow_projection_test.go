@@ -16,7 +16,7 @@ func TestMembershipFlowProjectionMatchesGoldenAndLinksThreeViews(t *testing.T) {
 	if projection.DefaultEntry.Kind != navigationEndpointUnspecified || projection.DefaultEntry.Page != "" {
 		t.Fatalf("default entry = %#v", projection.DefaultEntry)
 	}
-	if projection.Outcomes.TotalGroups != 17 || projection.Outcomes.TotalCases != 83 || projection.Outcomes.LinkedGroups != 10 || projection.Outcomes.LinkedCases != 60 {
+	if projection.Outcomes.TotalGroups != 18 || projection.Outcomes.TotalCases != 87 || projection.Outcomes.LinkedGroups != 10 || projection.Outcomes.LinkedCases != 60 {
 		t.Fatalf("outcome coverage = %#v", projection.Outcomes)
 	}
 	if projection.States.TotalElements != 5 || projection.States.LinkedElements != 5 || projection.States.EdgeAnnotations != 5 {
@@ -66,10 +66,11 @@ func TestAdminFlowProjectionMatchesGoldenAndKeepsSurfaceSpecificOutcomes(t *test
 		semanticID("page", "Users", "view", "list", "User", "action", "suspend"):        true,
 	}
 	for _, edge := range suspendEdges {
-		if len(edge.OutcomeReferences) != 1 || !wantGroups[edge.OutcomeReferences[0].GroupID] {
+		if len(edge.OutcomeReferences) != 2 || edge.OutcomeReferences[0].GroupID != actionID("User", "suspend") ||
+			!wantGroups[edge.OutcomeReferences[1].GroupID] {
 			t.Fatalf("surface-specific suspend outcome = %#v", edge.OutcomeReferences)
 		}
-		delete(wantGroups, edge.OutcomeReferences[0].GroupID)
+		delete(wantGroups, edge.OutcomeReferences[1].GroupID)
 		assertFlowStateKinds(t, edge, "transition")
 		if !reflect.DeepEqual(edge.StateReferences[0].Requirements, []string{"confirmation", "roles=admin"}) {
 			t.Fatalf("suspend requirements = %#v", edge.StateReferences[0])

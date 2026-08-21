@@ -55,8 +55,8 @@ func TestEmailVerifiedMembershipSurfaceResolvesCanonicalIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(facts.Facts) != 41 {
-		t.Fatalf("surface facts = %d, want 41", len(facts.Facts))
+	if len(facts.Facts) != 44 {
+		t.Fatalf("surface facts = %d, want 44", len(facts.Facts))
 	}
 	for id, target := range map[SemanticID]SemanticID{
 		"fact/application/entry/navigation":                             pageID("SignUp"),

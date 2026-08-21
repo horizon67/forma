@@ -1,6 +1,6 @@
 # Changes and Atomic Post-State Proposal
 
-Status: design candidate — not valid v0 syntax and not yet implemented
+Status: experimental vertical slice implemented and measured; not part of normative v0
 
 この文書は、actionがstate transition以外のdomain dataを変更するとき、その変更集合をFormaでどう表し、
 どこまでを1つのatomic post-stateとしてcoding agentへ渡すかを定める。最終対象は注文承認時の在庫引当だが、
@@ -9,7 +9,21 @@ Status: design candidate — not valid v0 syntax and not yet implemented
 規範v0は[`v0-primitives.md`](v0-primitives.md)、Expressionの現在地は
 [`expression-proposal.md`](expression-proposal.md)、注文全体のdesign probeは
 [`order-approval-proposal.md`](order-approval-proposal.md)にある。本proposalの`changes`構文は比較用candidateであり、
-現行Parserは受理しない。
+このbounded構文はreference Parserが受理する。ただし規範v0の10 primitivesや完了条件にはまだ含めず、
+collection、複数assignment、record作成へ一般化する前のexperimental sliceとして扱う。
+
+## 実装結果（2026-08-21）
+
+Parser、checker、Resolved Intent `v0.9`、Source Map `v0.6`、Acceptance Facts `v0alpha7`、
+Outcome Projection `v0alpha3`、Review Requirements `v0alpha3`まで実装した。既存domain actionについても
+transition accepted/source rejected、confirmation accepted/declined、surface feedbackを導出し、Changes actionには
+atomic accepted、Invariant rejected、target unavailableのdomain/surface Factsを追加した。validatorはResolved Intentから
+このaction contractを再導出し、Factの欠落・捏造・result反転を拒否する。
+
+[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、Forma runtimeを持たない通常のGo applicationへ
+`StockReservation.commit`を実装し、275/275 Factsを52 repository testsで再測定した。implicit transitionとrelated
+StockItem updateは同じmutex内でのみcommitされ、Invariant違反、target欠落、source state不一致では両entityが不変である。
+atomicity、cross-entity authorization、既存Invariant concurrencyの3 Review Requirementsは人間確認待ちである。
 
 ## 結論
 
@@ -313,7 +327,7 @@ Changesの有無にかかわらず、すべての明示domain actionから最初
 
 最初の2つは`action/...`をsubjectとするdomain outcome Factである。confirmationはsurfaceでしか観測できないため、
 各`page/.../action/...`をsubjectとし、明示actionならそのdeclarationもsource nodeに含める。この追加で標準`delete`を含む
-既存172 Factsのbaselineが変わることは意図した結果であり、implementation後にGeneration RequestとE2E測定値を更新する。
+既存172 Factsのbaselineが変わることは意図した結果であり、実装後のGeneration Requestは275 Factsへ更新した。
 
 ### 1. valid post-stateは全変更をcommitする
 
@@ -453,7 +467,7 @@ control flow、順序、途中状態、target runtime例外をlanguage semantics
 
 最終目標ではあるが、collection fan-out、算術、record creationを一度に導入するため、最初の言語sliceにはしない。
 
-## 最初のcompiler slice
+## 最初のcompiler slice（実装済み）
 
 設計review後の実装範囲を次に固定する。
 

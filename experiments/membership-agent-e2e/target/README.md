@@ -34,7 +34,7 @@ so neither can be read back out of the store.
 [`forma.implementation.yaml`](forma.implementation.yaml) fixes the minimum
 implementation policies used by this update.
 
-[`generation-feedback.json`](generation-feedback.json) maps all 81 Acceptance
+[`generation-feedback.json`](generation-feedback.json) maps all 85 Acceptance
 Facts to repository-relative test references and reports all three implementation
 policies. It is written by a generator that retracts the previous record before
 it starts, runs `go test -count=1 -json ./...`, and publishes a new record with a

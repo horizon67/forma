@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-const ReviewRequirementsVersion = "forma/review-requirements/v0alpha2"
+const ReviewRequirementsVersion = "forma/review-requirements/v0alpha3"
 
 // ReviewRequirements contains implementation properties that Forma cannot
 // mechanically prove from agent feedback. They remain separate from
@@ -30,6 +30,8 @@ var reviewInstructions = map[string]string{
 	"secret-storage":                   "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism.",
 	"fixture-fidelity":                 "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests.",
 	"concurrent-invariant-enforcement": "Review every authoritative mutation boundary that can change a field referenced by this invariant; confirm that concurrent operations cannot commit a post-state that violates it and that enforcement is not limited to a user interface or single-threaded test.",
+	"atomic-changes-enforcement":       "Review the action implementation; confirm that target identity resolution, pre-state reads, invariant checks, and commit share one transaction, lock, or conflict-retry boundary, and that concurrent invocation or process failure cannot commit only part of the transition and explicit Changes.",
+	"cross-entity-write-authorization": "Review the action access, every presenting surface's effective access, the changed entity and field, and existing surfaces that can change that field; confirm that the cross-entity write path is intentional without inferring the target surfaces' roles as additional action authorization.",
 }
 
 // BuildReviewRequirements deterministically derives the human-review boundary
@@ -91,6 +93,28 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 			})
 		}
 	}
+	for _, action := range intent.Actions {
+		if len(action.Changes) == 0 {
+			continue
+		}
+		atomicSources := actionReviewSources(intent, action, false)
+		kind := "atomic-changes-enforcement"
+		requirements = append(requirements, ReviewRequirement{
+			ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
+			SourceNodes: atomicSources, Instruction: reviewInstructions[kind],
+		})
+		crossEntity := false
+		for _, change := range action.Changes {
+			crossEntity = crossEntity || len(change.Target.RelationPath) != 0
+		}
+		if crossEntity {
+			kind = "cross-entity-write-authorization"
+			requirements = append(requirements, ReviewRequirement{
+				ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
+				SourceNodes: actionReviewSources(intent, action, true), Instruction: reviewInstructions[kind],
+			})
+		}
+	}
 	sort.Slice(requirements, func(i, j int) bool { return requirements[i].ID < requirements[j].ID })
 	result := &ReviewRequirements{
 		Version: ReviewRequirementsVersion, IntentVersion: intent.Version, Requirements: requirements,
@@ -99,6 +123,82 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 		return nil, err
 	}
 	return result, nil
+}
+
+func actionReviewSources(intent *ResolvedIntent, action IRAction, includeAuthorizationSurfaces bool) []SemanticID {
+	sources := []SemanticID{action.ID}
+	for _, entity := range intent.Entities {
+		if entity.Name == action.Entity {
+			sources = append(sources, entity.ID)
+			if entity.State != nil {
+				sources = append(sources, entity.State.ID)
+			}
+		}
+	}
+	targetFields := map[SemanticID]bool{}
+	for _, change := range action.Changes {
+		sources = append(sources, change.ID, change.Target.ID, change.Target.Field, change.Value.ID, change.Value.Field)
+		sources = append(sources, change.Target.RelationPath...)
+		targetFields[change.Target.Field] = true
+		for _, entity := range intent.Entities {
+			for _, field := range entity.Fields {
+				if field.ID == change.Target.Field {
+					sources = append(sources, entity.ID)
+				}
+			}
+			for _, invariant := range entity.Invariants {
+				for _, field := range invariantFieldReferences(invariant) {
+					if targetFields[field] {
+						sources = append(sources, invariantFactSourceNodes(invariant)...)
+					}
+				}
+			}
+		}
+	}
+	if !includeAuthorizationSurfaces {
+		return canonicalSemanticIDs(sources)
+	}
+	for _, page := range intent.Pages {
+		for _, view := range page.Views {
+			for _, ref := range view.Actions {
+				if ref.Action != action.ID {
+					continue
+				}
+				sources = append(sources, page.ID, view.ID, ref.ID, ref.Access.ID)
+				for _, access := range ref.Access.AllOf {
+					sources = append(sources, access.Source)
+				}
+			}
+			if view.Submit == nil {
+				continue
+			}
+			for _, fieldName := range view.Fields {
+				field, ok := fieldByEntityAndName(intent, view.Entity, fieldName)
+				if !ok || !targetFields[field.ID] {
+					continue
+				}
+				sources = append(sources, page.ID, view.ID, view.Submit.ID, view.Submit.Access.ID, field.ID)
+				for _, access := range view.Submit.Access.AllOf {
+					sources = append(sources, access.Source)
+				}
+			}
+		}
+	}
+	return canonicalSemanticIDs(sources)
+}
+
+func fieldByEntityAndName(intent *ResolvedIntent, entityName, fieldName string) (IRField, bool) {
+	for _, entity := range intent.Entities {
+		if entity.Name != entityName {
+			continue
+		}
+		for _, field := range entity.Fields {
+			if field.Name == fieldName {
+				return field, true
+			}
+		}
+	}
+	return IRField{}, false
 }
 
 // ValidateReviewRequirements rejects requests that omit, invent, or rewrite a

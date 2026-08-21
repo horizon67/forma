@@ -40,18 +40,18 @@ go run ./cmd/forma verify \
 ## 実測結果
 
 ```text
-facts 81 (changed 38, unchanged 43)
+facts 85 (changed 42, unchanged 43)
 intent nodes changed 43, unchanged 32
 review requirements 3 (changed 3, unchanged 0)
 
-verified 81 acceptance facts: all passed
-  40 distinct tests, max 8 facts per test
+verified 85 acceptance facts: all passed
+  41 distinct tests, max 8 facts per test
 verified 3 implementation policies
   2 satisfied, 1 deviated, 0 flagged
 human review required: 3 requirements are not machine-verified
 ```
 
-- **admin semanticsは不変**。baselineと共通するFact IDはちょうど43件で、38件の変更はすべて`added`。
+- **admin semanticsは不変**。baselineと共通するFact IDはちょうど43件で、42件の変更はすべて`added`。
   既存Factの変更・削除はない。
 - **lineageは実artifactに対して検証**した。`cmd/generate`はbaselineのbyte列がGit blob
   `5751ecf85e9b7be2665aa91854ee5b69798e81a3`と一致することを確認してから使い、`ValidateIncrementalBaseline`が
@@ -77,7 +77,7 @@ human review required: 3 requirements are not machine-verified
 **Forma側のFactが2件、到達不能な状態をsetupしていた。** どちらもE2Eを実flowで書いたことで発覚した。
 両方の修正は当時のAcceptance Facts `v0alpha4`に含まれた（`v0alpha3`からの1回のbump内で完結しており、
 `v0alpha4`のartifactが外部へ出たことはない）。現在のchecked-in requestは、後続のentry/surface-transition schema追加に伴い
-同じ81 Factを、Invariant Fact追加後のcurrent schema `v0alpha6`として再直列化している。
+後続のaction transition Fact追加後は85 Factとなり、current schema `v0alpha7`として再直列化している。
 
 1. `verification-rejected`のconsumed caseが`Pending + consumed evidence`をsetupしていた。consumed
    evidenceは「consumeとPending → Activeをatomicに適用する」成功verificationからしか生まれないため、
@@ -98,7 +98,7 @@ human review required: 3 requirements are not machine-verified
 test referenceが解決できるかを見るが、そのtestがFactの期待値を観測しているかは見ない。review時に
 9件のreferenceが、名前は対応しているのに期待値を確認していないと指摘された（surfaceのinput集合・
 field集合、navigationの宛先、3 caseのうち1 caseだけの検証、evidence conditionの直接観測）。
-protocol上の81/81と意味上の81/81は別物で、後者は現状human reviewでしか埋められない。
+当時のprotocol上の81/81と意味上の81/81は別物で、後者は現状human reviewでしか埋められない。
 このexperimentではtest側を強化して埋めた（distinct tests 36 → 40）。
 
 **target側がFormaにないruleを補っていた。** email検証に独自の空白禁止と`type="email"`を足していた。

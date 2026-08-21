@@ -1,5 +1,5 @@
 {
-  "version": "forma/resolved-intent/v0.8",
+  "version": "forma/resolved-intent/v0.9",
   "roles": [
     {
       "id": "role/admin",
@@ -230,6 +230,9 @@
               "name": "delete",
               "kind": "standard",
               "successPage": "Users",
+              "interactionStates": [
+                "failure"
+              ],
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/delete/access",
                 "allOf": [
@@ -254,7 +257,12 @@
               "id": "page/UserDetail/view/detail/User/action/confirm",
               "name": "confirm",
               "kind": "transition",
+              "action": "action/User/confirm",
               "successPage": "UserDetail",
+              "interactionStates": [
+                "invalid",
+                "failure"
+              ],
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/confirm/access",
                 "allOf": [
@@ -272,7 +280,12 @@
               "id": "page/UserDetail/view/detail/User/action/activate",
               "name": "activate",
               "kind": "transition",
+              "action": "action/User/activate",
               "successPage": "UserDetail",
+              "interactionStates": [
+                "invalid",
+                "failure"
+              ],
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/activate/access",
                 "allOf": [
@@ -290,7 +303,12 @@
               "id": "page/UserDetail/view/detail/User/action/suspend",
               "name": "suspend",
               "kind": "transition",
+              "action": "action/User/suspend",
               "successPage": "UserDetail",
+              "interactionStates": [
+                "invalid",
+                "failure"
+              ],
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/suspend/access",
                 "allOf": [
@@ -315,7 +333,12 @@
               "id": "page/UserDetail/view/detail/User/action/reinstate",
               "name": "reinstate",
               "kind": "transition",
+              "action": "action/User/reinstate",
               "successPage": "UserDetail",
+              "interactionStates": [
+                "invalid",
+                "failure"
+              ],
               "access": {
                 "id": "page/UserDetail/view/detail/User/action/reinstate/access",
                 "allOf": [
@@ -514,6 +537,9 @@
               "name": "delete",
               "kind": "standard",
               "successPage": "Users",
+              "interactionStates": [
+                "failure"
+              ],
               "access": {
                 "id": "page/Users/view/list/User/action/delete/access",
                 "allOf": [
@@ -531,7 +557,12 @@
               "id": "page/Users/view/list/User/action/suspend",
               "name": "suspend",
               "kind": "transition",
+              "action": "action/User/suspend",
               "successPage": "Users",
+              "interactionStates": [
+                "invalid",
+                "failure"
+              ],
               "access": {
                 "id": "page/Users/view/list/User/action/suspend/access",
                 "allOf": [

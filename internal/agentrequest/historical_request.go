@@ -253,6 +253,12 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 			view := &page.Views[viewIndex]
 			for actionIndex := range view.Actions {
 				action := &view.Actions[actionIndex]
+				if action.Kind == "transition" {
+					action.Action = compiler.SemanticID("action/" + view.Entity + "/" + action.Name)
+					action.InteractionStates = []string{"invalid", "failure"}
+				} else if action.Kind == "standard" && action.Name == "delete" {
+					action.InteractionStates = []string{"failure"}
+				}
 				if err := upgradeHistoricalAccess(&action.Access); err != nil {
 					return result, fmt.Errorf("upgrade historical Generation Request: %w", err)
 				}

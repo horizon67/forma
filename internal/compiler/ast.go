@@ -105,7 +105,20 @@ type ActionDecl struct {
 	Sources     []Name
 	Destination Name
 	Mods        []ActionModifier
+	HasBody     bool
+	Changes     []*ChangesDecl
 	Span        Span
+}
+
+type ChangesDecl struct {
+	Assignments []*ChangeAssignmentDecl
+	Span        Span
+}
+
+type ChangeAssignmentDecl struct {
+	Target *FieldExpression
+	Value  *Expression
+	Span   Span
 }
 
 type ActionModifier struct {

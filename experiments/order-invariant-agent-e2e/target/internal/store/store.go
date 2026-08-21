@@ -25,6 +25,7 @@ type Store struct {
 	stockItems   map[string]domain.StockItem
 	orders       map[string]domain.Order
 	orderLines   map[string]domain.OrderLine
+	reservations map[string]domain.StockReservation
 	orderNumbers map[string]string
 	replays      map[string]replay
 }
@@ -33,7 +34,7 @@ func New() *Store {
 	return &Store{
 		customers: map[string]domain.Customer{}, products: map[string]domain.Product{},
 		stockItems: map[string]domain.StockItem{}, orders: map[string]domain.Order{},
-		orderLines: map[string]domain.OrderLine{}, orderNumbers: map[string]string{},
+		orderLines: map[string]domain.OrderLine{}, reservations: map[string]domain.StockReservation{}, orderNumbers: map[string]string{},
 		replays: map[string]replay{},
 	}
 }
@@ -256,6 +257,66 @@ func (store *Store) ReserveStock(id string, quantity int) (domain.StockItem, err
 	return want, nil
 }
 
+func (store *Store) PutStockReservation(reservation domain.StockReservation) (domain.StockReservation, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if strings.TrimSpace(reservation.Code) == "" || reservation.ReservedAfter < 0 || store.stockItems[reservation.StockID].ID == "" {
+		return domain.StockReservation{}, domain.ErrInvalid
+	}
+	if reservation.ID == "" {
+		reservation.ID = store.next("reservation")
+	}
+	if reservation.Status == "" {
+		reservation.Status = domain.ReservationPending
+	}
+	reservation.Version++
+	store.reservations[reservation.ID] = reservation
+	return reservation, nil
+}
+
+// CommitStockReservation implements one action-owned atomic boundary. The
+// source state, relation target, candidate StockItem invariant, and both
+// commits are evaluated while holding the same lock.
+func (store *Store) CommitStockReservation(id string, principal domain.Principal, confirmed bool) (domain.StockReservation, domain.StockItem, error) {
+	if !domain.Allowed(principal, domain.ReservationCommit) {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrDenied
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	reservation, ok := store.reservations[id]
+	if !ok {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrNotFound
+	}
+	if !confirmed {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrConfirmationNeeded
+	}
+	if reservation.Status != domain.ReservationPending {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrInvalidTransition
+	}
+	stock, ok := store.stockItems[reservation.StockID]
+	if !ok {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrTargetUnavailable
+	}
+	wantStock := stock
+	wantStock.Reserved = reservation.ReservedAfter
+	if err := domain.ValidateStock(wantStock); err != nil {
+		return domain.StockReservation{}, domain.StockItem{}, err
+	}
+	wantReservation := reservation
+	wantReservation.Status = domain.ReservationCommitted
+	wantReservation.Version++
+	wantStock.Version++
+	store.reservations[id] = wantReservation
+	store.stockItems[stock.ID] = wantStock
+	return wantReservation, wantStock, nil
+}
+
+func (store *Store) RemoveStockItem(id string) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	delete(store.stockItems, id)
+}
+
 func (store *Store) replay(kind, token string) (replay, bool) {
 	if token == "" {
 		return replay{}, false
@@ -308,6 +369,32 @@ func (store *Store) StockItem(id string) (domain.StockItem, error) {
 		return domain.StockItem{}, domain.ErrNotFound
 	}
 	return item, nil
+}
+
+func (store *Store) StockReservation(id string) (domain.StockReservation, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	item, ok := store.reservations[id]
+	if !ok {
+		return domain.StockReservation{}, domain.ErrNotFound
+	}
+	return item, nil
+}
+
+func (store *Store) StockReservations() ([]domain.StockReservation, error) {
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	items := make([]domain.StockReservation, 0, len(store.reservations))
+	for _, item := range store.reservations {
+		items = append(items, item)
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Code != items[j].Code {
+			return items[i].Code < items[j].Code
+		}
+		return items[i].ID < items[j].ID
+	})
+	return items, nil
 }
 
 func (store *Store) OrderLine(id string) (domain.OrderLine, error) {

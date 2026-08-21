@@ -4,6 +4,181 @@
   "status": "succeeded",
   "factCoverage": [
     {
+      "factId": "fact/action/Order/approve/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/approve/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/approve/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/approve/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/approve/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderApproveTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/reject/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/reject/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/reject/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/reject/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/reject/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderRejectTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/ship/transition/accepted/from/Approved",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/ship/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/ship/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/ship/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/ship/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderShipTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/submit/transition/accepted/from/Draft",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/submit/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/submit/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/submit/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/Order/submit/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/store/store_test.go#TestOrderSubmitTransitionFactsAtStoreBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/StockReservation/commit/changes/accepted/from/Pending",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/StockReservation/commit/changes/invariant/entity/StockItem/invariant/stockAvailable/rejected/from/Pending",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/StockReservation/commit/changes/target-unavailable/from/Pending",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/StockReservation/commit/transition/accepted/from/Pending",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/StockReservation/commit/transition/rejected/from/Committed",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/entity/Order/field/customer/relation/resolved",
       "testReferences": [
         "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
@@ -49,6 +224,13 @@
       "factId": "fact/entity/StockItem/invariant/stockAvailable/evaluation/violated",
       "testReferences": [
         "internal/store/store_test.go#TestStockInvariantAcceptsValidAndRejectsInvalidPostStates"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/entity/StockReservation/field/stock/relation/resolved",
+      "testReferences": [
+        "internal/store/store_test.go#TestRelationsResolveToEntitiesAndLabels"
       ],
       "result": "passed"
     },
@@ -204,9 +386,65 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/confirmation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/confirmation/declined",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/approve/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -235,6 +473,27 @@
       "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/confirmation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/confirmation/declined",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/delete/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
       ],
       "result": "passed"
     },
@@ -309,9 +568,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/reject/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -344,9 +645,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/transition/accepted/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/ship/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -372,9 +715,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/transition/accepted/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/OrderDetail/view/detail/Order/action/submit/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -558,9 +943,65 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/confirmation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/confirmation/declined",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/Orders/view/list/Order/action/approve/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/approve/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderApproveTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -617,6 +1058,27 @@
       "factId": "fact/page/Orders/view/list/Order/action/delete/access/denied/anonymous",
       "testReferences": [
         "internal/web/server_test.go#TestOrderDeleteActionsHTTPAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/confirmation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/confirmation/declined",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/delete/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch"
       ],
       "result": "passed"
     },
@@ -691,9 +1153,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/Orders/view/list/Order/action/reject/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/transition/accepted/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/reject/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderRejectTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -726,9 +1230,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/Orders/view/list/Order/action/ship/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/transition/accepted/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/ship/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderShipTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -754,9 +1300,51 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/Orders/view/list/Order/action/submit/navigation",
       "testReferences": [
         "internal/web/server_test.go#TestOrderActionNavigationFromListAndDetail"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/transition/accepted/from/Draft",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Approved",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Rejected",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Shipped",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Orders/view/list/Order/action/submit/transition/rejected/from/Submitted",
+      "testReferences": [
+        "internal/web/server_test.go#TestOrderSubmitTransitionFactsAtHTTPBoundary"
       ],
       "result": "passed"
     },
@@ -860,6 +1448,140 @@
       "testReferences": [
         "internal/web/server_test.go#TestOrdersListQueryHTTPBehavior",
         "internal/store/store_test.go#TestOrderQuerySearchFiltersSortAndPageBoundary"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/access/allowed/staff",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/access/denied/admin",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/access/denied/anonymous",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/changes/accepted/from/Pending",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/changes/invariant/entity/StockItem/invariant/stockAvailable/rejected/from/Pending",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/changes/target-unavailable/from/Pending",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/accepted",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/declined",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome",
+        "internal/web/server_test.go#TestReservationCommitConfirmationAndCrossEntityAuthorization"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/navigation",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/transition/accepted/from/Pending",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/transition/rejected/from/Committed",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/actions",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/feedback",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/fields",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/page/Reservations/view/list/StockReservation/records/visible",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationsSurfaceFieldsActionsFeedbackAndAccess"
       ],
       "result": "passed"
     },
@@ -1234,5 +1956,5 @@
     }
   ],
   "command": "cd experiments/order-invariant-agent-e2e/target \u0026\u0026 go test -count=1 -json ./...",
-  "summary": "The AI-generated order and inventory application passed every repository-native test mapped to the 172 Acceptance Facts."
+  "summary": "The AI-generated order, inventory, and stock-reservation application passed every repository-native test mapped to the 275 Acceptance Facts."
 }

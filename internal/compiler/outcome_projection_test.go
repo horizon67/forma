@@ -13,8 +13,8 @@ func TestMembershipOutcomeProjectionMatchesGoldenAndKeepsSecurityBoundaries(t *t
 	projection, formatted, sourceMap := outcomeProjectionFromFile(t, path)
 	assertOutcomeGolden(t, formatted, filepath.Join("testdata", "membership.outcomes.txt"))
 
-	if count := outcomeRowCount(projection); count != 83 {
-		t.Fatalf("outcome rows = %d, want 83", count)
+	if count := outcomeRowCount(projection); count != 87 {
+		t.Fatalf("outcome rows = %d, want 87", count)
 	}
 	entries := map[SemanticID]bool{}
 	for _, entry := range sourceMap.Entries {

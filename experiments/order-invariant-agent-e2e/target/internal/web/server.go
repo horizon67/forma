@@ -23,6 +23,9 @@ type Repository interface {
 	StockItems(store.StockQuery) (store.Page[domain.StockItem], error)
 	StockItem(string) (domain.StockItem, error)
 	UpdateStockItem(string, store.StockInput, string) (domain.StockItem, error)
+	StockReservations() ([]domain.StockReservation, error)
+	StockReservation(string) (domain.StockReservation, error)
+	CommitStockReservation(string, domain.Principal, bool) (domain.StockReservation, domain.StockItem, error)
 }
 
 type Server struct {
@@ -57,6 +60,8 @@ func (server *Server) routes() {
 	server.mux.HandleFunc("GET /stock-items/{id}", server.stockItemDetail)
 	server.mux.HandleFunc("GET /stock-items/{id}/edit", server.stockItemEdit)
 	server.mux.HandleFunc("POST /stock-items/{id}", server.updateStockItem)
+	server.mux.HandleFunc("GET /reservations", server.reservations)
+	server.mux.HandleFunc("POST /reservations/{id}/actions/commit", server.commitReservation)
 }
 
 func (server *Server) orders(writer http.ResponseWriter, request *http.Request) {
@@ -84,7 +89,7 @@ func (server *Server) orders(writer http.ResponseWriter, request *http.Request) 
 		id := html.EscapeString(order.ID)
 		fmt.Fprintf(&body, "<article data-id=\"%s\"><a data-action=\"view\" href=\"/orders/%s\">%s</a><a data-action=\"edit\" href=\"/orders/%s/edit\">edit</a>", id, id, html.EscapeString(order.Number), id)
 		for _, action := range []string{"delete", "submit", "approve", "reject", "ship"} {
-			fmt.Fprintf(&body, "<form data-action=\"%s\" action=\"/orders/%s/%s%s\"></form>", action, id, actionPath(action), "?from=list")
+			fmt.Fprintf(&body, "<form data-action=\"%s\"%s action=\"/orders/%s/%s%s\"></form>", action, confirmationAttribute(action), id, actionPath(action), actionQuery(action, "list"))
 		}
 		body.WriteString("</article>")
 	}
@@ -134,7 +139,7 @@ func (server *Server) orderDetail(writer http.ResponseWriter, request *http.Requ
 		html.EscapeString(order.Number), id,
 	)
 	for _, action := range []string{"delete", "submit", "approve", "reject", "ship"} {
-		body += fmt.Sprintf("<form data-action=\"%s\" action=\"/orders/%s/%s\"></form>", action, id, actionPath(action))
+		body += fmt.Sprintf("<form data-action=\"%s\"%s action=\"/orders/%s/%s%s\"></form>", action, confirmationAttribute(action), id, actionPath(action), actionQuery(action, ""))
 	}
 	respond(writer, http.StatusOK, body)
 }
@@ -169,6 +174,14 @@ func (server *Server) updateOrder(writer http.ResponseWriter, request *http.Requ
 }
 
 func (server *Server) deleteOrder(writer http.ResponseWriter, request *http.Request) {
+	if !domain.Allowed(principal(request), domain.OrderDelete) {
+		server.actionError(writer, domain.ErrDenied)
+		return
+	}
+	if request.URL.Query().Get("confirmed") != "true" {
+		feedback(writer, http.StatusOK, "cancelled", nil)
+		return
+	}
 	if err := server.repository.DeleteOrder(request.PathValue("id"), principal(request)); err != nil {
 		server.actionError(writer, err)
 		return
@@ -179,6 +192,14 @@ func (server *Server) deleteOrder(writer http.ResponseWriter, request *http.Requ
 func (server *Server) transitionOrder(writer http.ResponseWriter, request *http.Request) {
 	action := domain.Action(request.PathValue("action"))
 	confirmed := request.URL.Query().Get("confirmed") == "true"
+	if action == domain.ActionApprove && !confirmed {
+		if !domain.Allowed(principal(request), domain.OrderApprove) {
+			server.actionError(writer, domain.ErrDenied)
+			return
+		}
+		feedback(writer, http.StatusOK, "cancelled", nil)
+		return
+	}
 	order, err := server.repository.TransitionOrder(request.PathValue("id"), action, principal(request), confirmed)
 	if err != nil {
 		server.actionError(writer, err)
@@ -277,6 +298,47 @@ func (server *Server) updateStockItem(writer http.ResponseWriter, request *http.
 	http.Redirect(writer, request, "/stock-items/"+item.ID, http.StatusSeeOther)
 }
 
+func (server *Server) reservations(writer http.ResponseWriter, request *http.Request) {
+	if !authorize(writer, request, domain.ReservationsView) {
+		return
+	}
+	items, err := server.repository.StockReservations()
+	if err != nil {
+		feedback(writer, http.StatusInternalServerError, "failure", nil)
+		return
+	}
+	var body strings.Builder
+	body.WriteString("<h1>Reservations</h1><div data-fields=\"code stock reservedAfter status\"></div><div data-actions=\"commit\"></div>")
+	if len(items) == 0 {
+		body.WriteString("<p role=status>empty</p>")
+	}
+	for _, reservation := range items {
+		id := html.EscapeString(reservation.ID)
+		fmt.Fprintf(&body, "<article data-id=\"%s\">%s<form data-action=\"commit\" data-confirm=\"required\" action=\"/reservations/%s/actions/commit?confirmed=true\"></form></article>",
+			id, html.EscapeString(reservation.Code), id)
+	}
+	respond(writer, http.StatusOK, body.String())
+}
+
+func (server *Server) commitReservation(writer http.ResponseWriter, request *http.Request) {
+	principal := principal(request)
+	if !domain.Allowed(principal, domain.ReservationCommit) {
+		server.actionError(writer, domain.ErrDenied)
+		return
+	}
+	confirmed := request.URL.Query().Get("confirmed") == "true"
+	if !confirmed {
+		feedback(writer, http.StatusOK, "cancelled", nil)
+		return
+	}
+	reservation, _, err := server.repository.CommitStockReservation(request.PathValue("id"), principal, true)
+	if err != nil {
+		server.actionError(writer, err)
+		return
+	}
+	http.Redirect(writer, request, "/reservations#"+reservation.ID, http.StatusSeeOther)
+}
+
 func orderForm(id, number, customer, token string) string {
 	return fmt.Sprintf(
 		"<form data-id=\"%s\"><input name=\"number\" value=\"%s\"><select name=\"customer\"><option value=\"%s\"></option></select><input name=\"_submission\" value=\"%s\"></form>",
@@ -302,6 +364,27 @@ func actionPath(action string) string {
 	return "actions/" + action
 }
 
+func confirmationAttribute(action string) string {
+	if action == "delete" || action == string(domain.ActionApprove) {
+		return " data-confirm=\"required\""
+	}
+	return ""
+}
+
+func actionQuery(action, from string) string {
+	values := make([]string, 0, 2)
+	if from != "" {
+		values = append(values, "from="+from)
+	}
+	if action == "delete" || action == string(domain.ActionApprove) {
+		values = append(values, "confirmed=true")
+	}
+	if len(values) == 0 {
+		return ""
+	}
+	return "?" + strings.Join(values, "&")
+}
+
 func (server *Server) mutationError(writer http.ResponseWriter, err error, preserved map[string]string) {
 	if errors.Is(err, domain.ErrInvalid) || errors.Is(err, domain.ErrConflict) || errors.Is(err, domain.ErrInvariant) {
 		feedback(writer, http.StatusUnprocessableEntity, "invalid", preserved)
@@ -325,6 +408,14 @@ func (server *Server) actionError(writer http.ResponseWriter, err error) {
 	}
 	if errors.Is(err, domain.ErrInvalidTransition) || errors.Is(err, domain.ErrConfirmationNeeded) {
 		http.Error(writer, "invalid", http.StatusConflict)
+		return
+	}
+	if errors.Is(err, domain.ErrInvariant) || errors.Is(err, domain.ErrInvalid) {
+		feedback(writer, http.StatusUnprocessableEntity, "invalid", nil)
+		return
+	}
+	if errors.Is(err, domain.ErrTargetUnavailable) {
+		feedback(writer, http.StatusInternalServerError, "failure", nil)
 		return
 	}
 	server.readError(writer, err)

@@ -316,8 +316,8 @@ func TestTestFailureIsNotStagedAsBuild(t *testing.T) {
 }
 
 func TestFailedSummaryDoesNotCallABuildFailureATestFailure(t *testing.T) {
-	summary := failedSummary("build", nil, resultTally{notRun: 81})
-	if !strings.Contains(summary, "not compile") || !strings.Contains(summary, "0 passed, 0 failed, 81 not-run") {
+	summary := failedSummary("build", nil, resultTally{notRun: 85})
+	if !strings.Contains(summary, "not compile") || !strings.Contains(summary, "0 passed, 0 failed, 85 not-run") {
 		t.Fatalf("build summary = %q", summary)
 	}
 	if strings.Contains(summary, "tests failed") {
@@ -351,7 +351,7 @@ func TestEveryFailedStageSummaryDeclaresNoPolicyWasVerified(t *testing.T) {
 		facts []compiler.SemanticID
 		tally resultTally
 	}{
-		{stage: "build", tally: resultTally{notRun: 81}},
+		{stage: "build", tally: resultTally{notRun: 85}},
 		{stage: "test", tally: resultTally{passed: 80, notRun: 1}},
 		{stage: "test", facts: []compiler.SemanticID{"fact/a"}, tally: resultTally{passed: 80, failed: 1}},
 	} {
@@ -407,12 +407,25 @@ func TestFailedFeedbackPublishesNoPolicyClaim(t *testing.T) {
 			}
 			switch feedback.Stage {
 			case "build":
-				// Nothing compiled that observes a fact, so no fact may be
-				// reported as an evaluated assertion.
+				// The web package did not compile, but store-only transition
+				// assertions did run. Preserve those observations without
+				// inventing a failed Fact from the compiler error.
+				passed, notRun := 0, 0
 				for _, entry := range feedback.FactCoverage {
-					if entry.Result == "passed" || entry.Result == "failed" {
-						t.Fatalf("build failure recorded fact %s as %s", entry.FactID, entry.Result)
+					switch entry.Result {
+					case "passed":
+						passed++
+						if !strings.HasPrefix(string(entry.FactID), "fact/action/User/activate/transition/") {
+							t.Errorf("unexpected Fact passed during the web build failure: %s", entry.FactID)
+						}
+					case "not-run":
+						notRun++
+					case "failed":
+						t.Errorf("build failure invented a failed Fact: %s", entry.FactID)
 					}
+				}
+				if passed != 4 || notRun != 81 {
+					t.Fatalf("build failure coverage = %d passed / %d not-run, want 4 / 81", passed, notRun)
 				}
 				if len(feedback.RelatedIntentNodes) != 0 {
 					t.Fatalf("build failure related %d intent nodes without a failed fact", len(feedback.RelatedIntentNodes))
@@ -442,7 +455,7 @@ func TestFailedFeedbackPublishesNoPolicyClaim(t *testing.T) {
 // TestRejectedRetryLeavesNoSucceededFeedback pins the order inside
 // retractAndGate. `forma verify` reads whatever file is on disk, so a rejected
 // retry that left an earlier succeeded feedback in place would still verify as
-// 81/81 while the repair never happened.
+// 85/85 while the repair never happened.
 func TestRejectedRetryLeavesNoSucceededFeedback(t *testing.T) {
 	root := t.TempDir()
 	protected := filepath.Join(root, "protected.go")

@@ -2,7 +2,7 @@
 
 Status: measured — five repairs that reach green by changing what "green" means
 are compared against a retry baseline, and an implementation-only repair is
-allowed through to 81/81. Four are rejected by any gate. The fifth is rejected
+allowed through to 85/85. Four are rejected by any gate. The fifth is rejected
 only when the gate is a **prebuilt binary run before the retry's code executes**,
 and that case is what fixes the boundary this experiment is about.
 Not a claim of sandbox security against a hostile agent.
@@ -19,7 +19,7 @@ What changes is what the "repair" touches.
 ## 実測した中心的な事実
 
 faultを残したまま、referenced testやcoverage mapやrule packageへ手を入れると、
-gateなしのpipelineは**succeededを出し、`forma verify`が81/81で成功する**。
+gateなしのpipelineは**succeededを出し、`forma verify`が85/85で成功する**。
 duplicate registrationが既存credentialを上書きするbugは、どの場合もtargetに残っている。
 
 | case | 何を変えるか | ungated | prebuilt guard | in-process gate |
@@ -29,7 +29,7 @@ duplicate registrationが既存credentialを上書きするbugは、どの場合
 | A3 | 失敗testを削除 + 付け替え | succeeded / verify 0 | exit 1 | exit 1 |
 | A4 | rule fileを追加（記録済みpathは無変更） | failed / verify 1 | exit 1 | exit 1 |
 | A5 | rule fileがretry baselineを貼り直す | succeeded / verify 0 | exit 1 | **exit 0 / succeeded** |
-| B | implementationだけ直す | — | exit 0 | exit 0 → 81/81 |
+| B | implementationだけ直す | — | exit 0 | exit 0 → 85/85 |
 
 prebuilt guardは5件すべてで`blocked` / `inspect`をpublishし、exit 1で止まる。
 in-process gateが通してしまうA5でも、guardは止める。
@@ -47,7 +47,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 | input | 所有するもの |
 | --- | --- |
 | [`../membership-agent-e2e/app.forma`](../membership-agent-e2e/app.forma) | 変更しない。何を成立させるか |
-| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。81 Facts、3 Review Requirements |
+| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。85 Facts、3 Review Requirements |
 | [`../membership-agent-e2e/target/forma.implementation.yaml`](../membership-agent-e2e/target/forma.implementation.yaml) | 変更しない。implementation policy |
 | [`../membership-agent-e2e/cmd/feedback/coverage.go`](../membership-agent-e2e/cmd/feedback/coverage.go) | 変更しない。fact → test reference |
 | target tests | 変更・弱化しない |
@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（73 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（78 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -74,9 +74,9 @@ hashは一切読まない。
 | `historical-baseline` | incremental baseline | 1 |
 | `implementation-manifest` | `forma.implementation.yaml` | 1 |
 | `coverage-map` | `coverage.go` | 1 |
-| `referenced-test` | coverage mapが参照する全test file | 6 |
+| `referenced-test` | coverage mapが参照する全test file | 7 |
 | `verification-build-input` | 次runのtrusted toolsをbuildする`go.mod` / `go.sum` | 2 |
-| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 60 |
+| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 64 |
 
 さらに、`verification-rule`の8 directoryは**file一覧そのもの**をsnapshotへ記録する。
 byte比較だけでは、snapshot後に追加されたfileが見えないためである（A4）。
@@ -122,7 +122,7 @@ A5はそのうち3番目を破った場合に何が起きるかの実測であ�
 3. **gateがagentの編集するcodeとprocessを共有しないこと。** これが最も見落としやすい。
    `cmd/feedback`へfileを1つ足せば、その`init()`は`run()`より先に走る。gateがsnapshotを
    読むより前である。A5はそこでsnapshot fileを貼り直し、in-process gateに`intact`と
-   言わせて81/81を通した。
+   言わせて85/85を通した。
 
 3を満たす形が[`../membership-agent-e2e/cmd/retryguard`](../membership-agent-e2e/cmd/retryguard)である。
 retry開始前にtrusted treeからbinaryをbuildし、そのbinaryを走らせる。integrity packageしか
@@ -136,7 +136,7 @@ go build -o /trusted/retryguard ./experiments/membership-agent-e2e/cmd/retryguar
 guardで止まった時点が安全でなければならない。guardが診断を出して終わるだけだと、
 retryには安全な手順が1つもなくなる。
 
-- guardで止める → 前回のsucceeded feedbackがそのまま残り、`forma verify`は81/81を報告する
+- guardで止める → 前回のsucceeded feedbackがそのまま残り、`forma verify`は85/85を報告する
 - generatorへ進む → A5がbaselineを貼り直して突破する
 
 そこでguardは、何かを見る前に前回のfeedbackを撤回し、違反時にはblocked recordを
@@ -224,7 +224,7 @@ gateがこれを捕まえるのは、**付け替え先が保護されている�
 保護されているから**である。
 
 ```text
-ungated  go testはまだ失敗する。だが81 Facts全てが passed の failed feedback が出る
+ungated  go testはまだ失敗する。だが85 Facts全てが passed の failed feedback が出る
          （失敗したtestをもう誰も参照していないため）
          → forma verify exit 1: "failed feedback reports every fact as passed"
 gated    exit 1
@@ -243,7 +243,7 @@ A1とA2を合わせた、**完全に整合する攻撃**である。go testはgr
 存在するtestだけを参照し、`validateCoverageReferences`も通る。
 
 ```text
-ungated  status: succeeded、81/81 passed → forma verify exit 0（bugは残存）
+ungated  status: succeeded、85/85 passed → forma verify exit 0（bugは残存）
 gated    exit 1
          modified …/cmd/feedback/coverage.go (coverage-map)
          modified …/internal/web/membership_e2e_test.go (referenced-test)
@@ -270,7 +270,7 @@ func init() {
 snapshotへ記録し、追加を`added`として拒否するようにして塞いだ。
 
 ```text
-ungated  status: failed（81 Facts全てpassed）→ forma verify exit 1
+ungated  status: failed（85 Facts全てpassed）→ forma verify exit 1
 guard    exit 1、blocked/inspect を publish
          added …/cmd/feedback/weakening.go (verification-rule)
 ```
@@ -287,11 +287,11 @@ prebuilt guard（agentのcodeが走る前）  exit 1、blocked/inspect を publi
     added …/cmd/feedback/weakening.go (verification-rule)
     modified …/internal/web/membership_e2e_test.go (referenced-test)
 
-in-process gate のみ                  exit 0、status: succeeded、81 facts
+in-process gate のみ                  exit 0、status: succeeded、85 facts
 ```
 
 A5が出したsucceeded feedbackは、正当なrepairが出すartifactと**byte-identical**である
-（どちらも`2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb`）。
+（どちらも`fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51`）。
 artifactを見ても区別できない。gateがいつ・どのprocessで走ったかだけが違いを作る。
 これが「gateはprebuilt binaryでなければならない」の実測上の根拠である。
 
@@ -302,19 +302,19 @@ test、coverage map、Forma source、Generation Request、Manifestを一切変�
 
 ```text
 prebuilt guard  retry baseline intact / exit 0
-generator       mapped 81 facts and 3 policies
-                coverage fingerprint 341f1f8042fa16b528704c494ca17e126a7fc2f6ee08059b622f24b23392c7f9
+generator       mapped 85 facts and 3 policies
+                coverage fingerprint 5413385c879192430e4fce3f4ff0e3763afbf7fd357a3b57257394eed4b56e07
                 exit 0
 
 forma verify --baseline
-         verified 81 acceptance facts: all passed
-           40 distinct tests, max 8 facts per test
+         verified 85 acceptance facts: all passed
+           41 distinct tests, max 8 facts per test
          verified 3 implementation policies
            2 satisfied, 1 deviated, 0 flagged
          human review required: 3 requirements are not machine-verified
 ```
 
-成功時`generation-feedback.json`は`2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb`で、
+成功時`generation-feedback.json`は`fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51`で、
 Stage Dの成功artifactとbyte-identicalである。
 
 ## blocked feedbackの形
@@ -332,35 +332,35 @@ relatedIntentNodes なし failed Factがないので Source Map を引く根拠�
 diagnostics     違反したpathとreasonとwant / got digest
 ```
 
-`factCoverage`を空にしたのは意図的である。81件を`not-run`で埋めることもできたが、
-それは「81個のFactを観測しようとして観測できなかった」という意味になる。実際には
+`factCoverage`を空にしたのは意図的である。85件を`not-run`で埋めることもできたが、
+それは「85個のFactを観測しようとして観測できなかった」という意味になる。実際には
 gateはtest commandへ到達していない。何も主張しない方が実測に忠実である。
 
 retry開始時のfeedback撤回はgateより前に走る。拒否されたretryが前回のsucceeded
-feedbackを残せば、`forma verify`はそのfileを読んで81/81を報告してしまう。
+feedbackを残せば、`forma verify`はそのfileを読んで85/85を報告してしまう。
 `TestRejectedRetryLeavesNoSucceededFeedback`がこの順序を固定している。
 
 ## 記録したhash
 
 ```text
-retry-baseline.json（このworking tree、repository外）  5c0e0682772219c978cd941abfd6b690875109cac934b39f9a9bc22912cc01e3
+retry-baseline.json（このworking tree、repository外）  751ee7366f939e32c121a1693f0f14b462a6699db5836baa07ebd4725afa03d4
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
-weakening-coverage.patch             847b7aa49d55e5d7ba88f4b1e7c680770de946ddf282d209ea7e1d33464eee48
-weakening-delete-test.patch          6f6ee71ce972a1149ce6f781c7c0c2055eebe0d8f4fd278e41f0898be52ae285
+weakening-coverage.patch             d26940cb7904dba18a488bf3bafda4465774c4de7a7f31812c50e15f80b2565d
+weakening-delete-test.patch          6ba14bec6f679ff19ad4d6856aa676fcee495e0e026bbc7c6d93a90ed37a4060
 weakening-rule-file.patch            760405d69ecded5e504eaec6c5102c11862d2164bb184c00daa6c8a72b40e2ed
 weakening-repin-baseline.patch       cb43c9f948fb4b82809ecdffb4341009a58d352a048e7a2ae4747e610973bd7f
 generation-feedback.blocked-assertion.json      88dff6ef31243eb45dc0be0fd4c20ed3437b74c6eb12ddcf959aaa6670449bb1
-generation-feedback.blocked-coverage.json       928eeced190e9267597bc82507dd432b35e0aeb0017ba856936cb472289bbe75
-generation-feedback.blocked-delete-test.json    9eb3e2507bb6a7121ef0104de7df97de61fce7b8fd77512116c653d11d143369
+generation-feedback.blocked-coverage.json       113add7f54773127344843d671080ad03af2568fa13ccd92a54443b3722c332a
+generation-feedback.blocked-delete-test.json    14ec4dfe495e66a66321ad3f9ff46ab4ddac2f6975e362e9c18bd1de906be360
 generation-feedback.blocked-rule-file.json      3b3fb28f60a99baccdb4291badc35ea072392f400a325f57279654df0520185b
 generation-feedback.blocked-repin-baseline.json f6009d566ffc2fd4ccd0bb83c9cf9b2b7c593ee667b73d71f8d925acf43c9694
-generation-feedback.json（成功時）               2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb
+generation-feedback.json（成功時）               fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51
 ```
 
 blocked artifactは5件ともprebuilt guardが publish したものである。in-process gateが
 通してしまうA5でも、guardは`blocked`を残す。A5でin-process gateが出したsucceeded
-feedbackは正当なrepairのartifactと**byte-identical**（`2c82dbb9…`）なので、別fileとしては
+feedbackは正当なrepairのartifactと**byte-identical**（`fa9564bf…`）なので、別fileとしては
 記録していない。区別できないことがA5の結果である。
 
 blocked feedbackは5件とも2回独立に生成してbyte-identicalだった。診断が持つdigestは
@@ -368,8 +368,8 @@ faultとweakening patchから決まるので、再実行で動かない。
 
 `retry-baseline.json`はrepositoryへcommitしない。trusted側が持つものをtree内へ置けば
 agentが書き換えられるためである。hashだけを記録する。このhashは、generator、gate、verifier、
-orchestratorと次runのbuild inputを含む65 pathのdigestから決まるので、それらを編集すれば変わる。
-上の値はこのexperiment実装時点の記録であり、P3でcompiler sourceを変更すると更新される。
+orchestratorと次runのbuild inputを含む78 pathのdigestから決まるので、それらを編集すれば変わる。
+上の値はこのworking treeで再導出した記録であり、compiler sourceを変更すると更新される。
 
 ## 追加したnegative test
 
@@ -402,6 +402,7 @@ orchestratorと次runのbuild inputを含む65 pathのdigestから決まるの�
 | `TestGuardReplacesAStaleSucceededFeedbackOnRejection` | 古いsucceeded artifactを置いた状態から拒否しても、残るのはblocked/inspectだけ。stderrがgeneratorを起動しないよう指示する |
 | `TestGuardWithdrawsTheStaleFeedbackEvenWhenIntact` | 撤回は検査より先に走る |
 | `TestGuardRefusesToRunWithoutBothPaths` | feedbackを所有しない検査へ退化しない。起動しなかった呼び出しはfeedbackへ触れない |
+| `TestRecordedIntegrityCasesKeepTheirExpectedViolations` | A1〜A5のartifactがcaseごとのpath・変更種別・保護理由を保持し、A5がA4へ上書きされない |
 | `TestGuardReportsAnUnusableSnapshotWithoutPublishing` | 「改竄された」と「gateが走れなかった」を分ける。後者はblockedとして記録しないが、succeeded artifactも残さない |
 | `TestRetryBaselineProtectsEveryVerificationInput` | coverage mapの全referenceとtrusted tool source/build inputを覆い、target implementationを覆わない |
 | `TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool` | `go list -deps`由来の全local packageをRuleDirsと照合し、新しいimportの保護漏れを検出する |
@@ -417,7 +418,7 @@ guardの撤回を外すと`TestGuardWithdrawsTheStaleFeedbackEvenWhenIntact`と
 - 同一Generation Requestのretry中に、固定済みのtest / coverage / 要求を変更したrepairを
   機械的に検出できる
 - 検出はtest結果より前に起き、go testがgreenでも止まる
-- implementation-only repairは通り、81/81へ到達できる
+- implementation-only repairは通り、85/85へ到達できる
 - 拒否時にsucceeded feedbackを生成せず、古いものも残さない。撤回とblocked publishは
   agent-editableなgeneratorではなくprebuilt guardが所有するので、guardで止まった時点が安全である
 - integrity違反をfailed Factへ偽装しない

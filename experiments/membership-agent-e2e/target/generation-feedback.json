@@ -49,6 +49,34 @@
   ],
   "factCoverage": [
     {
+      "factId": "fact/action/User/activate/transition/accepted/from/Pending",
+      "testReferences": [
+        "internal/store/identity_test.go#TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/User/activate/transition/rejected/from/Active",
+      "testReferences": [
+        "internal/store/identity_test.go#TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/User/activate/transition/rejected/from/Confirmed",
+      "testReferences": [
+        "internal/store/identity_test.go#TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"
+      ],
+      "result": "passed"
+    },
+    {
+      "factId": "fact/action/User/activate/transition/rejected/from/Suspended",
+      "testReferences": [
+        "internal/store/identity_test.go#TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/entity/User/field/team/relation/resolved",
       "testReferences": [
         "internal/web/server_test.go#TestRelationUsesTeamLabel"

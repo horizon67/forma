@@ -288,6 +288,9 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, destination Name, 
 	}()
 	if _, standard := standardActions[name.Text]; standard {
 		ref.Kind = "standard"
+		if name.Text == "delete" {
+			ref.InteractionStates = []string{"failure"}
+		}
 		switch name.Text {
 		case "create":
 			if info.View.Kind != ViewList {
@@ -323,6 +326,8 @@ func (c *checker) resolveActionRef(info *viewInfo, name Name, destination Name, 
 		return ref
 	}
 	domainAction = action
+	ref.Action = actionID(action.Entity.Text, action.Name.Text)
+	ref.InteractionStates = []string{"invalid", "failure"}
 	if destination.Text != "" && report {
 		// Domain action navigation is declared once at the top level so the
 		// reference cannot introduce a second, possibly disagreeing, record.

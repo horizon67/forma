@@ -17,7 +17,7 @@ import (
 //
 // It runs before the tree is checked, not after. `forma verify` reads whatever
 // file is on disk, so a retry that stops without withdrawing the previous run's
-// succeeded feedback leaves an artifact that still verifies as 81/81 while the
+// succeeded feedback leaves an artifact that still verifies as 85/85 while the
 // repair never happened. Withdrawing first means the only ways to end a retry
 // are a fresh measurement, a blocked record, or no feedback at all.
 func Retract(path string) error {

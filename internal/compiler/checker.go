@@ -36,6 +36,14 @@ type viewInfo struct {
 	Mode   string
 }
 
+type resolvedChange struct {
+	ActionEntity *EntityDecl
+	TargetEntity *EntityDecl
+	RelationPath []*FieldDecl
+	TargetField  *FieldDecl
+	ValueField   *FieldDecl
+}
+
 type checker struct {
 	program *Program
 
@@ -52,6 +60,7 @@ type checker struct {
 	entityLabels     map[string]string
 	expressionFields map[*Expression]*FieldDecl
 	expressionTypes  map[*Expression]string
+	resolvedChanges  map[*ChangeAssignmentDecl]resolvedChange
 
 	viewInfo   map[*ViewDecl]*viewInfo
 	createForm map[string][]*viewInfo
@@ -69,7 +78,7 @@ func check(program *Program) (*ResolvedIntent, *SourceMap, []Diagnostic) {
 		identities:    map[string]*IdentityDecl{},
 		resolvedTypes: map[string]resolvedType{}, resolving: map[string]bool{}, cycleReported: map[string]bool{},
 		entityLabels: map[string]string{}, expressionFields: map[*Expression]*FieldDecl{},
-		expressionTypes: map[*Expression]string{}, viewInfo: map[*ViewDecl]*viewInfo{},
+		expressionTypes: map[*Expression]string{}, resolvedChanges: map[*ChangeAssignmentDecl]resolvedChange{}, viewInfo: map[*ViewDecl]*viewInfo{},
 		createForm: map[string][]*viewInfo{}, editForm: map[string][]*viewInfo{},
 		details: map[string][]*viewInfo{}, lists: map[string][]*viewInfo{},
 	}
@@ -519,6 +528,7 @@ func (c *checker) checkActions() {
 				}
 			}
 		}
+		c.checkActionChanges(action, entity)
 	}
 }
 

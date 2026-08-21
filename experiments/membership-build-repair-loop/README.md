@@ -2,7 +2,7 @@
 
 Status: measured — a controlled Go **build** failure on the membership target, a
 `stage: build` / `status: failed` Generation Feedback, and a repair back to
-81/81. Not a claim of automatic agent orchestration or general repair.
+85/85. Not a claim of automatic agent orchestration or general repair.
 
 [`../membership-repair-loop`](../membership-repair-loop/README.md) measured a
 **test** failure: an assertion ran and rejected the implementation, so exactly one
@@ -27,7 +27,7 @@ evaluated.
 | input | 所有するもの |
 | --- | --- |
 | [`../membership-agent-e2e/app.forma`](../membership-agent-e2e/app.forma) | 変更しない。何を成立させるか |
-| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。81 Facts、3 Review Requirements |
+| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。85 Facts、3 Review Requirements |
 | [`../membership-agent-e2e/target/forma.implementation.yaml`](../membership-agent-e2e/target/forma.implementation.yaml) | 変更しない。implementation policy |
 | coverage map in [`../membership-agent-e2e/cmd/feedback/coverage.go`](../membership-agent-e2e/cmd/feedback/coverage.go) | 変更しない。fact → test reference |
 | target tests | 変更・弱化しない |
@@ -111,14 +111,14 @@ diagnosticsの先頭へ置くだけで、schemaにもForma semanticsにも触れ
 fault.patch
   → internal/web が compile 失敗、cmd/server も build failed
   → stage: build / status: failed
-  → 81 Facts すべて not-run（passed 0 / failed 0 / not-run 81）
+  → webに依存する81 Factsはnot-run、storeだけで観測する新しい4 transition Factsはpassed
   → relatedIntentNodes は空。failed Fact がないので Source Map を引く根拠がない
   → policyCoverage も空。この run は policy を1件も検証していない
   → diagnostics に compiler error 4行 + 症状 4行
   → forma verify --baseline → exit 1
   → diagnostic の "want (string)" と identity.Credential.Matches の signature だけを根拠に
      引数を1つ戻す
-  → forma verify --baseline は 81/81、40 distinct tests
+  → forma verify --baseline は 85/85、41 distinct tests
 ```
 
 失敗時feedbackの要点:
@@ -130,7 +130,7 @@ status  failed
 command cd experiments/membership-agent-e2e/target && go test -count=1 -json ./...
 summary The target did not compile, so any fact whose required test
         references did not all complete is not-run: 0 passed, 0 failed,
-        81 not-run. The compiler diagnostic is in diagnostics.
+        4 passed, 0 failed, 81 not-run. The compiler diagnostic is in diagnostics.
         No implementation policy was verified in this run, so this feedback
         reports no policy coverage.
 policyCoverage  なし
@@ -148,17 +148,19 @@ diagnostics
 ## 失敗時のcoverage集計
 
 ```text
-passed    0
+passed    4
 failed    0
 not-run  81
 ```
 
 `internal/store`、`internal/identity`、`internal/clock`、`internal/mail`の4 packageはbuildも
 実行も成功しており、25 top-level testsと12 subtestsがpassしている。それでも`passed`が0件なのは、
-81 Factsすべてが少なくとも1件のtest referenceを`internal/web`へ持つためである。
+残る81 Factsすべてが少なくとも1件のtest referenceを`internal/web`へ持つためである。新しい4件の
+`User.activate` transition Factは`internal/store`だけを参照するため、このbuild failureでもpassedになる。
 
 | Factが参照するpackage | Facts |
 | --- | --- |
+| `internal/store` のみ | 4 |
 | `internal/web` のみ | 77 |
 | `internal/web` + `cmd/server` | 2 |
 | `internal/web` + `internal/store` | 1 |
@@ -166,7 +168,7 @@ not-run  81
 
 これはcoverage mapの弱点ではなく観測構造の事実である。Acceptance Factsはすべて
 HTTP surface越しに観測される設計なので、web packageのbuild failureはcoverage全体を
-盲目にする。1つのpackageのcompile errorが81件すべての観測可能性を落とす、というのが
+盲目にする。1つのpackageのcompile errorがwebに依存する81件すべての観測可能性を落とす、というのが
 この構造から出る帰結である。
 
 `not-run`になる条件は「失敗packageだけで観測されるFact」より広い。`factResult`はFactの
@@ -212,16 +214,16 @@ Factを観測することも拒否することもあり得るため、「何も�
 ## 保護したartifactのhash
 
 fault適用中とrepairの前後で、次はbyte-identicalだった。coverage mapのfingerprintも
-`341f1f8042fa16b528704c494ca17e126a7fc2f6ee08059b622f24b23392c7f9`のまま変わらない。
+`5413385c879192430e4fce3f4ff0e3763afbf7fd357a3b57257394eed4b56e07`のまま変わらない。
 
 ```text
 app.forma                          4a74e51d3c433ae3f15c6852925b584f944759dccd7621d8e076ebcca927250a
-generation-request.json            19b10ca6fa7515325fbc3b8a23a3a084b0989023ca33c0f8fce4d108eb343dcc
+generation-request.json            12fe5c8bfd36d161af462d8ef67065084ff2d3ef72fb3124b41cf7ee5f77d544
 forma.implementation.yaml          6b2712b999bbc26a10477f8fb6ce0a0c0d903c8b712b608bb46359f74ddc7d8c
 membership_e2e_test.go             4831e672962c450bceb81652bbaf55f7c750596a56252b776dcc02509dbe066a
 server_test.go                     b8d324560d52558577c4d6e2c0d6440b13380a898770d8fee69e28f3aa87be9f
 submission_test.go                 ae83bb8ce513e34f2113cc4da4f2e59c401344e02d69b0619d6b0d25ccaea238
-store/identity_test.go             83a89cc3c42306b61bcd2b0443ce0bdb2f237f2ef8a8efe2d649d83ab5956dbf
+store/identity_test.go             730ce623fa5c835e455e338c094a918ce3f4a02ec50250a8e6ad7a0195ca77cc
 store/store_test.go                72497725856c389224e1bef739e09c6030424031d173d3564ca0151be3e7d430
 identity/identity_test.go          ebeae4189689b4ade715ec52d8935f8cdc78f9aaaf5290ba55e577bb176bf20c
 cmd/server/main_test.go            4fdfd2fc28967e77e50891fbb91916f261b5bd260f7177093238a58efda74283
@@ -233,8 +235,8 @@ cmd/feedback/coverage.go           c009dfe154e5ffbe4f1a2c572c2f2fe78dfa9c5f2162a
 測定artifact:
 
 ```text
-generation-feedback.json           2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb
-generation-feedback.failed.json    849623ace3fd1299e39db4745b5cf9d0933360cffd23724c10634bb6083deba0
+generation-feedback.json           fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51
+generation-feedback.failed.json    e3efc034a397c1a0ba270cd7f66d40f46740b5035ba7a8f702822a16e71431b9
 fault.patch                        948146752688b546d68235daaed6d5a94ea62fbd2e3668c76acbfd221c56f339
 ```
 
@@ -272,7 +274,7 @@ compile errorの行・列は固定patchから決まるためである。
 - 観測されなかったFactを`failed`へ落とさず`not-run`に保てる。根拠のない
   `relatedIntentNodes`も作らない
 - 検証されないpolicy statusをfailed feedbackへ残さない
-- compiler diagnosticだけを根拠に実装1行を直し、81/81へ戻せる
+- compiler diagnosticだけを根拠に実装1行を直し、85/85へ戻せる
 - Forma source、Generation Request、Manifest、coverage map、testを一切変えずに1往復できる
 - 成功時artifactがbyte-identicalに戻る
 - schemaは`forma/generation-feedback/v0alpha2`のままで足りた。build failureを表すのに

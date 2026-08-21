@@ -245,16 +245,18 @@ Go front end partially implements the design draft v0.4 grammar, parser, name
 resolution, type checking, semantic validation, stable identities, Resolved
 Intent, and Source Maps. It also implements a minimal admin-flow Acceptance
 Facts and Generation Request slice and an exploratory non-v0 self-only
-Invariant slice.
+Invariant slice and a bounded action-owned Changes slice.
 
 The first Invariant vertical slice emits two entity-level Acceptance Facts for
 satisfied and violated post-state predicates, plus an authoritative rejection
 Fact for each form submit that edits a referenced field. It carries the resolved
 Expression tree and atomic outcome into a Generation Request and exposes
 concurrent enforcement as a separate human Review Requirement. The
-repository-specific coding-agent run now passes all 172 Acceptance Facts in a
-standalone Go application across 39 mapped tests. The remaining concurrency
-Review Requirement awaits human review.
+repository-specific coding-agent run now passes all 275 Acceptance Facts in a
+standalone Go application across 52 mapped tests. The same target implements
+`StockReservation.commit`: its implicit transition and related StockItem write
+commit atomically from one pre-state snapshot. Three concurrency, atomicity,
+and cross-entity authorization Review Requirements await human review.
 
 In the first controlled agent run, a Generation Request produced from Forma was
 given to an AI coding agent, which implemented an admin interface in a
@@ -315,21 +317,20 @@ explicit index. The diagram is not editable application meaning and does not
 infer layout. `forma request` emits a Generation Request, and
 `forma verify` validates agent feedback against the immutable request. The
 email-verified signup/signin Identity probe is complete
-through Stage D: current artifacts use Resolved Intent v0.8, Source Map v0.5, 81 Acceptance Facts,
+through Stage D: current artifacts use Resolved Intent v0.9, Source Map v0.6, 85 Acceptance Facts,
 and three Review Requirements are verified in the existing admin target. The
 first bounded P2 automated-repair probe is also complete. Separate fresh agent
 processes repaired a controlled test failure and build failure in one attempt
-each and returned both runs to 81/81. A third process left the repository
+each and returned both runs to 85/85. A third process left the repository
 unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
 human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
-members on their source pages. P3 is now in progress: the first self-only
-Invariant reaches Acceptance Facts, Generation Request diffs, and a 172/172
-repository E2E in an ordinary Go application. The concurrency Review
-Requirement remains pending while the next bounded Changes and atomic
-post-state design awaits review before compiler implementation; Occurrence and
-Effect follow only after that boundary is measured. Projection readability
+members on their source pages. P3 is now in progress: self-only Invariant and
+the first bounded Changes/atomic-post-state slice reach the Parser, Resolved
+Intent, Acceptance Facts, Generation Request, and a 275/275 repository E2E in
+an ordinary Go application. Three human Review Requirements remain pending;
+Occurrence and Effect follow only after this boundary is reviewed. Projection readability
 evaluation runs independently.
 
 ## Design documents

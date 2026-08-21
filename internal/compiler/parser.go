@@ -546,7 +546,7 @@ func (p *parser) parseActionDecl() *ActionDecl {
 	p.consume(tokenArrow, "`->` after the source state")
 	destination := p.consumeTypeName("as the destination state")
 	decl := &ActionDecl{Entity: entity, Name: name, Sources: sources, Destination: destination}
-	for !p.atLineEnd() {
+	for !p.atLineEnd() && !p.check(tokenLBrace) {
 		if !p.check(tokenIdent) {
 			p.unexpected("an action modifier")
 			p.synchronizeLine()
@@ -570,8 +570,72 @@ func (p *parser) parseActionDecl() *ActionDecl {
 		}
 		decl.Mods = append(decl.Mods, mod)
 	}
-	p.finishLine()
-	decl.Span = mergeSpan(start, p.previous().Span)
+	if !p.check(tokenLBrace) {
+		p.finishLine()
+		decl.Span = mergeSpan(start, p.previous().Span)
+		return decl
+	}
+	decl.HasBody = true
+	if !p.beginBlock("an action body") {
+		p.synchronizeLine()
+		decl.Span = mergeSpan(start, p.previous().Span)
+		return decl
+	}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		if !p.check(tokenIdent) {
+			p.unexpected("`changes` in the action body")
+			p.synchronizeLine()
+			continue
+		}
+		if p.peek().Value != "changes" {
+			member := p.advance()
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown action member `%s`", member.Value), "the first action body slice supports only `changes`")
+			p.synchronizeLine()
+			continue
+		}
+		decl.Changes = append(decl.Changes, p.parseChangesDecl())
+	}
+	end := p.consume(tokenRBrace, "`}` to close the action")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
+	return decl
+}
+
+func (p *parser) parseChangesDecl() *ChangesDecl {
+	start := p.advance().Span
+	decl := &ChangesDecl{}
+	if !p.beginBlock("a changes block") {
+		p.synchronizeLine()
+		decl.Span = mergeSpan(start, p.previous().Span)
+		return decl
+	}
+	for !p.atEnd() && !p.check(tokenRBrace) {
+		p.skipNewlines()
+		if p.check(tokenRBrace) || p.atEnd() {
+			break
+		}
+		if !p.check(tokenIdent) {
+			p.unexpected("a change assignment")
+			p.synchronizeLine()
+			continue
+		}
+		targetExpression := p.parseFieldExpression("as the change target")
+		p.consume(tokenEqual, "`=` after the change target")
+		value := p.parseFieldExpression("as the change value")
+		decl.Assignments = append(decl.Assignments, &ChangeAssignmentDecl{
+			Target: targetExpression.Field,
+			Value:  value,
+			Span:   mergeSpan(targetExpression.Span, value.Span),
+		})
+		p.finishLine()
+	}
+	end := p.consume(tokenRBrace, "`}` to close changes")
+	decl.Span = mergeSpan(start, end.Span)
+	p.consumeOptionalNewline()
 	return decl
 }
 

@@ -952,12 +952,12 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 
 | boundary | 固定する内容 | 現在の状態 |
 | --- | --- | --- |
-| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.8`として部分実装。Identity proof、application entry、surface-only transition、明示navigation destinationを含む |
-| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.5`として実装済み |
-| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha6`。admin/Identity、entry、surface transition、self-only Invariantの成立・違反と該当form mutationの拒否を導出 |
-| Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha2`。Identityごとの3件とInvariantごとのconcurrency確認を実装 |
+| Resolved Intent schema | version、解決済みnode、stable identity、canonical order | `forma/resolved-intent/v0.9`として部分実装。Identity proof、application entry、surface-only transition、明示navigation destination、experimental Changesを含む |
+| Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.6`として実装済み |
+| Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha7`。admin/Identity、entry、surface transition、self-only Invariant、action transition/confirmation、experimental Changesのatomic outcomeを導出 |
+| Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha3`。Identity、Invariant concurrency、experimental Changes atomicity/cross-entity authorizationを実装 |
 | Generation Request | intent、facts、review requirements、source map、implementation policy、requested change、verification policy | historical `v0alpha1` / `v0alpha2`とcurrent `v0alpha4`を実装。中間schemaは、現在のbinaryが再導出できないAcceptance Factsを運ぶため受理しない |
-| Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、81 facts・3 policiesと最初のbounded automated repair loopを実装 |
+| Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、current membership 85 facts・3 policiesと最初のbounded automated repair loopを実装 |
 
 framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の
 schemaへ固定しない。model provider、prompt template、tool listもagent execution設定であり、language

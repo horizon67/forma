@@ -10,11 +10,12 @@ import (
 )
 
 type fixture struct {
-	store    *Store
-	customer domain.Customer
-	product  domain.Product
-	stock    domain.StockItem
-	order    domain.Order
+	store       *Store
+	customer    domain.Customer
+	product     domain.Product
+	stock       domain.StockItem
+	reservation domain.StockReservation
+	order       domain.Order
 }
 
 func newFixture(t *testing.T) fixture {
@@ -26,11 +27,15 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	reservation, err := repository.PutStockReservation(domain.StockReservation{Code: "RES-100", StockID: stock.ID, ReservedAfter: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
 	order, err := repository.CreateOrder(OrderInput{Number: "ORD-100", CustomerID: customer.ID}, "seed-order")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return fixture{store: repository, customer: customer, product: product, stock: stock, order: order}
+	return fixture{store: repository, customer: customer, product: product, stock: stock, reservation: reservation, order: order}
 }
 
 func TestRelationsResolveToEntitiesAndLabels(t *testing.T) {
@@ -42,10 +47,12 @@ func TestRelationsResolveToEntitiesAndLabels(t *testing.T) {
 	order, _ := item.store.Order(item.order.ID)
 	customer, _ := item.store.Customer(order.CustomerID)
 	stockProduct, _ := item.store.Product(item.stock.ProductID)
+	reservation, _ := item.store.StockReservation(item.reservation.ID)
+	reservationStock, _ := item.store.StockItem(reservation.StockID)
 	storedLine, _ := item.store.OrderLine(line.ID)
 	lineOrder, _ := item.store.Order(storedLine.OrderID)
 	lineProduct, _ := item.store.Product(storedLine.ProductID)
-	if customer.Label() != "Aster Labs" || stockProduct.Label() != "Widget" ||
+	if customer.Label() != "Aster Labs" || stockProduct.Label() != "Widget" || reservationStock.Label() != "Tokyo" ||
 		lineOrder.Label() != "ORD-100" || lineProduct.Label() != "Widget" || len(order.LineIDs) != 1 {
 		t.Fatalf("relations did not resolve: customer=%#v stockProduct=%#v line=%#v order=%#v", customer, stockProduct, storedLine, order)
 	}
@@ -159,6 +166,166 @@ func TestOrderTransitionsHonorPreconditionsConfirmationAndRoles(t *testing.T) {
 	order, err = item.store.TransitionOrder(item.order.ID, domain.ActionShip, staff, false)
 	if err != nil || order.Status != domain.OrderShipped {
 		t.Fatalf("ship = %#v, %v", order, err)
+	}
+}
+
+func TestOrderSubmitTransitionFactsAtStoreBoundary(t *testing.T) {
+	testOrderTransitionFactsAtStoreBoundary(t, domain.ActionSubmit, domain.OrderDraft, domain.OrderSubmitted, domain.NewPrincipal(domain.RoleStaff), false)
+}
+
+func TestOrderApproveTransitionFactsAtStoreBoundary(t *testing.T) {
+	testOrderTransitionFactsAtStoreBoundary(t, domain.ActionApprove, domain.OrderSubmitted, domain.OrderApproved, domain.NewPrincipal(domain.RoleAdmin), true)
+}
+
+func TestOrderRejectTransitionFactsAtStoreBoundary(t *testing.T) {
+	testOrderTransitionFactsAtStoreBoundary(t, domain.ActionReject, domain.OrderSubmitted, domain.OrderRejected, domain.NewPrincipal(domain.RoleAdmin), false)
+}
+
+func TestOrderShipTransitionFactsAtStoreBoundary(t *testing.T) {
+	testOrderTransitionFactsAtStoreBoundary(t, domain.ActionShip, domain.OrderApproved, domain.OrderShipped, domain.NewPrincipal(domain.RoleStaff), false)
+}
+
+func testOrderTransitionFactsAtStoreBoundary(t *testing.T, action domain.Action, source, destination domain.OrderStatus, principal domain.Principal, confirmed bool) {
+	t.Helper()
+	states := []domain.OrderStatus{
+		domain.OrderDraft, domain.OrderSubmitted, domain.OrderApproved, domain.OrderRejected, domain.OrderShipped,
+	}
+	for _, state := range states {
+		t.Run(string(state), func(t *testing.T) {
+			item := newFixture(t)
+			order := createStoredOrderAtStatus(t, item, "STORE-"+string(action)+"-"+string(state), state)
+			beforeVersion := order.Version
+			got, err := item.store.TransitionOrder(order.ID, action, principal, confirmed)
+			if state == source {
+				if err != nil || got.Status != destination || got.Version != beforeVersion+1 {
+					t.Fatalf("accepted transition = %#v, %v", got, err)
+				}
+				return
+			}
+			if !errors.Is(err, domain.ErrInvalidTransition) {
+				t.Fatalf("rejected transition error = %v", err)
+			}
+			stored, readErr := item.store.Order(order.ID)
+			if readErr != nil || stored.Status != state || stored.Version != beforeVersion {
+				t.Fatalf("rejected transition changed order = %#v, %v", stored, readErr)
+			}
+		})
+	}
+}
+
+func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
+	staff := domain.NewPrincipal(domain.RoleStaff)
+
+	t.Run("accepted", func(t *testing.T) {
+		item := newFixture(t)
+		reservation, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
+		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != item.reservation.ReservedAfter {
+			t.Fatalf("commit = %#v, %#v, %v", reservation, stock, err)
+		}
+	})
+
+	t.Run("invariant rejection preserves both entities", func(t *testing.T) {
+		item := newFixture(t)
+		reservation, err := item.store.PutStockReservation(domain.StockReservation{
+			Code: "RES-INVALID", StockID: item.stock.ID, ReservedAfter: item.stock.OnHand + 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := item.store.CommitStockReservation(reservation.ID, staff, true); !errors.Is(err, domain.ErrInvariant) {
+			t.Fatalf("invariant error = %v", err)
+		}
+		storedReservation, _ := item.store.StockReservation(reservation.ID)
+		storedStock, _ := item.store.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedStock.Reserved != item.stock.Reserved {
+			t.Fatalf("partial commit after invariant rejection: reservation=%#v stock=%#v", storedReservation, storedStock)
+		}
+	})
+
+	t.Run("target unavailable preserves source", func(t *testing.T) {
+		item := newFixture(t)
+		item.store.RemoveStockItem(item.stock.ID)
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); !errors.Is(err, domain.ErrTargetUnavailable) {
+			t.Fatalf("target-unavailable error = %v", err)
+		}
+		stored, _ := item.store.StockReservation(item.reservation.ID)
+		if stored.Status != domain.ReservationPending || stored.Version != item.reservation.Version {
+			t.Fatalf("target-unavailable changed source = %#v", stored)
+		}
+	})
+
+	t.Run("source rejection preserves target", func(t *testing.T) {
+		item := newFixture(t)
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); err != nil {
+			t.Fatal(err)
+		}
+		before, _ := item.store.StockItem(item.stock.ID)
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); !errors.Is(err, domain.ErrInvalidTransition) {
+			t.Fatalf("source rejection error = %v", err)
+		}
+		after, _ := item.store.StockItem(item.stock.ID)
+		if after != before {
+			t.Fatalf("source rejection changed target: before=%#v after=%#v", before, after)
+		}
+	})
+}
+
+func TestStockReservationCommitAuthorizationOwnsCrossEntityWritePath(t *testing.T) {
+	item := newFixture(t)
+	if _, _, err := item.store.CommitStockReservation(item.reservation.ID, domain.NewPrincipal(domain.RoleAdmin), true); !errors.Is(err, domain.ErrDenied) {
+		t.Fatalf("admin commit error = %v", err)
+	}
+	storedReservation, _ := item.store.StockReservation(item.reservation.ID)
+	storedStock, _ := item.store.StockItem(item.stock.ID)
+	if storedReservation.Status != domain.ReservationPending || storedStock.Reserved != item.stock.Reserved {
+		t.Fatalf("denied cross-entity write changed state: reservation=%#v stock=%#v", storedReservation, storedStock)
+	}
+	if _, _, err := item.store.CommitStockReservation(item.reservation.ID, domain.NewPrincipal(domain.RoleStaff), true); err != nil {
+		t.Fatalf("staff commit was denied by target entity's admin-only edit surface: %v", err)
+	}
+}
+
+func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *testing.T) {
+	item := newFixture(t)
+	valid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-VALID", StockID: item.stock.ID, ReservedAfter: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-INVALID", StockID: item.stock.ID, ReservedAfter: 11})
+	if err != nil {
+		t.Fatal(err)
+	}
+	staff := domain.NewPrincipal(domain.RoleStaff)
+	start := make(chan struct{})
+	errorsByID := make(chan struct {
+		id  string
+		err error
+	}, 2)
+	for _, reservation := range []domain.StockReservation{valid, invalid} {
+		reservation := reservation
+		go func() {
+			<-start
+			_, _, commitErr := item.store.CommitStockReservation(reservation.ID, staff, true)
+			errorsByID <- struct {
+				id  string
+				err error
+			}{reservation.ID, commitErr}
+		}()
+	}
+	close(start)
+	results := map[string]error{}
+	for range 2 {
+		result := <-errorsByID
+		results[result.id] = result.err
+	}
+	if results[valid.ID] != nil || !errors.Is(results[invalid.ID], domain.ErrInvariant) {
+		t.Fatalf("concurrent results = %#v", results)
+	}
+	storedValid, _ := item.store.StockReservation(valid.ID)
+	storedInvalid, _ := item.store.StockReservation(invalid.ID)
+	stock, _ := item.store.StockItem(item.stock.ID)
+	if storedValid.Status != domain.ReservationCommitted || storedInvalid.Status != domain.ReservationPending || stock.Reserved != 8 {
+		t.Fatalf("concurrent atomic state = valid %#v invalid %#v stock %#v", storedValid, storedInvalid, stock)
 	}
 }
 
@@ -286,4 +453,42 @@ func TestStockQuerySearchFilterSortAndPageBoundary(t *testing.T) {
 			t.Fatalf("stock is not sorted: %s then %s", all.Items[index-1].Location, all.Items[index].Location)
 		}
 	}
+}
+
+func createStoredOrderAtStatus(t *testing.T, item fixture, number string, status domain.OrderStatus) domain.Order {
+	t.Helper()
+	order, err := item.store.CreateOrder(OrderInput{Number: number, CustomerID: item.customer.ID}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	staff := domain.NewPrincipal(domain.RoleStaff)
+	admin := domain.NewPrincipal(domain.RoleAdmin)
+	if status != domain.OrderDraft {
+		order, err = item.store.TransitionOrder(order.ID, domain.ActionSubmit, staff, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	switch status {
+	case domain.OrderDraft, domain.OrderSubmitted:
+	case domain.OrderApproved, domain.OrderShipped:
+		order, err = item.store.TransitionOrder(order.ID, domain.ActionApprove, admin, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status == domain.OrderShipped {
+			order, err = item.store.TransitionOrder(order.ID, domain.ActionShip, staff, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	case domain.OrderRejected:
+		order, err = item.store.TransitionOrder(order.ID, domain.ActionReject, admin, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	default:
+		t.Fatalf("unsupported order status %s", status)
+	}
+	return order
 }

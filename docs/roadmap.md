@@ -39,10 +39,10 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
-| public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、81/81 Facts、3 Review Requirementsを検証した |
-| automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → 81/81と、intent gap → human handoffを自動実行 |
+| public Identity | **P1 Stage D完了** | 既存admin targetへIdentityを追加し、current 85/85 Facts、3 Review Requirementsを検証した |
+| automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → current 85/85と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
-| Expression以降 | **P3 in progress** | self-only Invariantを通常のGo applicationで172/172 Factsまで実測。Changesはaction-attachedな同時代入とatomic post-stateのdesign candidateを選定し、compiler実装前 |
+| Expression以降 | **P3 in progress** | self-only Invariantとbounded Changesを通常のGo applicationで275/275 Factsまで実測。Changesはaction-attachedな同時代入、atomic post-state、target欠落、cross-entity認可までcompiler実装済み |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -366,10 +366,10 @@ Stage Cでは[`identity-surface-syntax-proposal.md`](identity-surface-syntax-pro
 
 このfirst sliceは当初Resolved Intent `v0.7`、Source Map `v0.4`、38 Identity Factsとして実装した。
 その後`examples/email-verified-membership.forma`へapplication entryとpage-local surface transitionを追加し、現在は
-Resolved Intent `v0.8`、Source Map `v0.5`、Acceptance Facts `v0alpha6`へ解決する。Identity semantics、3 Review
+Resolved Intent `v0.9`、Source Map `v0.6`、Acceptance Facts `v0alpha7`へ解決する。Identity semantics、3 Review
 Requirements、未対応proof / lifecycle / owner bindingのnegative testは維持している。各Identity operationのinteractionも
-application全体でちょうど1件に制限する。Stage DではIdentity追加Generation Requestを既存admin targetへ適用し、既存43件とIdentity 38件を合わせた
-81/81 Facts、3 Review Requirementsを検証した。詳細は
+application全体でちょうど1件に制限する。Stage DではIdentity追加Generation Requestを既存admin targetへ適用し、当初81/81、
+action transition Fact追加後のcurrent artifactでは85/85 Facts、3 Review Requirementsを検証した。詳細は
 [`../experiments/membership-agent-e2e`](../experiments/membership-agent-e2e/README.md)に記録する。
 
 ### Exit criteria
@@ -425,7 +425,7 @@ Source Mapを使ったfailure関連付けと、controlledなfailure → repair �
       `forma verify`は成功しなかった。
 - [x] app.forma、Generation Request、Manifest、coverage map、既存testのhashはrepair前後で不変。
       成功時feedbackはStage D記録とbyte-identicalに戻った。
-- [x] 実装だけを直し、`forma verify --baseline`が81/81、40 distinct tests、3 policies、
+- [x] 実装だけを直し、current `forma verify --baseline`が85/85、41 distinct tests、3 policies、
       3 Review Requirementsで成功した。
 
 このprobeは同じagentによるcontrolled runである。完全な自動orchestrationや一般的なrepair能力の証明ではない。
@@ -437,7 +437,8 @@ test failureに対する上のprobeと対にして、compile failureを
 
 - [x] `signIn`のcredential照合をarity違いにするcontrolled compile errorを1行入れ、
       `internal/web`と`cmd/server`のbuild失敗を観測した。
-- [x] `stage: build` / `status: failed`を出し、81 Factsすべてを`not-run`に保った。
+- [x] `stage: build` / `status: failed`を出し、webに依存する81 Factsを`not-run`に保った。
+      storeだけで観測できた新しい4 transition Factsは`passed`として残る。
       失敗したassertionがないので`failed` Factも`relatedIntentNodes`も作らない。
 - [x] 最初の実行でdiagnosticsからGo compiler errorが落ちることを発見した。`go test -json`は
       compiler errorを`ImportPath`付きの`build-output` recordで出すが、generatorのparserが
@@ -448,13 +449,13 @@ test failureに対する上のprobeと対にして、compile failureを
       `factCoverage`の`not-run`に当たる語がpolicy側にないので、schemaを増やさず何も主張しない方を選んだ。
       feedback generatorは共有なのでtest failure側にも効き、上のprobeの
       `generation-feedback.failed.json`も再生成した。stage `test`の実測結果は変わっていない。
-- [x] compiler diagnosticだけを根拠に実装1行を戻し、`forma verify --baseline`が81/81へ復帰した。
+- [x] compiler diagnosticだけを根拠に実装1行を戻し、`forma verify --baseline`が85/85へ復帰した。
       成功時`generation-feedback.json`のhashは上のprobeの記録と同一へ戻った。
 - [x] build failureをtest failureと誤分類しない、未観測Factを`passed` / `failed`にしない、
       compiler diagnosticを空にしない、をnegative testで固定した。
 
-81 Factsすべてが少なくとも1件のtest referenceを`internal/web`へ持つため、
-web packageのcompile errorはcoverage全体を盲目にする。`passed`は0件だった。
+webに依存する81 Factsは少なくとも1件のtest referenceを`internal/web`へ持つため、
+web packageのcompile errorはそのcoverageを盲目にする。store-onlyの4 Factsだけが`passed`だった。
 
 ### retry integrityのprobeの結果
 
@@ -462,13 +463,13 @@ repairが実装を直さず、testやcoverageやrequestを弱めてgreenにす�
 [`../experiments/membership-repair-integrity`](../experiments/membership-repair-integrity/README.md)で実測した。
 
 - [x] faultを残したままreferenced testを弱める / 失敗testを削除してcoverage mapを付け替えると、
-      現在のpipelineは`succeeded`を出し`forma verify`が81/81で成功することを確認した。
+      現在のpipelineは`succeeded`を出し`forma verify`が85/85で成功することを確認した。
       duplicate registrationのbugはtargetに残ったままである。
 - [x] retry開始前にtrusted側が固定したsnapshotとの比較で、3経路すべてを拒否した。
       比較元はrepositoryの外に置き、agentが返したhashは読まない。
 - [x] gateはtest commandより前に走る。go testがgreenでも止まる。
 - [x] 保護対象のtest fileはcoverage mapのtest referenceから決定的に導出する。
-      target implementationは固定しないので、implementation-only repairは通り81/81へ到達した。
+      target implementationは固定しないので、implementation-only repairは通り85/85へ到達した。
 - [x] 拒否時は`status: blocked` / `stage: inspect`をpublishし、fact coverageもpolicy coverageも
       主張しない。schemaは`v0alpha2`のままで足りた。撤回とblocked publishはagent-editableな
       generatorではなくprebuilt guardが所有するので、guardで止まった時点が安全であり、
@@ -499,7 +500,7 @@ byte-identicalになり、artifactからは区別できない。testが意味と
       guardがblockedをpublishした場合はgeneratorを起動せず、attempt上限またはagent非0終了では
       最新のfailed feedbackを人間へ残す。
 - [x] 別々の`codex exec --ephemeral` processへtest failureとbuild failureを渡し、どちらも
-      implementationだけを1 attemptで修正した。trusted側の最終測定は81/81、40 distinct tests、
+      implementationだけを1 attemptで修正した。trusted側の最終測定は85/85、41 distinct tests、
       3 policies、3 Review Requirementsで成功し、feedbackは元のartifactへbyte-identicalに戻った。
 - [x] repair agentは最終testとverifierを実行せず、合否はagent process終了後にtrusted側が決めた。
 - [x] ASCII case foldだけを宣言したimmutable requestに対し、protected testがUnicode case foldを要求する
@@ -546,20 +547,19 @@ bounded Changesはaction entityのrequired field valueだけでatomicityを検�
 ### 現在のprobe
 
 - [`expression-proposal.md`](expression-proposal.md): self-only Invariantの`<=`、成立・違反2 Facts、該当formのauthoritative拒否Fact、concurrency Review Requirement、Generation Request差分を最小sliceとして実装
-- [`changes-proposal.md`](changes-proposal.md): action-attachedな同時代入、pre-state評価、複数entityのall-or-nothing post-state、cross-entity認可とtarget-unavailable outcomeを含む最小candidate
+- [`changes-proposal.md`](changes-proposal.md): action-attachedな同時代入、pre-state評価、複数entityのall-or-nothing post-state、cross-entity認可とtarget-unavailable outcomeを含む最小実装slice
 - [`order-approval-proposal.md`](order-approval-proposal.md): 注文承認、在庫引当、通知再送、閾値割れ
 - [`examples/orders.forma`](../examples/orders.forma): v0で書ける構造・lifecycle・認可にexperimental Invariantを接続
-- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで172/172 Factsと39 repository testを実測。concurrency Review Requirementは人間確認待ち
+- [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/): Forma非依存の通常のGo applicationで275/275 Factsと52 repository testsを実測。concurrency、atomicity、cross-entity authorizationの3 Review Requirementsは人間確認待ち
 
 最初のExpression sliceはcompilerからGeneration Requestまで到達した。該当form submitへの拒否Factにより、
 entity単位の隔離testだけで満たす経路も閉じた。repository E2Eではcoding agentが`post-state`のInvariantを
-authoritativeな保存境界で検査し、違反時に部分変更を残さない実装とtestへ変換できた。172 Factsはすべて
-repository commandから再測定して成功した。concurrent operationで同じ保証を維持することは独立Review Requirementとして
-人間が確認する。次のChanges designではExpressionの一般化を急がず、requiredなto-one relation先へabsolute valueを
-代入する`StockReservation.commit`をbounded sliceに選んだ。design review後はParserからGeneration Requestまで実装し、
-既存actionに不足するtransition outcome、明示`confirm`と標準`delete`のconfirmation、surface feedback Factsも同じsliceで
-追加する。cross-entity targetの認可差とruntime欠落を明示し、transitionとrelated entity changeのpartial commitを
-通常application E2Eで検出する。
+authoritativeな保存境界で検査し、違反時に部分変更を残さない実装とtestへ変換できた。続くChanges sliceでは、
+requiredなto-one relation先へabsolute valueを代入する`StockReservation.commit`をParserからGeneration Requestまで実装した。
+既存actionに不足していたtransition outcome、明示`confirm`と標準`delete`のconfirmation、surface feedback Factsも追加し、
+cross-entity targetの認可差とruntime欠落を明示した。通常application E2Eではtransitionとrelated entity changeのpartial
+commit、confirmation bypass、cross-entity authorization bypassを検出し、全275 Factsをrepository commandから再測定した。
+3件のReview Requirementは引き続き人間が確認する。
 
 ### 選別基準
 

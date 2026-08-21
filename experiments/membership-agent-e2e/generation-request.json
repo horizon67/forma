@@ -1,7 +1,7 @@
 {
   "schema": "forma/generation-request/v0alpha4",
   "resolvedIntent": {
-    "version": "forma/resolved-intent/v0.8",
+    "version": "forma/resolved-intent/v0.9",
     "roles": [
       {
         "id": "role/admin",
@@ -728,9 +728,181 @@
     ]
   },
   "acceptanceFacts": {
-    "version": "forma/acceptance-facts/v0alpha6",
-    "intentVersion": "forma/resolved-intent/v0.8",
+    "version": "forma/acceptance-facts/v0alpha7",
+    "intentVersion": "forma/resolved-intent/v0.9",
     "facts": [
+      {
+        "id": "fact/action/User/activate/transition/accepted/from/Pending",
+        "kind": "transition-accepted",
+        "subject": "action/User/activate",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/User",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Pending"
+              }
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/User/activate",
+            "subject": "subject/action",
+            "dispatches": 1
+          }
+        },
+        "expected": {
+          "outcome": "accepted",
+          "appliedMutations": 1,
+          "enforcement": "authoritative",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              }
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/User/activate",
+          "entity/User",
+          "entity/User/state/status"
+        ]
+      },
+      {
+        "id": "fact/action/User/activate/transition/rejected/from/Active",
+        "kind": "transition-source-rejected",
+        "subject": "action/User/activate",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/User",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              }
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/User/activate",
+            "subject": "subject/action",
+            "dispatches": 1
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "enforcement": "authoritative",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Active"
+              },
+              "unchanged": true
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/User/activate",
+          "entity/User",
+          "entity/User/state/status"
+        ]
+      },
+      {
+        "id": "fact/action/User/activate/transition/rejected/from/Confirmed",
+        "kind": "transition-source-rejected",
+        "subject": "action/User/activate",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/User",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Confirmed"
+              }
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/User/activate",
+            "subject": "subject/action",
+            "dispatches": 1
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "enforcement": "authoritative",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Confirmed"
+              },
+              "unchanged": true
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/User/activate",
+          "entity/User",
+          "entity/User/state/status"
+        ]
+      },
+      {
+        "id": "fact/action/User/activate/transition/rejected/from/Suspended",
+        "kind": "transition-source-rejected",
+        "subject": "action/User/activate",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/User",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Suspended"
+              }
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/User/activate",
+            "subject": "subject/action",
+            "dispatches": 1
+          }
+        },
+        "expected": {
+          "outcome": "rejected",
+          "enforcement": "authoritative",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/User/state/status",
+                "value": "Suspended"
+              },
+              "unchanged": true
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/User/activate",
+          "entity/User",
+          "entity/User/state/status"
+        ]
+      },
       {
         "id": "fact/entity/User/field/team/relation/resolved",
         "kind": "relation-resolved",
@@ -3522,8 +3694,8 @@
     ]
   },
   "reviewRequirements": {
-    "version": "forma/review-requirements/v0alpha2",
-    "intentVersion": "forma/resolved-intent/v0.8",
+    "version": "forma/review-requirements/v0alpha3",
+    "intentVersion": "forma/resolved-intent/v0.9",
     "requirements": [
       {
         "id": "review/identity/UserAccount/fixture-fidelity",
@@ -3567,8 +3739,8 @@
     ]
   },
   "sourceMap": {
-    "version": "forma/source-map/v0.5",
-    "intentVersion": "forma/resolved-intent/v0.8",
+    "version": "forma/source-map/v0.6",
+    "intentVersion": "forma/resolved-intent/v0.9",
     "entries": [
       {
         "nodeId": "action/User/activate",
@@ -5173,6 +5345,22 @@
     "factChanges": [
       {
         "kind": "added",
+        "nodeId": "fact/action/User/activate/transition/accepted/from/Pending"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/action/User/activate/transition/rejected/from/Active"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/action/User/activate/transition/rejected/from/Confirmed"
+      },
+      {
+        "kind": "added",
+        "nodeId": "fact/action/User/activate/transition/rejected/from/Suspended"
+      },
+      {
+        "kind": "added",
         "nodeId": "fact/identity/UserAccount/credential/password/non-projectable"
       },
       {
@@ -5344,6 +5532,10 @@
   "verification": {
     "feedbackSchema": "forma/generation-feedback/v0alpha2",
     "requiredFactIds": [
+      "fact/action/User/activate/transition/accepted/from/Pending",
+      "fact/action/User/activate/transition/rejected/from/Active",
+      "fact/action/User/activate/transition/rejected/from/Confirmed",
+      "fact/action/User/activate/transition/rejected/from/Suspended",
       "fact/entity/User/field/team/relation/resolved",
       "fact/identity/UserAccount/credential/password/non-projectable",
       "fact/identity/UserAccount/operation/register/at-most-once",

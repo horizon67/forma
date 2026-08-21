@@ -114,6 +114,34 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 				}
 			}
 		}
+		if len(action.Changes) == 1 && len(action.Changes[0].Assignments) == 1 {
+			assignment := action.Changes[0].Assignments[0]
+			resolved, ok := c.resolvedChanges[assignment]
+			if ok {
+				targetPath := make([]string, 0, len(resolved.RelationPath)+1)
+				relationPath := make([]SemanticID, 0, len(resolved.RelationPath))
+				for _, relation := range resolved.RelationPath {
+					targetPath = append(targetPath, relation.Name.Text)
+					relationPath = append(relationPath, semanticID(string(entityID(resolved.ActionEntity.Name.Text)), "field", relation.Name.Text))
+				}
+				targetPath = append(targetPath, resolved.TargetField.Name.Text)
+				changeID := actionChangeID(id, targetPath)
+				targetID := semanticID(string(changeID), "target")
+				valueID := semanticID(string(changeID), "value")
+				item.Atomicity = "all-or-nothing"
+				item.Changes = append(item.Changes, IRActionChange{
+					ID: changeID,
+					Target: IRChangeTarget{
+						ID: targetID, Binding: "self", RelationPath: relationPath,
+						Field: semanticID(string(entityID(resolved.TargetEntity.Name.Text)), "field", resolved.TargetField.Name.Text),
+					},
+					Value:      c.buildExpressionIR(resolved.ActionEntity, assignment.Value, valueID, sourceMap),
+					Evaluation: "pre-state",
+				})
+				sourceMap.add(changeID, "change", assignment.Span)
+				sourceMap.add(targetID, "change-target", assignment.Target.Span)
+			}
+		}
 		ir.Actions = append(ir.Actions, item)
 	}
 	for _, identity := range c.program.Identities {

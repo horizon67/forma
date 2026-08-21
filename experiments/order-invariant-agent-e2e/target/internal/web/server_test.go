@@ -15,12 +15,13 @@ import (
 )
 
 type webFixture struct {
-	repository *store.Store
-	handler    http.Handler
-	customer   domain.Customer
-	product    domain.Product
-	order      domain.Order
-	stock      domain.StockItem
+	repository  *store.Store
+	handler     http.Handler
+	customer    domain.Customer
+	product     domain.Product
+	order       domain.Order
+	stock       domain.StockItem
+	reservation domain.StockReservation
 }
 
 func newWebFixture(t *testing.T) webFixture {
@@ -32,13 +33,17 @@ func newWebFixture(t *testing.T) webFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	reservation, err := repository.PutStockReservation(domain.StockReservation{Code: "RES-100", StockID: stockItem.ID, ReservedAfter: 6})
+	if err != nil {
+		t.Fatal(err)
+	}
 	order, err := repository.CreateOrder(store.OrderInput{Number: "ORD-100", CustomerID: customer.ID}, "seed")
 	if err != nil {
 		t.Fatal(err)
 	}
 	return webFixture{
 		repository: repository, handler: New(repository), customer: customer,
-		product: product, order: order, stock: stockItem,
+		product: product, order: order, stock: stockItem, reservation: reservation,
 	}
 }
 
@@ -218,17 +223,17 @@ func TestOrderActionNavigationFromListAndDetail(t *testing.T) {
 	list := request(t, item.handler, http.MethodGet, "/orders", "staff", nil)
 	assertResponse(t, list, http.StatusOK,
 		"href=\"/orders/new\"", "href=\"/orders/"+item.order.ID+"\"", "href=\"/orders/"+item.order.ID+"/edit\"",
-		"action=\"/orders/"+item.order.ID+"/delete?from=list\"",
+		"data-action=\"delete\" data-confirm=\"required\" action=\"/orders/"+item.order.ID+"/delete?from=list&confirmed=true\"",
 		"action=\"/orders/"+item.order.ID+"/actions/submit?from=list\"",
-		"action=\"/orders/"+item.order.ID+"/actions/approve?from=list\"",
+		"data-action=\"approve\" data-confirm=\"required\" action=\"/orders/"+item.order.ID+"/actions/approve?from=list&confirmed=true\"",
 		"action=\"/orders/"+item.order.ID+"/actions/reject?from=list\"",
 		"action=\"/orders/"+item.order.ID+"/actions/ship?from=list\"",
 	)
 	detail := request(t, item.handler, http.MethodGet, "/orders/"+item.order.ID, "staff", nil)
 	assertResponse(t, detail, http.StatusOK, "href=\"/orders/"+item.order.ID+"/edit\"",
-		"action=\"/orders/"+item.order.ID+"/delete\"",
+		"data-action=\"delete\" data-confirm=\"required\" action=\"/orders/"+item.order.ID+"/delete?confirmed=true\"",
 		"action=\"/orders/"+item.order.ID+"/actions/submit\"",
-		"action=\"/orders/"+item.order.ID+"/actions/approve\"",
+		"data-action=\"approve\" data-confirm=\"required\" action=\"/orders/"+item.order.ID+"/actions/approve?confirmed=true\"",
 		"action=\"/orders/"+item.order.ID+"/actions/reject\"",
 		"action=\"/orders/"+item.order.ID+"/actions/ship\"",
 	)
@@ -245,12 +250,125 @@ func TestOrderActionNavigationFromListAndDetail(t *testing.T) {
 	if shipped.Code != http.StatusSeeOther || shipped.Header().Get("Location") != "/orders/"+item.order.ID {
 		t.Fatalf("ship transition = %d location=%q", shipped.Code, shipped.Header().Get("Location"))
 	}
-	deleted := request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete", "admin", nil)
+	deleted := request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete?confirmed=true", "admin", nil)
 	if deleted.Code != http.StatusSeeOther || deleted.Header().Get("Location") != "/orders" {
 		t.Fatalf("delete = %d location=%q", deleted.Code, deleted.Header().Get("Location"))
 	}
 
 	assertOrderActionRedirects(t, item)
+}
+
+func TestOrderSubmitTransitionFactsAtHTTPBoundary(t *testing.T) {
+	testOrderTransitionFactsAtHTTPBoundary(t, domain.ActionSubmit, domain.OrderDraft, domain.OrderSubmitted, "staff")
+}
+
+func TestOrderApproveTransitionFactsAtHTTPBoundary(t *testing.T) {
+	testOrderTransitionFactsAtHTTPBoundary(t, domain.ActionApprove, domain.OrderSubmitted, domain.OrderApproved, "admin")
+}
+
+func TestOrderRejectTransitionFactsAtHTTPBoundary(t *testing.T) {
+	testOrderTransitionFactsAtHTTPBoundary(t, domain.ActionReject, domain.OrderSubmitted, domain.OrderRejected, "admin")
+}
+
+func TestOrderShipTransitionFactsAtHTTPBoundary(t *testing.T) {
+	testOrderTransitionFactsAtHTTPBoundary(t, domain.ActionShip, domain.OrderApproved, domain.OrderShipped, "staff")
+}
+
+func testOrderTransitionFactsAtHTTPBoundary(t *testing.T, action domain.Action, source, destination domain.OrderStatus, roles string) {
+	t.Helper()
+	states := []domain.OrderStatus{
+		domain.OrderDraft, domain.OrderSubmitted, domain.OrderApproved, domain.OrderRejected, domain.OrderShipped,
+	}
+	for _, state := range states {
+		for _, surface := range []string{"list", "detail"} {
+			name := string(state) + "/" + surface
+			t.Run(name, func(t *testing.T) {
+				item := newWebFixture(t)
+				order := createOrderAtStatus(t, item, "HTTP-"+string(action)+"-"+strings.ReplaceAll(name, "/", "-"), state)
+				target := "/orders/" + order.ID + "/actions/" + string(action) + "?from=" + surface
+				if action == domain.ActionApprove {
+					target += "&confirmed=true"
+				}
+				response := request(t, item.handler, http.MethodPost, target, roles, nil)
+				stored, err := item.repository.Order(order.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if state == source {
+					if response.Code != http.StatusSeeOther || stored.Status != destination {
+						t.Fatalf("accepted transition = %d, status %s; body=%s", response.Code, stored.Status, response.Body.String())
+					}
+					return
+				}
+				assertResponse(t, response, http.StatusConflict, "invalid")
+				if stored.Status != state {
+					t.Fatalf("rejected transition changed %s to %s", state, stored.Status)
+				}
+			})
+		}
+	}
+
+	for _, surface := range []string{"list", "detail"} {
+		t.Run("failure/"+surface, func(t *testing.T) {
+			item := newWebFixture(t)
+			repository := &failingTransitionRepository{Store: item.repository}
+			target := "/orders/" + item.order.ID + "/actions/" + string(action) + "?from=" + surface
+			if action == domain.ActionApprove {
+				target += "&confirmed=true"
+			}
+			response := request(t, New(repository), http.MethodPost, target, roles, nil)
+			assertResponse(t, response, http.StatusInternalServerError, "failure")
+		})
+	}
+}
+
+func TestOrderActionConfirmationAcceptsOnceAndDeclinesWithoutDispatch(t *testing.T) {
+	fixture := newWebFixture(t)
+	list := request(t, fixture.handler, http.MethodGet, "/orders", "staff", nil)
+	detail := request(t, fixture.handler, http.MethodGet, "/orders/"+fixture.order.ID, "staff", nil)
+	for _, response := range []*httptest.ResponseRecorder{list, detail} {
+		assertResponse(t, response, http.StatusOK, "data-action=\"approve\" data-confirm=\"required\"", "data-action=\"delete\" data-confirm=\"required\"")
+	}
+	for _, surface := range []string{"list", "detail"} {
+		t.Run("approve/"+surface, func(t *testing.T) {
+			item := newWebFixture(t)
+			order := createOrderAtStatus(t, item, "CONFIRM-APPROVE-"+surface, domain.OrderSubmitted)
+			repository := &countingActionRepository{Store: item.repository}
+			target := "/orders/" + order.ID + "/actions/approve?from=" + surface
+			declined := request(t, New(repository), http.MethodPost, target, "admin", nil)
+			assertResponse(t, declined, http.StatusOK, "cancelled")
+			stored, _ := item.repository.Order(order.ID)
+			if repository.transitionCalls != 0 || stored.Status != domain.OrderSubmitted {
+				t.Fatalf("declined approve dispatched %d times or changed status to %s", repository.transitionCalls, stored.Status)
+			}
+			accepted := request(t, New(repository), http.MethodPost, target+"&confirmed=true", "admin", nil)
+			if accepted.Code != http.StatusSeeOther || repository.transitionCalls != 1 {
+				t.Fatalf("accepted approve = %d, dispatches %d", accepted.Code, repository.transitionCalls)
+			}
+		})
+
+		t.Run("delete/"+surface, func(t *testing.T) {
+			item := newWebFixture(t)
+			repository := &countingActionRepository{Store: item.repository}
+			target := "/orders/" + item.order.ID + "/delete?from=" + surface
+			declined := request(t, New(repository), http.MethodPost, target, "staff", nil)
+			assertResponse(t, declined, http.StatusOK, "cancelled")
+			if repository.deleteCalls != 0 {
+				t.Fatalf("declined delete dispatched %d times", repository.deleteCalls)
+			}
+			accepted := request(t, New(repository), http.MethodPost, target+"&confirmed=true", "staff", nil)
+			if accepted.Code != http.StatusSeeOther || repository.deleteCalls != 1 {
+				t.Fatalf("accepted delete = %d, dispatches %d", accepted.Code, repository.deleteCalls)
+			}
+		})
+
+		t.Run("delete-failure/"+surface, func(t *testing.T) {
+			item := newWebFixture(t)
+			response := request(t, New(&failingDeleteRepository{Store: item.repository}), http.MethodPost,
+				"/orders/"+item.order.ID+"/delete?from="+surface+"&confirmed=true", "staff", nil)
+			assertResponse(t, response, http.StatusInternalServerError, "failure")
+		})
+	}
 }
 
 func TestStockItemsSurfaceListsFieldsActionsAndObservableFeedback(t *testing.T) {
@@ -400,6 +518,114 @@ func TestStockActionNavigationFromListAndDetail(t *testing.T) {
 	assertResponse(t, detail, http.StatusOK, "href=\"/stock-items/"+item.stock.ID+"/edit\"")
 }
 
+func TestReservationsSurfaceFieldsActionsFeedbackAndAccess(t *testing.T) {
+	item := newWebFixture(t)
+	response := request(t, item.handler, http.MethodGet, "/reservations", "staff", nil)
+	assertResponse(t, response, http.StatusOK,
+		"data-fields=\"code stock reservedAfter status\"", "data-actions=\"commit\"", "RES-100",
+		"data-action=\"commit\" data-confirm=\"required\" action=\"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true\"")
+	for _, roles := range []string{"admin", ""} {
+		denied := request(t, item.handler, http.MethodGet, "/reservations", roles, nil)
+		assertResponse(t, denied, http.StatusForbidden, "denied")
+	}
+	empty := request(t, New(store.New()), http.MethodGet, "/reservations", "staff", nil)
+	assertResponse(t, empty, http.StatusOK, "empty")
+	failure := request(t, New(&failingReservationsRepository{Store: item.repository}), http.MethodGet, "/reservations", "staff", nil)
+	assertResponse(t, failure, http.StatusInternalServerError, "failure")
+}
+
+func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
+	t.Run("accepted and navigated", func(t *testing.T) {
+		item := newWebFixture(t)
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		if response.Code != http.StatusSeeOther || response.Header().Get("Location") != "/reservations#"+item.reservation.ID {
+			t.Fatalf("accepted commit = %d location=%q", response.Code, response.Header().Get("Location"))
+		}
+		reservation, _ := item.repository.StockReservation(item.reservation.ID)
+		stock, _ := item.repository.StockItem(item.stock.ID)
+		if reservation.Status != domain.ReservationCommitted || stock.Reserved != item.reservation.ReservedAfter {
+			t.Fatalf("accepted surface state = reservation %#v stock %#v", reservation, stock)
+		}
+	})
+
+	t.Run("invariant rejected without partial commit", func(t *testing.T) {
+		item := newWebFixture(t)
+		reservation, err := item.repository.PutStockReservation(domain.StockReservation{
+			Code: "RES-HTTP-INVALID", StockID: item.stock.ID, ReservedAfter: item.stock.OnHand + 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusUnprocessableEntity, "invalid")
+		storedReservation, _ := item.repository.StockReservation(reservation.ID)
+		stock, _ := item.repository.StockItem(item.stock.ID)
+		if storedReservation.Status != domain.ReservationPending || stock.Reserved != item.stock.Reserved {
+			t.Fatalf("invariant surface partially committed: reservation %#v stock %#v", storedReservation, stock)
+		}
+	})
+
+	t.Run("source rejected", func(t *testing.T) {
+		item := newWebFixture(t)
+		target := "/reservations/" + item.reservation.ID + "/actions/commit?confirmed=true"
+		if accepted := request(t, item.handler, http.MethodPost, target, "staff", nil); accepted.Code != http.StatusSeeOther {
+			t.Fatalf("first commit = %d", accepted.Code)
+		}
+		before, _ := item.repository.StockItem(item.stock.ID)
+		rejected := request(t, item.handler, http.MethodPost, target, "staff", nil)
+		assertResponse(t, rejected, http.StatusConflict, "invalid")
+		after, _ := item.repository.StockItem(item.stock.ID)
+		if after != before {
+			t.Fatalf("source rejection changed stock: before %#v after %#v", before, after)
+		}
+	})
+
+	t.Run("target unavailable", func(t *testing.T) {
+		item := newWebFixture(t)
+		item.repository.RemoveStockItem(item.stock.ID)
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusInternalServerError, "failure")
+		stored, _ := item.repository.StockReservation(item.reservation.ID)
+		if stored.Status != domain.ReservationPending {
+			t.Fatalf("target unavailable changed source = %#v", stored)
+		}
+	})
+}
+
+func TestReservationCommitConfirmationAndCrossEntityAuthorization(t *testing.T) {
+	t.Run("decline dispatches zero times", func(t *testing.T) {
+		item := newWebFixture(t)
+		repository := &countingReservationRepository{Store: item.repository}
+		target := "/reservations/" + item.reservation.ID + "/actions/commit"
+		declined := request(t, New(repository), http.MethodPost, target, "staff", nil)
+		assertResponse(t, declined, http.StatusOK, "cancelled")
+		if repository.calls != 0 {
+			t.Fatalf("declined confirmation dispatched %d times", repository.calls)
+		}
+		accepted := request(t, New(repository), http.MethodPost, target+"?confirmed=true", "staff", nil)
+		if accepted.Code != http.StatusSeeOther || repository.calls != 1 {
+			t.Fatalf("accepted confirmation = %d, dispatches %d", accepted.Code, repository.calls)
+		}
+	})
+
+	for _, roles := range []string{"admin", ""} {
+		t.Run("denied/"+roles, func(t *testing.T) {
+			item := newWebFixture(t)
+			response := request(t, item.handler, http.MethodPost,
+				"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true", roles, nil)
+			assertResponse(t, response, http.StatusForbidden, "denied")
+			reservation, _ := item.repository.StockReservation(item.reservation.ID)
+			stock, _ := item.repository.StockItem(item.stock.ID)
+			if reservation.Status != domain.ReservationPending || stock.Reserved != item.stock.Reserved {
+				t.Fatalf("denied surface changed cross-entity state: reservation %#v stock %#v", reservation, stock)
+			}
+		})
+	}
+}
+
 func TestOrdersHTTPAccess(t *testing.T) {
 	assertHTTPAccess(t, "list", authenticatedCases, http.StatusOK, func(t *testing.T, item webFixture, roles string) *httptest.ResponseRecorder {
 		return request(t, item.handler, http.MethodGet, "/orders", roles, nil)
@@ -463,10 +689,10 @@ func TestOrderEditSubmitHTTPAccess(t *testing.T) {
 
 func TestOrderDeleteActionsHTTPAccess(t *testing.T) {
 	assertHTTPAccess(t, "list-action", authenticatedCases, http.StatusSeeOther, func(t *testing.T, item webFixture, roles string) *httptest.ResponseRecorder {
-		return request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete?from=list", roles, nil)
+		return request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete?from=list&confirmed=true", roles, nil)
 	})
 	assertHTTPAccess(t, "detail-action", authenticatedWithCombinedCases, http.StatusSeeOther, func(t *testing.T, item webFixture, roles string) *httptest.ResponseRecorder {
-		return request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete", roles, nil)
+		return request(t, item.handler, http.MethodPost, "/orders/"+item.order.ID+"/delete?confirmed=true", roles, nil)
 	})
 }
 
@@ -659,10 +885,54 @@ func (repository *failingUpdateOrderRepository) UpdateOrder(string, store.OrderI
 	return domain.Order{}, domain.ErrUnavailable
 }
 
+type failingTransitionRepository struct{ *store.Store }
+
+func (repository *failingTransitionRepository) TransitionOrder(string, domain.Action, domain.Principal, bool) (domain.Order, error) {
+	return domain.Order{}, domain.ErrUnavailable
+}
+
+type failingDeleteRepository struct{ *store.Store }
+
+func (repository *failingDeleteRepository) DeleteOrder(string, domain.Principal) error {
+	return domain.ErrUnavailable
+}
+
+type countingActionRepository struct {
+	*store.Store
+	transitionCalls int
+	deleteCalls     int
+}
+
+func (repository *countingActionRepository) TransitionOrder(id string, action domain.Action, principal domain.Principal, confirmed bool) (domain.Order, error) {
+	repository.transitionCalls++
+	return repository.Store.TransitionOrder(id, action, principal, confirmed)
+}
+
+func (repository *countingActionRepository) DeleteOrder(id string, principal domain.Principal) error {
+	repository.deleteCalls++
+	return repository.Store.DeleteOrder(id, principal)
+}
+
 type failingStockItemsRepository struct{ *store.Store }
 
 func (repository *failingStockItemsRepository) StockItems(store.StockQuery) (store.Page[domain.StockItem], error) {
 	return store.Page[domain.StockItem]{}, domain.ErrUnavailable
+}
+
+type failingReservationsRepository struct{ *store.Store }
+
+func (repository *failingReservationsRepository) StockReservations() ([]domain.StockReservation, error) {
+	return nil, domain.ErrUnavailable
+}
+
+type countingReservationRepository struct {
+	*store.Store
+	calls int
+}
+
+func (repository *countingReservationRepository) CommitStockReservation(id string, principal domain.Principal, confirmed bool) (domain.StockReservation, domain.StockItem, error) {
+	repository.calls++
+	return repository.Store.CommitStockReservation(id, principal, confirmed)
 }
 
 type failingStockItemRepository struct{ *store.Store }
@@ -726,6 +996,44 @@ func assertOrderActionRedirects(t *testing.T, item webFixture) {
 			}
 		}
 	}
+}
+
+func createOrderAtStatus(t *testing.T, item webFixture, number string, status domain.OrderStatus) domain.Order {
+	t.Helper()
+	order, err := item.repository.CreateOrder(store.OrderInput{Number: number, CustomerID: item.customer.ID}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	staff := domain.NewPrincipal(domain.RoleStaff)
+	admin := domain.NewPrincipal(domain.RoleAdmin)
+	if status != domain.OrderDraft {
+		order, err = item.repository.TransitionOrder(order.ID, domain.ActionSubmit, staff, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	switch status {
+	case domain.OrderDraft, domain.OrderSubmitted:
+	case domain.OrderApproved, domain.OrderShipped:
+		order, err = item.repository.TransitionOrder(order.ID, domain.ActionApprove, admin, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status == domain.OrderShipped {
+			order, err = item.repository.TransitionOrder(order.ID, domain.ActionShip, staff, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	case domain.OrderRejected:
+		order, err = item.repository.TransitionOrder(order.ID, domain.ActionReject, admin, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+	default:
+		t.Fatalf("unsupported order status %s", status)
+	}
+	return order
 }
 
 func request(t *testing.T, handler http.Handler, method, target, roles string, form url.Values) *httptest.ResponseRecorder {

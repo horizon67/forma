@@ -4,7 +4,7 @@ Status: first probe measured — a controlled failure → repair → success on 
 membership target. Not a claim of automatic agent orchestration or general repair.
 
 このexperimentは、[`../membership-agent-e2e`](../membership-agent-e2e/README.md)で
-81/81まで通ったmembership targetへ、duplicate registration時に既存credentialを上書きする
+85/85まで通ったmembership targetへ、duplicate registration時に既存credentialを上書きする
 実装bugを一時的に入れ、実際のtest failureから`status: failed`のGeneration Feedbackを作り、
 Formaの意味を弱めずに実装だけを直して再び成功するかを実測する。
 
@@ -17,7 +17,7 @@ atomicに公開すること、そしてその記録を使った1回のcontrolled
 | input | 所有するもの |
 | --- | --- |
 | [`../membership-agent-e2e/app.forma`](../membership-agent-e2e/app.forma) | 変更しない。何を成立させるか |
-| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。81 Facts、3 Review Requirements |
+| [`../membership-agent-e2e/generation-request.json`](../membership-agent-e2e/generation-request.json) | 変更しない。85 Facts、3 Review Requirements |
 | [`../membership-agent-e2e/target/forma.implementation.yaml`](../membership-agent-e2e/target/forma.implementation.yaml) | 変更しない。implementation policy |
 | coverage map in [`../membership-agent-e2e/cmd/feedback/coverage.go`](../membership-agent-e2e/cmd/feedback/coverage.go) | 変更しない。fact → test reference |
 | target tests | 変更・弱化しない |
@@ -57,7 +57,7 @@ broken codeは最終成果へ残さない。[`fault.patch`](fault.patch)と
 fault.patch
   → go test -count=1 -json ./... が TestDuplicateIdentifierCoversExactAndCanonicalForms で失敗
   → fact/identity/UserAccount/operation/register/identifier/duplicate が failed
-  → 実行された他testに紐づく80 Factsは passed。未実行なら not-run
+  → 実行された他testに紐づく84 Factsは passed。未実行なら not-run
   → sourceNodes ∩ Source Map
       identity/UserAccount/credential/password
       identity/UserAccount/identifier/email
@@ -67,7 +67,7 @@ fault.patch
   → forma verify は status: failed を成功にしない
   → Register の duplicate 分岐から credential 上書きを除く
   → 元の secret だけが通り、duplicate 時の secret は拒否される
-  → forma verify --baseline は 81/81、40 distinct tests
+  → forma verify --baseline は 85/85、41 distinct tests
 ```
 
 失敗時feedbackの要点:
@@ -79,7 +79,7 @@ status  failed
 command cd experiments/membership-agent-e2e/target && go test -count=1 -json ./...
 failed  fact/identity/UserAccount/operation/register/identifier/duplicate
         internal/web/membership_e2e_test.go#TestDuplicateIdentifierCoversExactAndCanonicalForms
-counts  80 passed, 1 failed, 0 not-run
+counts  84 passed, 1 failed, 0 not-run
 policyCoverage  なし
 diagnostics（実行時間なし）
         --- FAIL: TestDuplicateIdentifierCoversExactAndCanonicalForms
@@ -95,16 +95,16 @@ repairの前後で次はbyte-identicalだった。coverage mapのfingerprintも�
 
 ```text
 app.forma                          4a74e51d3c433ae3f15c6852925b584f944759dccd7621d8e076ebcca927250a
-generation-request.json            19b10ca6fa7515325fbc3b8a23a3a084b0989023ca33c0f8fce4d108eb343dcc
+generation-request.json            12fe5c8bfd36d161af462d8ef67065084ff2d3ef72fb3124b41cf7ee5f77d544
 forma.implementation.yaml          6b2712b999bbc26a10477f8fb6ce0a0c0d903c8b712b608bb46359f74ddc7d8c
 membership_e2e_test.go             4831e672962c450bceb81652bbaf55f7c750596a56252b776dcc02509dbe066a
 server_test.go                     b8d324560d52558577c4d6e2c0d6440b13380a898770d8fee69e28f3aa87be9f
 submission_test.go                 ae83bb8ce513e34f2113cc4da4f2e59c401344e02d69b0619d6b0d25ccaea238
-store/identity_test.go             83a89cc3c42306b61bcd2b0443ce0bdb2f237f2ef8a8efe2d649d83ab5956dbf
+store/identity_test.go             730ce623fa5c835e455e338c094a918ce3f4a02ec50250a8e6ad7a0195ca77cc
 store/store_test.go                72497725856c389224e1bef739e09c6030424031d173d3564ca0151be3e7d430
 identity/identity_test.go          ebeae4189689b4ade715ec52d8935f8cdc78f9aaaf5290ba55e577bb176bf20c
 cmd/server/main_test.go            4fdfd2fc28967e77e50891fbb91916f261b5bd260f7177093238a58efda74283
-coverage fingerprint               341f1f8042fa16b528704c494ca17e126a7fc2f6ee08059b622f24b23392c7f9
+coverage fingerprint               5413385c879192430e4fce3f4ff0e3763afbf7fd357a3b57257394eed4b56e07
 ```
 
 成功時の`generation-feedback.json`はcommandを実際の`go test -count=1 -json ./...`へ合わせたため、
@@ -123,16 +123,16 @@ failed feedbackとfault patch自体は測定artifactであり、repairで消さ�
 relatedIntentNodesは同じ5件、diagnosticsも同じである。
 
 ```text
-generation-feedback.json           2c82dbb96360ec598b5f3b0f31de91e36ba79cb067f214727fb8f793e08e8fdb
-generation-feedback.failed.json    347e8c85bbf68c1711ed433a3597a92debc1a2ff29054515068845fd03b5de31
+generation-feedback.json           fa9564bfeaa41a5e225bbcc9dc0ea28f90c7a1693f4d13446f9c5822c1ffee51
+generation-feedback.failed.json    d60aa56019d5d89e1e337ff1fc0b45afebbf3c764d8b0d7746e2f70bf3607a6a
 fault.patch                        36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 ```
 
 ## 検証結果
 
 ```text
-verified 81 acceptance facts: all passed
-  40 distinct tests, max 8 facts per test
+verified 85 acceptance facts: all passed
+  41 distinct tests, max 8 facts per test
 verified 3 implementation policies
   2 satisfied, 1 deviated, 0 flagged
 human review required: 3 requirements are not machine-verified

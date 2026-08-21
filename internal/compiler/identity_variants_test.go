@@ -67,8 +67,8 @@ func TestPasswordlessFactSubsetUsesGenericValidator(t *testing.T) {
 			filtered.Facts = append(filtered.Facts, fact)
 		}
 	}
-	if len(filtered.Facts) != 26 || len(canonicalFacts.Facts) != 38 {
-		t.Fatalf("passwordless subset = %d of %d facts, want measured B5 boundary 26 of 38", len(filtered.Facts), len(canonicalFacts.Facts))
+	if len(filtered.Facts) != 29 || len(canonicalFacts.Facts) != 41 {
+		t.Fatalf("passwordless subset = %d of %d facts, want measured B5 boundary 29 of 41", len(filtered.Facts), len(canonicalFacts.Facts))
 	}
 	t.Logf("passwordless-compatible subset = %d of %d canonical membership facts", len(filtered.Facts), len(canonicalFacts.Facts))
 	for _, fact := range filtered.Facts {

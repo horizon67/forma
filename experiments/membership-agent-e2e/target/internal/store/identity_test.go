@@ -123,6 +123,46 @@ func TestVerifyActivatesExactlyOnce(t *testing.T) {
 	}
 }
 
+func TestActivationTransitionAcceptsPendingAndRejectsEveryOtherState(t *testing.T) {
+	issued := time.Date(2026, 8, 17, 10, 0, 0, 0, time.UTC)
+	for _, state := range []domain.Status{
+		domain.StatusPending, domain.StatusConfirmed, domain.StatusActive, domain.StatusSuspended,
+	} {
+		t.Run(string(state), func(t *testing.T) {
+			repository := membershipRepository()
+			registration, err := repository.Register(context.Background(), pendingUser("user-bob", "bob@example.com"), testCredential, issued)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if state != domain.StatusPending {
+				user, _, findErr := repository.FindUser(context.Background(), "user-bob")
+				if findErr != nil {
+					t.Fatal(findErr)
+				}
+				user.Status = state
+				if err := repository.UpdateUser(context.Background(), user); err != nil {
+					t.Fatal(err)
+				}
+			}
+			beforeMutations := repository.MutationCount("user-bob")
+			user, verifyErr := repository.VerifyEvidence(context.Background(), registration.Token, issued.Add(time.Minute))
+			if state == domain.StatusPending {
+				if verifyErr != nil || user.Status != domain.StatusActive || repository.MutationCount("user-bob") != beforeMutations+1 {
+					t.Fatalf("accepted activation = %#v, %v", user, verifyErr)
+				}
+				return
+			}
+			if !errors.Is(verifyErr, ErrNotPending) {
+				t.Fatalf("rejected activation error = %v", verifyErr)
+			}
+			stored, _, findErr := repository.FindUser(context.Background(), "user-bob")
+			if findErr != nil || stored.Status != state || repository.MutationCount("user-bob") != beforeMutations {
+				t.Fatalf("rejected activation changed subject = %#v, %v", stored, findErr)
+			}
+		})
+	}
+}
+
 func TestVerifyFailureLeavesUserAndEvidenceUnchanged(t *testing.T) {
 	issued := time.Date(2026, 8, 17, 10, 0, 0, 0, time.UTC)
 	tests := []struct {

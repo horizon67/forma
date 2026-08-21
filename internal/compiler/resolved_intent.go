@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.8"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.9"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -105,14 +105,30 @@ type IRExpression struct {
 }
 
 type IRAction struct {
-	ID          SemanticID `json:"id"`
-	Entity      string     `json:"entity"`
-	Name        string     `json:"name"`
-	Sources     []string   `json:"sources"`
-	Destination string     `json:"destination"`
-	Confirm     bool       `json:"confirm,omitempty"`
-	Allows      []string   `json:"allows,omitempty"`
-	Goto        string     `json:"goto,omitempty"`
+	ID          SemanticID       `json:"id"`
+	Entity      string           `json:"entity"`
+	Name        string           `json:"name"`
+	Sources     []string         `json:"sources"`
+	Destination string           `json:"destination"`
+	Confirm     bool             `json:"confirm,omitempty"`
+	Allows      []string         `json:"allows,omitempty"`
+	Goto        string           `json:"goto,omitempty"`
+	Atomicity   string           `json:"atomicity,omitempty"`
+	Changes     []IRActionChange `json:"changes,omitempty"`
+}
+
+type IRActionChange struct {
+	ID         SemanticID     `json:"id"`
+	Target     IRChangeTarget `json:"target"`
+	Value      IRExpression   `json:"value"`
+	Evaluation string         `json:"evaluation"`
+}
+
+type IRChangeTarget struct {
+	ID           SemanticID   `json:"id"`
+	Binding      string       `json:"binding"`
+	RelationPath []SemanticID `json:"relationPath,omitempty"`
+	Field        SemanticID   `json:"field"`
 }
 
 type IRPage struct {
@@ -164,12 +180,14 @@ type IRSort struct {
 }
 
 type IRActionRef struct {
-	ID          SemanticID `json:"id"`
-	Name        string     `json:"name"`
-	Kind        string     `json:"kind"`
-	TargetPage  string     `json:"targetPage,omitempty"`
-	SuccessPage string     `json:"successPage,omitempty"`
-	Access      IRAccess   `json:"access"`
+	ID                SemanticID `json:"id"`
+	Name              string     `json:"name"`
+	Kind              string     `json:"kind"`
+	Action            SemanticID `json:"action,omitempty"`
+	TargetPage        string     `json:"targetPage,omitempty"`
+	SuccessPage       string     `json:"successPage,omitempty"`
+	InteractionStates []string   `json:"interactionStates,omitempty"`
+	Access            IRAccess   `json:"access"`
 }
 
 // IRSubmitIntent is the fully resolved mutation represented by a form. The

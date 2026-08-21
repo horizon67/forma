@@ -1,7 +1,79 @@
-outcome projection forma/outcome-projection/v0alpha2
-intent forma/resolved-intent/v0.8
-facts forma/acceptance-facts/v0alpha6
-rows 69
+outcome projection forma/outcome-projection/v0alpha3
+intent forma/resolved-intent/v0.9
+facts forma/acceptance-facts/v0alpha7
+rows 120
+
+group User.activate [action/User/activate]
+  case transition-accepted / transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Active
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/accepted/from/Confirmed
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Active
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Pending
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/activate/transition/rejected/from/Suspended
+
+group User.confirm [action/User/confirm]
+  case transition-accepted / transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Confirmed
+    must not: (none declared)
+    fact: fact/action/User/confirm/transition/accepted/from/Pending
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/confirm/transition/rejected/from/Active
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/confirm/transition/rejected/from/Confirmed
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/confirm/transition/rejected/from/Suspended
+
+group User.reinstate [action/User/reinstate]
+  case transition-accepted / transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Active
+    must not: (none declared)
+    fact: fact/action/User/reinstate/transition/accepted/from/Suspended
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/reinstate/transition/rejected/from/Active
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/reinstate/transition/rejected/from/Confirmed
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/reinstate/transition/rejected/from/Pending
+
+group User.suspend [action/User/suspend]
+  case transition-accepted / transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Suspended
+    must not: (none declared)
+    fact: fact/action/User/suspend/transition/accepted/from/Active
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/suspend/transition/rejected/from/Confirmed
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/suspend/transition/rejected/from/Pending
+  case transition-source-rejected / transition-source-rejected
+    expect: outcome=rejected; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/action/User/suspend/transition/rejected/from/Suspended
 
 group UserCreate:User.create form [page/UserCreate/view/form/create/User]
   case roles(admin) / access-allowed
@@ -82,10 +154,30 @@ group UserDetail:User.activate [page/UserDetail/view/detail/User/action/activate
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/activate/access/denied/anonymous
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/feedback
   case navigation / navigation
     expect: navigation.success=page:UserDetail
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/activate/navigation
+  case action-transition-accepted / action-transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Active
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/transition/accepted/from/Confirmed
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/transition/rejected/from/Active
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/transition/rejected/from/Pending
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/activate/transition/rejected/from/Suspended
 
 group UserDetail:User.confirm [page/UserDetail/view/detail/User/action/confirm]
   case roles(admin) / access-allowed
@@ -96,10 +188,30 @@ group UserDetail:User.confirm [page/UserDetail/view/detail/User/action/confirm]
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/confirm/access/denied/anonymous
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/feedback
   case navigation / navigation
     expect: navigation.success=page:UserDetail
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/confirm/navigation
+  case action-transition-accepted / action-transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Confirmed
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/transition/accepted/from/Pending
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/transition/rejected/from/Active
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/transition/rejected/from/Confirmed
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/confirm/transition/rejected/from/Suspended
 
 group UserDetail:User.delete [page/UserDetail/view/detail/User/action/delete]
   case roles(admin) / access-allowed
@@ -110,6 +222,18 @@ group UserDetail:User.delete [page/UserDetail/view/detail/User/action/delete]
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/delete/access/denied/anonymous
+  case confirmation-required / confirmation-required
+    expect: outcome=accepted; dispatch=once
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/delete/confirmation/accepted
+  case confirmation-required / confirmation-required
+    expect: outcome=cancelled; subject/action unchanged
+    must not: action dispatched
+    fact: fact/page/UserDetail/view/detail/User/action/delete/confirmation/declined
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/delete/feedback
   case navigation / navigation
     expect: navigation.success=page:Users
     must not: (none declared)
@@ -138,10 +262,30 @@ group UserDetail:User.reinstate [page/UserDetail/view/detail/User/action/reinsta
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/reinstate/access/denied/anonymous
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/feedback
   case navigation / navigation
     expect: navigation.success=page:UserDetail
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/reinstate/navigation
+  case action-transition-accepted / action-transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Active
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/transition/accepted/from/Suspended
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Active; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/transition/rejected/from/Active
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/transition/rejected/from/Confirmed
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/reinstate/transition/rejected/from/Pending
 
 group UserDetail:User.suspend [page/UserDetail/view/detail/User/action/suspend]
   case roles(admin) / access-allowed
@@ -152,10 +296,38 @@ group UserDetail:User.suspend [page/UserDetail/view/detail/User/action/suspend]
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/suspend/access/denied/anonymous
+  case confirmation-required / confirmation-required
+    expect: outcome=accepted; dispatch=once
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/confirmation/accepted
+  case confirmation-required / confirmation-required
+    expect: outcome=cancelled; subject/action.state=User.status:Active; subject/action unchanged
+    must not: action dispatched
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/confirmation/declined
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/feedback
   case navigation / navigation
     expect: navigation.success=page:UserDetail
     must not: (none declared)
     fact: fact/page/UserDetail/view/detail/User/action/suspend/navigation
+  case action-transition-accepted / action-transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Suspended
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/transition/accepted/from/Active
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/transition/rejected/from/Confirmed
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/transition/rejected/from/Pending
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/UserDetail/view/detail/User/action/suspend/transition/rejected/from/Suspended
 
 group UserEdit:User.edit form [page/UserEdit/view/form/edit/User]
   case roles(admin) / access-allowed
@@ -266,6 +438,18 @@ group Users:User.delete [page/Users/view/list/User/action/delete]
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/Users/view/list/User/action/delete/access/denied/anonymous
+  case confirmation-required / confirmation-required
+    expect: outcome=accepted; dispatch=once
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/delete/confirmation/accepted
+  case confirmation-required / confirmation-required
+    expect: outcome=cancelled; subject/action unchanged
+    must not: action dispatched
+    fact: fact/page/Users/view/list/User/action/delete/confirmation/declined
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=failure
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/delete/feedback
   case navigation / navigation
     expect: navigation.success=page:Users
     must not: (none declared)
@@ -294,10 +478,38 @@ group Users:User.suspend [page/Users/view/list/User/action/suspend]
     expect: outcome=denied; enforcement=authoritative
     must not: (none declared)
     fact: fact/page/Users/view/list/User/action/suspend/access/denied/anonymous
+  case confirmation-required / confirmation-required
+    expect: outcome=accepted; dispatch=once
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/confirmation/accepted
+  case confirmation-required / confirmation-required
+    expect: outcome=cancelled; subject/action.state=User.status:Active; subject/action unchanged
+    must not: action dispatched
+    fact: fact/page/Users/view/list/User/action/suspend/confirmation/declined
+  case action-observable-feedback / action-observable-feedback
+    expect: feedback=invalid,failure
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/feedback
   case navigation / navigation
     expect: navigation.success=page:Users
     must not: (none declared)
     fact: fact/page/Users/view/list/User/action/suspend/navigation
+  case action-transition-accepted / action-transition-accepted
+    expect: outcome=accepted; applied-mutations=1; enforcement=authoritative; subject/action.state=User.status:Suspended
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/transition/accepted/from/Active
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Confirmed; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/transition/rejected/from/Confirmed
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Pending; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/transition/rejected/from/Pending
+  case action-transition-source-rejected / action-transition-source-rejected
+    expect: outcome=rejected; feedback=invalid; enforcement=authoritative; subject/action.state=User.status:Suspended; subject/action unchanged
+    must not: (none declared)
+    fact: fact/page/Users/view/list/User/action/suspend/transition/rejected/from/Suspended
 
 group Users:User.view [page/Users/view/list/User/action/view]
   case roles(admin) / access-allowed
