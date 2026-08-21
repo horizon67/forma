@@ -541,7 +541,7 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 - Date、DateTime literalをexpression layerと同時に設計するか。
 - collection operatorのsurface syntaxをproperty、closed builtin、別primitiveのどれにするか。
 - Derived Valueを`name Type = expression`と書くか、`derived`を明示するか。
-- Action Preconditionをmodifier、named clause、action bodyのどこへ置くか。
+- Action Preconditionの最初のnamed action-body candidate後、multiple predicateの合成とfailure messageをどう表すか。
 - Invariant違反の利用者向けcopyとfield feedbackをどこで宣言するか。
 - invariantを満たす／破るfixtureをcompilerがどこまで決定的に合成するか。
 
@@ -567,14 +567,15 @@ primitiveである。一方、個々のBinary ExpressionやField ReferenceはInv
 5. Generation RequestへExpression treeを含むFactsとReview Requirementを渡す。追加時のsemantic diffまで
    **実装済み**。
    coding agentがrepository固有testと保存境界へ実装できるかも、通常のGo applicationで当初**172/172 Factsを実測済み**。
-   後続Changes relation value統合後のcurrent artifactは278/278である。
+   後続Changes／Action Precondition統合後のcurrent artifactは280/280である。
 6. [`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)に従い、同じExpression treeをChanges右辺で
    再利用し、requiredなto-one relation traversal 1 hopを追加する。共有IR fieldの追加と同時に、relation traversalを
    許さないself-only Invariant validatorのclosed shapeも更新する。**実装済み**。
 7. [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)に従い、Changesの実例で
    field reference 2個の二項`+`を追加する。exact arithmetic、複数operand binding、relation別availability、
    repository representation failureを**実装済み**。二項`-`とnumeric literalは同時に入れず後続へ残す。
-8. Action Preconditionの実例が要求する比較、等価、boolean、括弧と左結合binary normalizationを追加する。
+8. [`action-precondition-proposal.md`](action-precondition-proposal.md)の最小sliceとして、required field／relation、`<=` root、
+   predicate全体で最大1個の`+`、pre-state rejectionを追加する。等価、boolean、括弧は同時に入れず後続へ残す。**実装済み**。
 9. multiple assignment、collection binding、record creationを分離し、full Order approvalのatomic coreまで進める。
 10. 同じExpression treeをDerived Value proposalで再利用し、保存／再計算／dependency semanticsを独立に決める。
 11. named numeric typeの単項マイナス・乗算規則を決め、比較例を通してから単項`-`と`*`を追加する。
@@ -603,8 +604,8 @@ entity StockItem {
 `invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
 `invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
 解決済みExpression tree、`post-state`評価、authoritative enforcement、
-`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha9`へ固定する。
-concurrencyはcurrent `forma/review-requirements/v0alpha5`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
+`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha10`へ固定する。
+concurrencyはcurrent `forma/review-requirements/v0alpha6`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
 将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。coding agentによるrepository固有testと
 保存境界の実測は、[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で完了した。
 targetはForma runtimeを持たない通常のGo applicationで、Invariant単独時は39 testsへ172 Factsを明示対応付けした。98 access Factsは
@@ -613,7 +614,7 @@ pureなrole判定testではなく、それぞれのpage、form submit、action�
 invalid post-stateの
 全変更拒否と、競合する在庫予約をmutex内で評価・commitするtestも通る。後者のarchitecture判断はReview Requirementとして
 人間確認待ちであり、機械Factへ偽装しない。その後general functionやcollectionを先回りで足さず、Changesと
-atomic post-stateとrelation valueのvertical sliceへ進み、current targetでは52 tests / 278 Factsまで統合した。最小sliceは
+atomic post-state、relation value、Action Preconditionのvertical sliceへ進み、current targetでは52 tests / 280 Factsまで統合した。最小sliceは
 [`changes-proposal.md`](changes-proposal.md)に分離し、最初のvalue expressionをaction entity自身のrequired field参照に
 限定した後、[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)でrequired to-one relation 1 hop、
 [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)でexact binary `+`と複数operand bindingまで拡張した。Effect syntaxはOccurrenceとの境界が

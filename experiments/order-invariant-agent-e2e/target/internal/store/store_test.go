@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 
@@ -28,7 +29,7 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6})
+	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6, RequestCeiling: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,35 +235,99 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 		}
 	})
 
+	t.Run("equality boundary", func(t *testing.T) {
+		item := newFixture(t)
+		plan := item.plan
+		plan.RequestCeiling = item.stock.Reserved + item.reservation.RequestedReserved
+		if _, err := item.store.PutReservationPlan(plan); err != nil {
+			t.Fatal(err)
+		}
+		reservation, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
+		if err != nil || reservation.Status != domain.ReservationCommitted || stock.Reserved != 8 {
+			t.Fatalf("equality-boundary commit = %#v, %#v, %v", reservation, stock, err)
+		}
+	})
+
+	t.Run("precondition rejection preserves every subject", func(t *testing.T) {
+		item := newFixture(t)
+		plan := item.plan
+		plan.RequestCeiling = 4
+		if _, err := item.store.PutReservationPlan(plan); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); !errors.Is(err, domain.ErrPrecondition) {
+			t.Fatalf("precondition error = %v", err)
+		}
+		storedReservation, _ := item.store.StockReservation(item.reservation.ID)
+		storedStock, _ := item.store.StockItem(item.stock.ID)
+		storedPlan, _ := item.store.ReservationPlan(item.plan.ID)
+		if storedReservation.Status != domain.ReservationPending || storedReservation.Version != item.reservation.Version ||
+			storedStock != item.stock || storedPlan.RequestCeiling != 4 {
+			t.Fatalf("precondition rejection changed subjects: reservation=%#v stock=%#v plan=%#v", storedReservation, storedStock, storedPlan)
+		}
+	})
+
 	t.Run("accepted value is the captured pre-state", func(t *testing.T) {
 		item := newFixture(t)
 		item.store.afterReservationSnapshotForTest = func() {
 			changed := item.store.plans[item.plan.ID]
 			changed.ApprovedReserved = 9
+			changed.RequestCeiling = 1
 			item.store.plans[item.plan.ID] = changed
+			changedReservation := item.store.reservations[item.reservation.ID]
+			changedReservation.RequestedReserved = 100
+			item.store.reservations[item.reservation.ID] = changedReservation
 			changedStock := item.store.stockItems[item.stock.ID]
 			changedStock.Reserved = 1
 			item.store.stockItems[item.stock.ID] = changedStock
 		}
-		_, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
-		if err != nil || stock.Reserved != item.stock.Reserved+item.plan.ApprovedReserved {
-			t.Fatalf("commit reread an operand after its pre-state snapshot: stock=%#v error=%v", stock, err)
+		reservation, stock, err := item.store.CommitStockReservation(item.reservation.ID, staff, true)
+		if err != nil || stock.Reserved != item.stock.Reserved+item.plan.ApprovedReserved ||
+			reservation.RequestedReserved != item.reservation.RequestedReserved {
+			t.Fatalf("commit reread an operand after its pre-state snapshot: reservation=%#v stock=%#v error=%v", reservation, stock, err)
 		}
 		changedPlan, _ := item.store.ReservationPlan(item.plan.ID)
-		if changedPlan.ApprovedReserved != 9 {
+		if changedPlan.ApprovedReserved != 9 || changedPlan.RequestCeiling != 1 {
 			t.Fatalf("snapshot hook did not alter the backing value source: plan=%#v", changedPlan)
+		}
+	})
+
+	t.Run("exact predicate overflow rejects as invalid", func(t *testing.T) {
+		item := newFixture(t)
+		maximum := int(^uint(0) >> 1)
+		stock, err := item.store.PutStockItem(domain.StockItem{ProductID: item.product.ID, Location: "Predicate overflow", OnHand: maximum, Reserved: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-PREDICATE-OVERFLOW", ApprovedReserved: 0, RequestCeiling: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		reservation, err := item.store.PutStockReservation(domain.StockReservation{
+			Code: "RES-PREDICATE-OVERFLOW", StockID: stock.ID, PlanID: plan.ID, RequestedReserved: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := item.store.CommitStockReservation(reservation.ID, staff, true); !errors.Is(err, domain.ErrPrecondition) {
+			t.Fatalf("exact predicate error = %v", err)
+		}
+		storedReservation, _ := item.store.StockReservation(reservation.ID)
+		storedStock, _ := item.store.StockItem(stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedStock != stock {
+			t.Fatalf("predicate overflow changed state: reservation=%#v stock=%#v", storedReservation, storedStock)
 		}
 	})
 
 	t.Run("unrepresentable exact result preserves both entities", func(t *testing.T) {
 		item := newFixture(t)
 		maximum := int(^uint(0) >> 1)
-		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-OVERFLOW", ApprovedReserved: maximum})
+		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-OVERFLOW", ApprovedReserved: maximum, RequestCeiling: maximum})
 		if err != nil {
 			t.Fatal(err)
 		}
 		reservation, err := item.store.PutStockReservation(domain.StockReservation{
-			Code: "RES-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
+			Code: "RES-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 0,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -279,7 +344,7 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 
 	t.Run("invariant rejection preserves both entities", func(t *testing.T) {
 		item := newFixture(t)
-		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-INVALID", ApprovedReserved: item.stock.OnHand + 1})
+		plan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-INVALID", ApprovedReserved: item.stock.OnHand + 1, RequestCeiling: 6})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -296,6 +361,27 @@ func TestStockReservationCommitIsAtomicAcrossReservationAndStock(t *testing.T) {
 		storedStock, _ := item.store.StockItem(item.stock.ID)
 		if storedReservation.Status != domain.ReservationPending || storedStock.Reserved != item.stock.Reserved {
 			t.Fatalf("partial commit after invariant rejection: reservation=%#v stock=%#v", storedReservation, storedStock)
+		}
+	})
+
+	t.Run("precondition wins when predicate and invariant would both fail", func(t *testing.T) {
+		item := newFixture(t)
+		stock := item.stock
+		stock.OnHand = 7
+		if _, err := item.store.PutStockItem(stock); err != nil {
+			t.Fatal(err)
+		}
+		plan := item.plan
+		plan.RequestCeiling = 4
+		if _, err := item.store.PutReservationPlan(plan); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := item.store.CommitStockReservation(item.reservation.ID, staff, true); !errors.Is(err, domain.ErrPrecondition) {
+			t.Fatalf("combined rejection error = %v", err)
+		}
+		stored, _ := item.store.StockItem(item.stock.ID)
+		if stored.Reserved != item.stock.Reserved {
+			t.Fatalf("combined rejection changed stock = %#v", stored)
 		}
 	})
 
@@ -355,21 +441,21 @@ func TestStockReservationCommitAuthorizationOwnsCrossEntityWritePath(t *testing.
 	}
 }
 
-func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *testing.T) {
+func TestConcurrentStockReservationCommitsRecheckPreconditionBeforeCommit(t *testing.T) {
 	item := newFixture(t)
-	validPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-VALID", ApprovedReserved: 6})
+	firstPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-A", ApprovedReserved: 6, RequestCeiling: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalidPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-INVALID", ApprovedReserved: 9})
+	secondPlan, err := item.store.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-CONCURRENT-B", ApprovedReserved: 6, RequestCeiling: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
-	valid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-VALID", StockID: item.stock.ID, PlanID: validPlan.ID, RequestedReserved: 5})
+	first, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-A", StockID: item.stock.ID, PlanID: firstPlan.ID, RequestedReserved: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalid, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-INVALID", StockID: item.stock.ID, PlanID: invalidPlan.ID, RequestedReserved: 5})
+	second, err := item.store.PutStockReservation(domain.StockReservation{Code: "RES-CONCURRENT-B", StockID: item.stock.ID, PlanID: secondPlan.ID, RequestedReserved: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +465,7 @@ func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *tes
 		id  string
 		err error
 	}, 2)
-	for _, reservation := range []domain.StockReservation{valid, invalid} {
+	for _, reservation := range []domain.StockReservation{first, second} {
 		reservation := reservation
 		go func() {
 			<-start
@@ -396,14 +482,23 @@ func TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant(t *tes
 		result := <-errorsByID
 		results[result.id] = result.err
 	}
-	if results[valid.ID] != nil || !errors.Is(results[invalid.ID], domain.ErrInvariant) {
-		t.Fatalf("concurrent results = %#v", results)
+	succeeded, rejected := 0, 0
+	for _, err := range results {
+		if err == nil {
+			succeeded++
+		} else if errors.Is(err, domain.ErrPrecondition) {
+			rejected++
+		} else {
+			t.Fatalf("unexpected concurrent error = %v", err)
+		}
 	}
-	storedValid, _ := item.store.StockReservation(valid.ID)
-	storedInvalid, _ := item.store.StockReservation(invalid.ID)
+	storedFirst, _ := item.store.StockReservation(first.ID)
+	storedSecond, _ := item.store.StockReservation(second.ID)
 	stock, _ := item.store.StockItem(item.stock.ID)
-	if storedValid.Status != domain.ReservationCommitted || storedInvalid.Status != domain.ReservationPending || stock.Reserved != 8 {
-		t.Fatalf("concurrent atomic state = valid %#v invalid %#v stock %#v", storedValid, storedInvalid, stock)
+	statuses := []domain.ReservationStatus{storedFirst.Status, storedSecond.Status}
+	if succeeded != 1 || rejected != 1 || !slices.Contains(statuses, domain.ReservationCommitted) ||
+		!slices.Contains(statuses, domain.ReservationPending) || stock.Reserved != 8 {
+		t.Fatalf("concurrent atomic state = first %#v second %#v stock %#v results %#v", storedFirst, storedSecond, stock, results)
 	}
 }
 

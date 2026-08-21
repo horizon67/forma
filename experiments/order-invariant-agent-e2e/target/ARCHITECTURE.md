@@ -7,4 +7,4 @@ This directory is the AI-produced application measured by the order invariant E2
 - `internal/web` owns HTTP authorization, server-rendered surfaces, form parsing, observable feedback, and redirects.
 - `cmd/server` composes and runs the ordinary application.
 
-The in-memory repository is an implementation choice for the experiment, not a Forma runtime. Its mutex is the transaction boundary: relation target/value resolution, pre-state value read, stock post-state calculation, invariant validation, and commit happen while the same lock is held.
+The in-memory repository is an implementation choice for the experiment, not a Forma runtime. Its mutex is the transaction boundary: source-state validation, relation target/value resolution, Action Precondition bindings and exact pre-state evaluation, stock post-state calculation, invariant validation, and commit happen while the same lock is held.

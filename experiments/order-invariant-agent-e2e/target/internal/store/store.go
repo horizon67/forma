@@ -266,7 +266,7 @@ func (store *Store) ReserveStock(id string, quantity int) (domain.StockItem, err
 func (store *Store) PutReservationPlan(plan domain.ReservationPlan) (domain.ReservationPlan, error) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	if strings.TrimSpace(plan.Code) == "" || plan.ApprovedReserved < 0 {
+	if strings.TrimSpace(plan.Code) == "" || plan.ApprovedReserved < 0 || plan.RequestCeiling < 0 {
 		return domain.ReservationPlan{}, domain.ErrInvalid
 	}
 	if plan.ID == "" {
@@ -295,8 +295,9 @@ func (store *Store) PutStockReservation(reservation domain.StockReservation) (do
 }
 
 // CommitStockReservation implements one action-owned atomic boundary. The
-// source state, relation target, distinct relation value, candidate StockItem
-// invariant, and both commits are evaluated while holding the same lock.
+// source state, relation target, distinct relation values, exact pre-state
+// Precondition, candidate StockItem invariant, and both commits are evaluated
+// while holding the same lock.
 func (store *Store) CommitStockReservation(id string, principal domain.Principal, confirmed bool) (domain.StockReservation, domain.StockItem, error) {
 	if !domain.Allowed(principal, domain.ReservationCommit) {
 		return domain.StockReservation{}, domain.StockItem{}, domain.ErrDenied
@@ -324,6 +325,9 @@ func (store *Store) CommitStockReservation(id string, principal domain.Principal
 	if store.afterReservationSnapshotForTest != nil {
 		store.afterReservationSnapshotForTest()
 	}
+	if !exactNonNegativeSumLessEqual(stock.Reserved, reservation.RequestedReserved, plan.RequestCeiling) {
+		return domain.StockReservation{}, domain.StockItem{}, domain.ErrPrecondition
+	}
 	reserved, ok := checkedAddInt(stock.Reserved, plan.ApprovedReserved)
 	if !ok {
 		return domain.StockReservation{}, domain.StockItem{}, domain.ErrNumericRepresentation
@@ -340,6 +344,16 @@ func (store *Store) CommitStockReservation(id string, principal domain.Principal
 	store.reservations[id] = wantReservation
 	store.stockItems[stock.ID] = wantStock
 	return wantReservation, wantStock, nil
+}
+
+// exactNonNegativeSumLessEqual compares left+right <= limit without forming a
+// potentially overflowing machine-int intermediate. All three values are
+// Quantity fields and have already passed the non-negative storage boundary.
+func exactNonNegativeSumLessEqual(left, right, limit int) bool {
+	if left < 0 || right < 0 || limit < 0 || right > limit {
+		return false
+	}
+	return left <= limit-right
 }
 
 func checkedAddInt(left, right int) (int, bool) {

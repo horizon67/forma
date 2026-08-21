@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha9"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha10"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -37,14 +37,24 @@ type FactPrincipal struct {
 }
 
 type FactInput struct {
-	Fields          []SemanticID         `json:"fields,omitempty"`
-	ExistingRecords int                  `json:"existingRecords,omitempty"`
-	Dispatches      int                  `json:"dispatches,omitempty"`
-	Violation       *FactViolation       `json:"violation,omitempty"`
-	Predicate       *FactPredicateInput  `json:"predicate,omitempty"`
-	Action          *FactActionInput     `json:"action,omitempty"`
-	Invariants      []FactInvariantInput `json:"invariants,omitempty"`
-	Identity        *IdentityFactInput   `json:"identity,omitempty"`
+	Fields          []SemanticID                  `json:"fields,omitempty"`
+	ExistingRecords int                           `json:"existingRecords,omitempty"`
+	Dispatches      int                           `json:"dispatches,omitempty"`
+	Violation       *FactViolation                `json:"violation,omitempty"`
+	Predicate       *FactPredicateInput           `json:"predicate,omitempty"`
+	Action          *FactActionInput              `json:"action,omitempty"`
+	Preconditions   []FactActionPreconditionInput `json:"preconditions,omitempty"`
+	Invariants      []FactInvariantInput          `json:"invariants,omitempty"`
+	Identity        *IdentityFactInput            `json:"identity,omitempty"`
+}
+
+type FactActionPreconditionInput struct {
+	Precondition SemanticID              `json:"precondition"`
+	Subject      string                  `json:"subject"`
+	Expression   IRExpression            `json:"expression"`
+	Bindings     []FactExpressionBinding `json:"bindings"`
+	Evaluation   string                  `json:"evaluation"`
+	Result       bool                    `json:"result"`
 }
 
 type FactActionInput struct {
@@ -393,6 +403,9 @@ func (b *acceptanceBuilder) build() error {
 		if err := b.addTransitionFacts(action); err != nil {
 			return err
 		}
+		if err := b.addPreconditionFacts(action, nil); err != nil {
+			return err
+		}
 		if err := b.addChangeFacts(action, nil); err != nil {
 			return err
 		}
@@ -722,6 +735,9 @@ func (b *acceptanceBuilder) addActionFacts(page IRPage, view IRView, entity IREn
 		if err := b.addTransitionSurfaceFacts(entity, resolved, action); err != nil {
 			return err
 		}
+		if err := b.addPreconditionFacts(resolved, &action); err != nil {
+			return err
+		}
 		if resolved.Confirm {
 			b.addConfirmationFacts(entity, &resolved, action)
 		}
@@ -943,6 +959,9 @@ func (b *acceptanceBuilder) add(fact AcceptanceFact) {
 	fact.SourceNodes = canonicalSemanticIDs(fact.SourceNodes)
 	canonicalizeFactSetup(fact.Setup)
 	if fact.Input != nil {
+		sort.Slice(fact.Input.Preconditions, func(i, j int) bool {
+			return fact.Input.Preconditions[i].Precondition < fact.Input.Preconditions[j].Precondition
+		})
 		sort.Slice(fact.Input.Invariants, func(i, j int) bool { return fact.Input.Invariants[i].Invariant < fact.Input.Invariants[j].Invariant })
 	}
 	if fact.Input != nil && fact.Input.Identity != nil {

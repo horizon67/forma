@@ -530,7 +530,7 @@ func (c *checker) checkActions() {
 				}
 			}
 		}
-		c.checkActionChanges(action, entity)
+		c.checkActionBody(action, entity)
 	}
 }
 

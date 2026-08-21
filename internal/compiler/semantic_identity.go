@@ -68,6 +68,10 @@ func actionID(entity, name string) SemanticID {
 	return semanticID("action", entity, name)
 }
 
+func actionPreconditionID(action SemanticID, name string) SemanticID {
+	return semanticID(string(action), "precondition", name)
+}
+
 func actionChangeID(action SemanticID, targetPath []string) SemanticID {
 	parts := []string{string(action), "change"}
 	parts = append(parts, targetPath...)

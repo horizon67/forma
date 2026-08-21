@@ -6,7 +6,7 @@ import (
 )
 
 func (c *checker) checkActionChanges(action *ActionDecl, entity *EntityDecl) {
-	if !action.HasBody {
+	if len(action.Changes) == 0 {
 		return
 	}
 	if len(action.Changes) != 1 {
@@ -81,12 +81,16 @@ func (c *checker) resolveChangeValueExpression(entity *EntityDecl, expression *E
 }
 
 func (c *checker) additionTypeIsClosed(name string, span Span) bool {
+	return c.additionTypeIsClosedFor(name, span, "F2809")
+}
+
+func (c *checker) additionTypeIsClosedFor(name string, span Span, code string) bool {
 	if name == "Int" || name == "Decimal" {
 		return true
 	}
 	decl := c.types[name]
 	if decl == nil || decl.Base == nil || (decl.Base.Text != "Int" && decl.Base.Text != "Decimal") {
-		c.error(span, "F2809", fmt.Sprintf("numeric type `%s` does not directly declare an Int or Decimal base", name), "use a builtin numeric type or a named type declared directly from `Int` or `Decimal`")
+		c.error(span, code, fmt.Sprintf("numeric type `%s` does not directly declare an Int or Decimal base", name), "use a builtin numeric type or a named type declared directly from `Int` or `Decimal`")
 		return false
 	}
 	var minValue, maxValue *big.Rat
@@ -106,7 +110,7 @@ func (c *checker) additionTypeIsClosed(name string, span Span) bool {
 	}
 	zero := new(big.Rat)
 	if (minValue != nil && minValue.Cmp(zero) < 0) || (maxValue != nil && maxValue.Cmp(zero) > 0) {
-		c.error(span, "F2809", fmt.Sprintf("numeric type `%s` is not closed under addition", name), "use an unbounded type, a non-negative lower-bounded type without a positive maximum, or a non-positive upper-bounded type without a negative minimum")
+		c.error(span, code, fmt.Sprintf("numeric type `%s` is not closed under addition", name), "use an unbounded type, a non-negative lower-bounded type without a positive maximum, or a non-positive upper-bounded type without a negative minimum")
 		return false
 	}
 	return true

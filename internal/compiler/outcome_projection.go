@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha4"
+const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha5"
 
 // OutcomeProjection is a deterministic review view over observable Acceptance
 // Facts. It splits multi-case facts into rows but does not add outcomes that
@@ -191,6 +191,17 @@ func cloneFactPrincipal(value *FactPrincipal) *FactPrincipal {
 }
 
 func outcomeFactCase(fact AcceptanceFact) string {
+	if fact.Input != nil && len(fact.Input.Preconditions) != 0 {
+		parts := make([]string, 0, len(fact.Input.Preconditions))
+		for _, precondition := range fact.Input.Preconditions {
+			result := "false"
+			if precondition.Result {
+				result = "true"
+			}
+			parts = append(parts, outcomeSemanticLabel(precondition.Precondition)+" "+result)
+		}
+		return strings.Join(parts, ", ")
+	}
 	if fact.Input != nil && fact.Input.Predicate != nil {
 		if fact.Input.Predicate.Result {
 			return "predicate true"

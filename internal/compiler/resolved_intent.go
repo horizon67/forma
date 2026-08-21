@@ -1,6 +1,6 @@
 package compiler
 
-const ResolvedIntentVersion = "forma/resolved-intent/v0.11"
+const ResolvedIntentVersion = "forma/resolved-intent/v0.12"
 
 // SemanticID is a path-derived identity that is independent of source files and
 // source positions. Renaming a declaration changes its identity; moving it does
@@ -117,16 +117,24 @@ type IRExpression struct {
 }
 
 type IRAction struct {
-	ID          SemanticID       `json:"id"`
-	Entity      string           `json:"entity"`
-	Name        string           `json:"name"`
-	Sources     []string         `json:"sources"`
-	Destination string           `json:"destination"`
-	Confirm     bool             `json:"confirm,omitempty"`
-	Allows      []string         `json:"allows,omitempty"`
-	Goto        string           `json:"goto,omitempty"`
-	Atomicity   string           `json:"atomicity,omitempty"`
-	Changes     []IRActionChange `json:"changes,omitempty"`
+	ID            SemanticID             `json:"id"`
+	Entity        string                 `json:"entity"`
+	Name          string                 `json:"name"`
+	Sources       []string               `json:"sources"`
+	Destination   string                 `json:"destination"`
+	Confirm       bool                   `json:"confirm,omitempty"`
+	Allows        []string               `json:"allows,omitempty"`
+	Goto          string                 `json:"goto,omitempty"`
+	Atomicity     string                 `json:"atomicity,omitempty"`
+	Preconditions []IRActionPrecondition `json:"preconditions,omitempty"`
+	Changes       []IRActionChange       `json:"changes,omitempty"`
+}
+
+type IRActionPrecondition struct {
+	ID         SemanticID   `json:"id"`
+	Name       string       `json:"name"`
+	Predicate  IRExpression `json:"predicate"`
+	Evaluation string       `json:"evaluation"`
 }
 
 type IRActionChange struct {

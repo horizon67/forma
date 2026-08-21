@@ -78,9 +78,10 @@ pageを追加するだけ、または生成diagramへedgeを足すだけでは�
 注文、在庫、承認、通知等には、値を読むExpression、atomicなChanges、発生した事実を表すOccurrence、外部作用を表すEffectが
 必要である。self-only Invariantのfield参照と`<=`、成立・違反Acceptance Facts、Generation Request差分を
 実装し、続いてChangesをaction-attachedな同時代入とatomic post-stateとして実装した。通常のGo applicationを使う
-repository E2Eで278/278 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity write/value-read authorization、
-exact numeric enforcementの5 Review Requirementsは人間確認待ちである。Changes右辺のrequired relation value 1 hopと、
-field reference 2個のexact binary `+`も各proposalどおり実装した。Action Precondition以降は未決定である。
+repository E2Eで280/280 Factsを実測し、Invariant concurrency、Changes atomicity、cross-entity write/value-read authorization、
+exact numeric enforcement、concurrent Action Precondition enforcementの6 Review Requirementsは人間確認待ちである。Changes右辺の
+required relation value 1 hop、field reference 2個のexact binary `+`、named Action Preconditionを各proposalどおり実装した。
+Preconditionはsource state不一致、exactなpre-state predicate、post-state Invariant違反を別outcomeとして保つ。
 
 ## DRのsemantic facetをどう扱うか
 
@@ -116,8 +117,8 @@ semantic graphへ解決されることを意味する。
 - global overviewは編集可能な`flow`正本ではなく、navigation/flow projectionから得る。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
-`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.11`、Source Map `v0.6`、
-Acceptance Facts `v0alpha9`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+`RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.12`、Source Map `v0.6`、
+Acceptance Facts `v0alpha10`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -138,7 +139,7 @@ Navigationのbounded probeが完了したため、[`expression-proposal.md`](exp
 2. Changesとatomic post-state（最初のslice完了）
 3. Changes RHSのrequired relation value（最初のslice完了）
 4. numeric `+`（最初のslice完了）
-5. Action Precondition、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
+5. Action Precondition（最小slice完了）、multiple assignment、collection binding、record creationをfull Order approvalまで段階化
 6. Derived Valueを独立したExpression consumerとして検証
 7. Occurrence
 8. Effect binding / delivery contract
@@ -156,7 +157,7 @@ requiredなto-one relationへの1 assignmentとimplicit state transitionに分�
 atomic Facts、Review Requirementsをreference compilerへ実装した。v0が要求しながら現compilerに無かったdomain actionの
 source precondition、遷移後state Fact、明示`confirm` actionと標準`delete`のconfirmation Fact、action拒否時のsurface
 feedbackも同じsliceで追加した。cross-entity writeの認可はactionが所有し、target entityの別surface accessは継承しない。
-通常applicationでは52 mapped testsから278/278 Factsを測定し、その差とatomic boundaryは人間Review Requirementへ提示する。
+通常applicationでは52 mapped testsから280/280 Factsを測定し、その差とatomic boundaryは人間Review Requirementへ提示する。
 
 続く[`relation-value-expression-proposal.md`](relation-value-expression-proposal.md)では、relation traversalの最初のconsumerを
 Derived ValueではなくChanges右辺に置いた。Changesには評価時点、pre-state、atomic boundary、failure outcomeが既にあり、
@@ -176,7 +177,10 @@ wrap・rounding防止はtarget固有representationを伴うため、machine Fact
 current compilerはchained named typeのinherited constraintをまだ合成しないため、最初のsliceはbuiltinを直接baseにする
 numeric typeへ限定した。immediate declared baseとclosure判定に使うeffective boundsをIRへ残し、validatorが同じboundsを
 再計算する。Expression treeと全leaf bindingをFactsへ運び、repository E2Eでは2+6=8、同一snapshot、overflow failure、
-無部分commitを実測した。次はAction Preconditionを独立sliceとして扱う。
+無部分commitを実測した。[`action-precondition-proposal.md`](action-precondition-proposal.md)の実装では、named predicateを
+source stateとpost-state Invariantから分離し、required relationを共有するexact pre-state評価、
+`precondition-unsatisfied`／`invalid`、relation unavailableとの優先順位、concurrent enforcementを最小sliceとして実装・実測した。
+compiler実装はこのproposalのdesign review後に行う。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には
 ChangesとOccurrenceの境界が必要だからである。

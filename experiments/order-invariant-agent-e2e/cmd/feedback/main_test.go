@@ -38,7 +38,7 @@ func TestRecordedCoverageMatchesGenerationRequestAndTargetTests(t *testing.T) {
 	if err := validateCoverage(request, coverage, target, module); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(coverage), 278; got != want {
+	if got, want := len(coverage), 280; got != want {
 		t.Fatalf("coverage entries = %d, want %d", got, want)
 	}
 }

@@ -410,7 +410,7 @@ func (server *Server) actionError(writer http.ResponseWriter, err error) {
 		http.Error(writer, "invalid", http.StatusConflict)
 		return
 	}
-	if errors.Is(err, domain.ErrInvariant) || errors.Is(err, domain.ErrInvalid) {
+	if errors.Is(err, domain.ErrInvariant) || errors.Is(err, domain.ErrPrecondition) || errors.Is(err, domain.ErrInvalid) {
 		feedback(writer, http.StatusUnprocessableEntity, "invalid", nil)
 		return
 	}

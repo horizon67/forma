@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-const ReviewRequirementsVersion = "forma/review-requirements/v0alpha5"
+const ReviewRequirementsVersion = "forma/review-requirements/v0alpha6"
 
 // ReviewRequirements contains implementation properties that Forma cannot
 // mechanically prove from agent feedback. They remain separate from
@@ -26,14 +26,15 @@ type ReviewRequirement struct {
 }
 
 var reviewInstructions = map[string]string{
-	"secret-redaction":                      "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed.",
-	"secret-storage":                        "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism.",
-	"fixture-fidelity":                      "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests.",
-	"concurrent-invariant-enforcement":      "Review every authoritative mutation boundary that can change a field referenced by this invariant; confirm that concurrent operations cannot commit a post-state that violates it and that enforcement is not limited to a user interface or single-threaded test.",
-	"atomic-changes-enforcement":            "Review the action implementation; confirm that target identity resolution, pre-state reads, invariant checks, and commit share one transaction, lock, or conflict-retry boundary, and that concurrent invocation or process failure cannot commit only part of the transition and explicit Changes.",
-	"cross-entity-write-authorization":      "Review the action access, every presenting surface's effective access, the changed entity and field, and existing surfaces that can change that field; confirm that the cross-entity write path is intentional without inferring the target surfaces' roles as additional action authorization.",
-	"cross-entity-value-read-authorization": "Review the action access, every presenting surface's effective access, each relation value source entity and field and existing surfaces that present it, and each stored target field and existing surfaces that present it; confirm that roles allowed to invoke the action may use the source value and that downstream disclosure is intentional without inferring the source entity's surface roles as additional action authorization.",
-	"exact-numeric-expression-enforcement":  "Review the action's Int or Decimal representation, addition operation, storage boundary, and failure path; confirm that wrap, binary floating-point rounding, or silent saturation cannot commit as success and that an unrepresentable exact result leaves state and every changed subject unmodified.",
+	"secret-redaction":                           "Review agent feedback, user-visible diagnostics, and repository logs; confirm that no runtime credential or verification-evidence value is exposed.",
+	"secret-storage":                             "Review repository storage paths; confirm that credentials and verification evidence are not stored as plaintext domain data and use the repository's established secure mechanism.",
+	"fixture-fidelity":                           "Review generated tests; confirm that semantic setup does not stub or directly inject the operation, authorization decision, or observation whose behavior the Acceptance Fact tests.",
+	"concurrent-invariant-enforcement":           "Review every authoritative mutation boundary that can change a field referenced by this invariant; confirm that concurrent operations cannot commit a post-state that violates it and that enforcement is not limited to a user interface or single-threaded test.",
+	"atomic-changes-enforcement":                 "Review the action implementation; confirm that target identity resolution, pre-state reads, invariant checks, and commit share one transaction, lock, or conflict-retry boundary, and that concurrent invocation or process failure cannot commit only part of the transition and explicit Changes.",
+	"cross-entity-write-authorization":           "Review the action access, every presenting surface's effective access, the changed entity and field, and existing surfaces that can change that field; confirm that the cross-entity write path is intentional without inferring the target surfaces' roles as additional action authorization.",
+	"cross-entity-value-read-authorization":      "Review the action access, every presenting surface's effective access, each relation value source entity and field and existing surfaces that present it, and each stored target field and existing surfaces that present it; confirm that roles allowed to invoke the action may use the source value and that downstream disclosure is intentional without inferring the source entity's surface roles as additional action authorization.",
+	"exact-numeric-expression-enforcement":       "Review the action's Int or Decimal representation, every addition in Changes and Precondition expressions, comparison, storage boundary, and failure path; confirm that wrap, binary floating-point rounding, or silent saturation cannot reverse a predicate or commit as success and that an unrepresentable stored result leaves state and every changed subject unmodified.",
+	"concurrent-action-precondition-enforcement": "Review the action implementation; confirm that source-state validation, every Precondition binding and pre-state read, predicate evaluation, Changes and state-transition commit share one transaction, lock, or conflict-retry boundary, so a concurrent operation cannot make the predicate false before commit and enforcement is not limited to a user interface or single-threaded test.",
 }
 
 // BuildReviewRequirements deterministically derives the human-review boundary
@@ -96,15 +97,22 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 		}
 	}
 	for _, action := range intent.Actions {
-		if len(action.Changes) == 0 {
-			continue
+		kind := ""
+		if len(action.Preconditions) != 0 {
+			kind = "concurrent-action-precondition-enforcement"
+			requirements = append(requirements, ReviewRequirement{
+				ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
+				SourceNodes: actionReviewSources(intent, action, false), Instruction: reviewInstructions[kind],
+			})
 		}
-		atomicSources := actionReviewSources(intent, action, false)
-		kind := "atomic-changes-enforcement"
-		requirements = append(requirements, ReviewRequirement{
-			ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
-			SourceNodes: atomicSources, Instruction: reviewInstructions[kind],
-		})
+		if len(action.Changes) != 0 {
+			atomicSources := actionReviewSources(intent, action, false)
+			kind = "atomic-changes-enforcement"
+			requirements = append(requirements, ReviewRequirement{
+				ID: SemanticID("review/" + string(action.ID) + "/" + kind), Kind: kind, Subject: action.ID,
+				SourceNodes: atomicSources, Instruction: reviewInstructions[kind],
+			})
+		}
 		crossEntity := false
 		for _, change := range action.Changes {
 			crossEntity = crossEntity || len(change.Target.RelationPath) != 0
@@ -123,6 +131,12 @@ func BuildReviewRequirements(intent *ResolvedIntent) (*ReviewRequirements, error
 				crossEntityValue = crossEntityValue || len(leaf.RelationPath) != 0
 			}
 			numericExpression = numericExpression || expressionHasOperator(change.Value, "add")
+		}
+		for _, precondition := range action.Preconditions {
+			for _, leaf := range expressionFieldReferenceNodes(precondition.Predicate) {
+				crossEntityValue = crossEntityValue || len(leaf.RelationPath) != 0
+			}
+			numericExpression = numericExpression || expressionHasOperator(precondition.Predicate, "add")
 		}
 		if crossEntityValue {
 			kind = "cross-entity-value-read-authorization"
@@ -180,6 +194,10 @@ func actionReviewSources(intent *ResolvedIntent, action IRAction, includeAuthori
 			}
 		}
 	}
+	for _, precondition := range action.Preconditions {
+		sources = append(sources, precondition.ID)
+		sources = appendExpressionReviewSources(intent, sources, precondition.Predicate)
+	}
 	if !includeAuthorizationSurfaces {
 		return canonicalSemanticIDs(sources)
 	}
@@ -218,6 +236,11 @@ func actionValueReadReviewSources(intent *ResolvedIntent, action IRAction) []Sem
 	for _, change := range action.Changes {
 		fields[change.Target.Field] = true
 		for _, leaf := range expressionFieldReferenceNodes(change.Value) {
+			fields[leaf.Field] = true
+		}
+	}
+	for _, precondition := range action.Preconditions {
+		for _, leaf := range expressionFieldReferenceNodes(precondition.Predicate) {
 			fields[leaf.Field] = true
 		}
 	}

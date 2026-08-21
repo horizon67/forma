@@ -21,10 +21,10 @@ atomic accepted、Invariant rejected、target unavailableのdomain/surface Facts
 このaction contractを再導出し、Factの欠落・捏造・result反転を拒否する。
 
 [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)では、Forma runtimeを持たない通常のGo applicationへ
-`StockReservation.commit`を実装した。後続relation value／numeric addition sliceまで統合したcurrent artifactは278/278 Factsを52 repository
-testsで再測定している。implicit transition、related StockItem update、distinct ReservationPlan value readとexact additionは同じmutex内でのみ
+`StockReservation.commit`を実装した。後続relation value／numeric addition／Action Precondition sliceまで統合したcurrent artifactは280/280 Factsを52 repository
+testsで再測定している。implicit transition、exactなpre-state predicate、related StockItem update、distinct ReservationPlan value readとexact additionは同じmutex内でのみ
 評価・commitされ、Invariant違反、target/value欠落、source state不一致ではsourceとresolved targetが不変である。
-atomicity、cross-entity write/value-read authorization、exact numeric enforcement、既存Invariant concurrencyの5 Review Requirementsは人間確認待ちである。
+atomicity、cross-entity write/value-read authorization、exact numeric enforcement、Action Precondition concurrency、既存Invariant concurrencyの6 Review Requirementsは人間確認待ちである。
 
 ## 結論
 

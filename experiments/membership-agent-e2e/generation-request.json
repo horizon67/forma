@@ -1,7 +1,7 @@
 {
   "schema": "forma/generation-request/v0alpha4",
   "resolvedIntent": {
-    "version": "forma/resolved-intent/v0.11",
+    "version": "forma/resolved-intent/v0.12",
     "roles": [
       {
         "id": "role/admin",
@@ -729,8 +729,8 @@
     ]
   },
   "acceptanceFacts": {
-    "version": "forma/acceptance-facts/v0alpha9",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "version": "forma/acceptance-facts/v0alpha10",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "facts": [
       {
         "id": "fact/action/User/activate/transition/accepted/from/Pending",
@@ -800,6 +800,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -843,6 +844,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -886,6 +888,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -3695,8 +3698,8 @@
     ]
   },
   "reviewRequirements": {
-    "version": "forma/review-requirements/v0alpha5",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "version": "forma/review-requirements/v0alpha6",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "requirements": [
       {
         "id": "review/identity/UserAccount/fixture-fidelity",
@@ -3741,7 +3744,7 @@
   },
   "sourceMap": {
     "version": "forma/source-map/v0.6",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "entries": [
       {
         "nodeId": "action/User/activate",

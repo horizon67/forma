@@ -172,6 +172,13 @@
       "result": "passed"
     },
     {
+      "factId": "fact/action/StockReservation/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
+      "testReferences": [
+        "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/action/StockReservation/commit/transition/accepted/from/Pending",
       "testReferences": [
         "internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock"
@@ -1565,6 +1572,13 @@
       "result": "passed"
     },
     {
+      "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
+      "testReferences": [
+        "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
+      ],
+      "result": "passed"
+    },
+    {
       "factId": "fact/page/Reservations/view/list/StockReservation/action/commit/transition/accepted/from/Pending",
       "testReferences": [
         "internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome"
@@ -1977,5 +1991,5 @@
     }
   ],
   "command": "cd experiments/order-invariant-agent-e2e/target \u0026\u0026 go test -count=1 -json ./...",
-  "summary": "The AI-generated order, inventory, and stock-reservation application passed every repository-native test mapped to the 278 Acceptance Facts."
+  "summary": "The AI-generated order, inventory, and stock-reservation application passed every repository-native test mapped to the 280 Acceptance Facts."
 }

@@ -191,6 +191,36 @@ func validateActionFactHandles(intent *ResolvedIntent, fact AcceptanceFact) erro
 	if action.Subject == "" || !setupHasSubject(fact.Setup, action.Subject) {
 		return fmt.Errorf("validate action Fact %s: action subject handle %q is not established", fact.ID, action.Subject)
 	}
+	for _, precondition := range fact.Input.Preconditions {
+		if precondition.Subject != action.Subject || precondition.Evaluation != "pre-state" || !setupHasSubject(fact.Setup, precondition.Subject) {
+			return fmt.Errorf("validate action Fact %s: precondition %s has a non-canonical subject or evaluation", fact.ID, precondition.Precondition)
+		}
+		leaves := expressionFieldReferenceNodes(precondition.Expression)
+		if len(leaves) == 0 || len(leaves) != len(precondition.Bindings) {
+			return fmt.Errorf("validate action Fact %s: precondition %s has incomplete expression bindings", fact.ID, precondition.Precondition)
+		}
+		for index, leaf := range leaves {
+			binding := precondition.Bindings[index]
+			if binding.Node != leaf.ID || !setupHasSubject(fact.Setup, binding.Subject) {
+				return fmt.Errorf("validate action Fact %s: precondition leaf %s has a non-canonical subject binding", fact.ID, leaf.ID)
+			}
+			wantSubject := action.Subject
+			if len(leaf.RelationPath) == 1 {
+				wantSubject = ""
+				if fact.Setup != nil {
+					for _, relation := range fact.Setup.Relations {
+						if relation.Field == leaf.RelationPath[0] && relation.Condition == "resolved" {
+							wantSubject = relation.Target
+							break
+						}
+					}
+				}
+			}
+			if wantSubject == "" || binding.Subject != wantSubject {
+				return fmt.Errorf("validate action Fact %s: precondition leaf %s does not follow its runtime relation binding", fact.ID, leaf.ID)
+			}
+		}
+	}
 	for _, subject := range fact.Expected.Subjects {
 		if !setupHasSubject(fact.Setup, subject.Handle) {
 			return fmt.Errorf("validate action Fact %s: expected subject handle %q is not established", fact.ID, subject.Handle)
@@ -922,7 +952,8 @@ func validSubjectHandle(handle string) bool {
 	if len(parts) == 2 {
 		return parts[0] == "subject" && validSubjectHandlePart(parts[1])
 	}
-	return len(parts) == 3 && parts[0] == "subject" && parts[1] == "value" && validSubjectHandlePart(parts[2])
+	return len(parts) == 3 && parts[0] == "subject" &&
+		(parts[1] == "value" || parts[1] == "precondition") && validSubjectHandlePart(parts[2])
 }
 
 func validSubjectHandlePart(part string) bool {

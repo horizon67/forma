@@ -34,7 +34,7 @@ func newWebFixture(t *testing.T) webFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6})
+	plan, err := repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-100", ApprovedReserved: 6, RequestCeiling: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -558,15 +558,59 @@ func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
 		}
 	})
 
-	t.Run("representation failure", func(t *testing.T) {
+	t.Run("precondition rejected without partial commit", func(t *testing.T) {
+		item := newWebFixture(t)
+		plan := item.plan
+		plan.RequestCeiling = 4
+		if _, err := item.repository.PutReservationPlan(plan); err != nil {
+			t.Fatal(err)
+		}
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+item.reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusUnprocessableEntity, "invalid")
+		reservation, _ := item.repository.StockReservation(item.reservation.ID)
+		stock, _ := item.repository.StockItem(item.stock.ID)
+		if reservation.Status != domain.ReservationPending || reservation.Version != item.reservation.Version || stock != item.stock {
+			t.Fatalf("precondition surface partially committed: reservation %#v stock %#v", reservation, stock)
+		}
+	})
+
+	t.Run("exact predicate overflow is invalid", func(t *testing.T) {
 		item := newWebFixture(t)
 		maximum := int(^uint(0) >> 1)
-		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-OVERFLOW", ApprovedReserved: maximum})
+		stock, err := item.repository.PutStockItem(domain.StockItem{ProductID: item.product.ID, Location: "HTTP predicate overflow", OnHand: maximum, Reserved: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-PREDICATE", ApprovedReserved: 0, RequestCeiling: maximum})
 		if err != nil {
 			t.Fatal(err)
 		}
 		reservation, err := item.repository.PutStockReservation(domain.StockReservation{
-			Code: "RES-HTTP-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 4,
+			Code: "RES-HTTP-PREDICATE", StockID: stock.ID, PlanID: plan.ID, RequestedReserved: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := request(t, item.handler, http.MethodPost,
+			"/reservations/"+reservation.ID+"/actions/commit?confirmed=true", "staff", nil)
+		assertResponse(t, response, http.StatusUnprocessableEntity, "invalid")
+		storedReservation, _ := item.repository.StockReservation(reservation.ID)
+		storedStock, _ := item.repository.StockItem(stock.ID)
+		if storedReservation.Status != domain.ReservationPending || storedStock != stock {
+			t.Fatalf("predicate overflow surface changed state: reservation %#v stock %#v", storedReservation, storedStock)
+		}
+	})
+
+	t.Run("representation failure", func(t *testing.T) {
+		item := newWebFixture(t)
+		maximum := int(^uint(0) >> 1)
+		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-OVERFLOW", ApprovedReserved: maximum, RequestCeiling: maximum})
+		if err != nil {
+			t.Fatal(err)
+		}
+		reservation, err := item.repository.PutStockReservation(domain.StockReservation{
+			Code: "RES-HTTP-OVERFLOW", StockID: item.stock.ID, PlanID: plan.ID, RequestedReserved: 0,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -583,7 +627,7 @@ func TestReservationCommitSurfaceObservesEveryAtomicOutcome(t *testing.T) {
 
 	t.Run("invariant rejected without partial commit", func(t *testing.T) {
 		item := newWebFixture(t)
-		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-INVALID", ApprovedReserved: item.stock.OnHand + 1})
+		plan, err := item.repository.PutReservationPlan(domain.ReservationPlan{Code: "PLAN-HTTP-INVALID", ApprovedReserved: item.stock.OnHand + 1, RequestCeiling: 6})
 		if err != nil {
 			t.Fatal(err)
 		}

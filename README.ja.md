@@ -214,13 +214,13 @@ Formaへ反映します。Formaはapplication codeのbyte-identicalな再生成�
 Formaは初期設計段階で、compilerは未releaseです。現在のGo front-endはdesign draft v0.4のgrammar、
 parser、名前解決、型検査、semantic validation、stable identity、Resolved Intent、Source Mapを部分実装し、
 管理画面flow向けの最小Acceptance Facts／Generation Request sliceも実装しています。v0外のself-only
-Invariant sliceも実験的に含みます。
+Invariant、bounded Changes、one-hop relation value、exact numeric addition、named Action Preconditionも実験的に含みます。
 
 最初のInvariant vertical sliceは、post-state predicateの成立・違反2件に加え、参照fieldを編集するform submitへ
 authoritativeな拒否Factを導出します。解決済みExpression treeとatomic outcomeをGeneration Requestへ運び、
 concurrent operationの保証は独立Review Requirementとして人間へ表示します。repository固有のcoding-agent runを
-Forma非依存の通常のGo applicationで実施し、39 testに対応付けた172/172 Acceptance Factsが成功しました。
-残るconcurrency Review Requirementは人間確認待ちです。
+Forma非依存の通常のGo applicationで実施し、52 testに対応付けた280/280 Acceptance Factsが成功しました。
+Invariant、Changes、cross-entity authorization、exact numeric、Action Preconditionに関する6 Review Requirementsは人間確認待ちです。
 
 最初のcontrolled agent runでは、Formaから生成したrequestをAI coding agentへ渡し、standalone Go
 repositoryへ管理画面を実装しました。そこで導出した43件すべてのAcceptance Factsを検証できました。
@@ -271,16 +271,17 @@ state elementはexactなsemantic ID関係だけでnavigation edgeへ結び、対
 図は編集可能なapplication semanticsではなく、layoutを推測しません。
 `forma request`はGeneration Request、`forma verify`はimmutableなrequestに対するagent
 feedbackの検査結果を出力します。メール認証付きsignup/signinの
-Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v0.11`、Source Map `v0.6`、85 Acceptance Facts、
+Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v0.12`、Source Map `v0.6`、85 Acceptance Facts、
 3 Review Requirementsを既存admin targetで検証しました。P2 Automated repair loopの最初のbounded probeも
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで85/85へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
 top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、self-only Invariant、
-bounded Changes、required relation value、field reference 2個のexact binary `+`をAcceptance Facts、Generation Request、
-通常のGo applicationによる278/278 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
-保持し、integer overflowは部分commitなしの`failure`になります。5 Review Requirementsは人間確認待ちで、次は
-Action Preconditionの最小sliceからfull Order approvalへ進み、その後Occurrence → Effectを扱います。
+bounded Changes、required relation value、field reference 2個のexact binary `+`、named Action PreconditionをAcceptance Facts、Generation Request、
+通常のGo applicationによる280/280 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
+保持し、integer overflowは部分commitなしの`failure`になります。Action Preconditionはsource state、exactなpre-state predicate、
+post-state Invariantを分離し、false時のauthoritativeな無変更拒否とconcurrent enforcementまで実測しました。
+6 Review Requirementsは人間確認待ちです。次はmultiple assignmentとcollection bindingを経てfull Order approvalへ進み、その後Occurrence → Effectを扱います。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料
@@ -293,6 +294,9 @@ projectionの人間評価は独立して進めます。
 - [言語設計原則](docs/language-design-principles.md)
 - [現在の言語方針](docs/current-language-direction.md)
 - [Changesとatomic post-state案](docs/changes-proposal.md)
+- [Changesのrelation value expression案](docs/relation-value-expression-proposal.md)
+- [Changesのnumeric addition案](docs/numeric-addition-expression-proposal.md)
+- [Action Precondition案](docs/action-precondition-proposal.md)
 - [会員登録flowのnotation比較](docs/membership-flow-notation-probe.md)
 - [会員登録flowの人間評価](docs/evaluations/membership-flow/README.md)
 - [ユーザー管理の完全例](examples/users.forma)

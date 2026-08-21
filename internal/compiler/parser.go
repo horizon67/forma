@@ -587,22 +587,55 @@ func (p *parser) parseActionDecl() *ActionDecl {
 			break
 		}
 		if !p.check(tokenIdent) {
-			p.unexpected("`changes` in the action body")
+			p.unexpected("`precondition` or `changes` in the action body")
 			p.synchronizeLine()
 			continue
 		}
-		if p.peek().Value != "changes" {
+		switch p.peek().Value {
+		case "precondition":
+			decl.Preconditions = append(decl.Preconditions, p.parsePreconditionDecl())
+		case "changes":
+			decl.Changes = append(decl.Changes, p.parseChangesDecl())
+		default:
 			member := p.advance()
-			p.report(member.Span, "F1004", fmt.Sprintf("unknown action member `%s`", member.Value), "the first action body slice supports only `changes`")
+			p.report(member.Span, "F1004", fmt.Sprintf("unknown action member `%s`", member.Value), "the action body supports `precondition` and `changes`")
 			p.synchronizeLine()
-			continue
 		}
-		decl.Changes = append(decl.Changes, p.parseChangesDecl())
 	}
 	end := p.consume(tokenRBrace, "`}` to close the action")
 	decl.Span = mergeSpan(start, end.Span)
 	p.consumeOptionalNewline()
 	return decl
+}
+
+func (p *parser) parsePreconditionDecl() *PreconditionDecl {
+	start := p.advance().Span
+	name := p.consumeName("after `precondition`")
+	p.consume(tokenColon, "`:` after the precondition name")
+	left := p.parseAdditiveFieldExpression("as the left precondition operand")
+	operator := p.consume(tokenLessEqual, "`<=` between precondition operands")
+	right := p.parseAdditiveFieldExpression("as the right precondition operand")
+	if p.check(tokenLessEqual) {
+		p.report(p.peek().Span, "F1003", "comparison operators cannot be chained", "declare one named precondition with a single `<=` comparison")
+		p.synchronizeLine()
+	} else {
+		p.finishLine()
+	}
+	expressionSpan := mergeSpan(left.Span, right.Span)
+	predicate := &Expression{
+		Kind: "binary",
+		Binary: &BinaryExpression{
+			Operator: "less-than-or-equal",
+			Left:     left,
+			Right:    right,
+			Span:     expressionSpan,
+		},
+		Span: expressionSpan,
+	}
+	if operator.Kind == tokenInvalid {
+		predicate.Binary.Operator = "invalid"
+	}
+	return &PreconditionDecl{Name: name, Predicate: predicate, Span: mergeSpan(start, p.previous().Span)}
 }
 
 func (p *parser) parseChangesDecl() *ChangesDecl {
@@ -640,9 +673,13 @@ func (p *parser) parseChangesDecl() *ChangesDecl {
 }
 
 func (p *parser) parseChangeValueExpression() *Expression {
-	left := p.parseFieldExpression("as the change value")
+	return p.parseAdditiveFieldExpression("as the change value")
+}
+
+func (p *parser) parseAdditiveFieldExpression(context string) *Expression {
+	left := p.parseFieldExpression(context)
 	for p.match(tokenPlus) {
-		right := p.parseFieldExpression("after `+` in the change value")
+		right := p.parseFieldExpression("after `+`")
 		span := mergeSpan(left.Span, right.Span)
 		left = &Expression{
 			Kind: "binary",

@@ -15,6 +15,7 @@ var (
 	ErrInvalidTransition     = errors.New("invalid state transition")
 	ErrConfirmationNeeded    = errors.New("confirmation required")
 	ErrInvariant             = errors.New("stock availability invariant violated")
+	ErrPrecondition          = errors.New("action precondition unsatisfied")
 	ErrTargetUnavailable     = errors.New("change target unavailable")
 	ErrValueUnavailable      = errors.New("change value unavailable")
 	ErrNumericRepresentation = errors.New("exact numeric result is not representable")
@@ -132,6 +133,7 @@ type ReservationPlan struct {
 	ID               string
 	Code             string
 	ApprovedReserved int
+	RequestCeiling   int
 }
 
 func (plan ReservationPlan) Label() string { return plan.Code }

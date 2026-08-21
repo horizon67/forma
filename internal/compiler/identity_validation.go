@@ -99,6 +99,9 @@ func ValidateResolvedIntent(intent *ResolvedIntent) error {
 	if err := validateActionSemantics(intent); err != nil {
 		return err
 	}
+	if err := validatePreconditionSemantics(intent); err != nil {
+		return err
+	}
 	if err := validateInvariantSemantics(intent); err != nil {
 		return err
 	}

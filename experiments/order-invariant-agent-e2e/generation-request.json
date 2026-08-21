@@ -1,7 +1,7 @@
 {
   "schema": "forma/generation-request/v0alpha4",
   "resolvedIntent": {
-    "version": "forma/resolved-intent/v0.11",
+    "version": "forma/resolved-intent/v0.12",
     "roles": [
       {
         "id": "role/admin",
@@ -190,6 +190,12 @@
             "name": "approvedReserved",
             "type": "Quantity",
             "required": true
+          },
+          {
+            "id": "entity/ReservationPlan/field/requestCeiling",
+            "name": "requestCeiling",
+            "type": "Quantity",
+            "required": true
           }
         ],
         "label": "code"
@@ -369,6 +375,52 @@
           "staff"
         ],
         "atomicity": "all-or-nothing",
+        "preconditions": [
+          {
+            "id": "action/StockReservation/commit/precondition/withinRequestLimit",
+            "name": "withinRequestLimit",
+            "predicate": {
+              "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+              "kind": "binary-expression",
+              "resultType": "Bool",
+              "operator": "less-than-or-equal",
+              "left": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                "kind": "binary-expression",
+                "resultType": "Quantity",
+                "operator": "add",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/stock"
+                  ],
+                  "field": "entity/StockItem/field/reserved"
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "field": "entity/StockReservation/field/requestedReserved"
+                }
+              },
+              "right": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                "kind": "field-reference",
+                "resultType": "Quantity",
+                "binding": "self",
+                "relationPath": [
+                  "entity/StockReservation/field/plan"
+                ],
+                "field": "entity/ReservationPlan/field/requestCeiling"
+              }
+            },
+            "evaluation": "pre-state"
+          }
+        ],
         "changes": [
           {
             "id": "action/StockReservation/commit/change/stock/reserved",
@@ -1257,8 +1309,8 @@
     ]
   },
   "acceptanceFacts": {
-    "version": "forma/acceptance-facts/v0alpha9",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "version": "forma/acceptance-facts/v0alpha10",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "facts": [
       {
         "id": "fact/action/Order/approve/transition/accepted/from/Submitted",
@@ -1328,6 +1380,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1371,6 +1424,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1414,6 +1468,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1457,6 +1512,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1543,6 +1599,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1586,6 +1643,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1629,6 +1687,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1672,6 +1731,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1758,6 +1818,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1801,6 +1862,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1844,6 +1906,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1887,6 +1950,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -1973,6 +2037,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -2016,6 +2081,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -2059,6 +2125,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -2102,6 +2169,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -2164,6 +2232,67 @@
             "subject": "subject/action",
             "dispatches": 1
           },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ],
           "invariants": [
             {
               "invariant": "entity/StockItem/invariant/stockAvailable",
@@ -2264,8 +2393,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -2275,6 +2411,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status"
         ]
@@ -2323,6 +2460,67 @@
             "subject": "subject/action",
             "dispatches": 1
           },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ],
           "invariants": [
             {
               "invariant": "entity/StockItem/invariant/stockAvailable",
@@ -2381,8 +2579,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -2392,6 +2597,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status"
         ]
@@ -2459,12 +2665,20 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/reserved",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status"
         ]
@@ -2536,12 +2750,169 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/reserved",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
+          "entity/StockReservation/field/stock",
+          "entity/StockReservation/state/status"
+        ]
+      },
+      {
+        "id": "fact/action/StockReservation/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
+        "kind": "precondition-unsatisfied",
+        "subject": "action/StockReservation/commit",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/StockReservation",
+              "state": {
+                "state": "entity/StockReservation/state/status",
+                "value": "Pending"
+              }
+            },
+            {
+              "handle": "subject/target",
+              "identity": "entity/StockItem"
+            },
+            {
+              "handle": "subject/value/plan",
+              "identity": "entity/ReservationPlan"
+            }
+          ],
+          "relations": [
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/plan",
+              "target": "subject/value/plan",
+              "condition": "resolved"
+            },
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/stock",
+              "target": "subject/target",
+              "condition": "resolved"
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/StockReservation/commit",
+            "subject": "subject/action",
+            "dispatches": 1
+          },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": false
+            }
+          ]
+        },
+        "expected": {
+          "outcome": "rejected",
+          "reason": "precondition-unsatisfied",
+          "enforcement": "authoritative",
+          "atomicity": "no-changes-committed",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/StockReservation/state/status",
+                "value": "Pending"
+              },
+              "unchanged": true
+            },
+            {
+              "handle": "subject/target",
+              "unchanged": true
+            },
+            {
+              "handle": "subject/value/plan",
+              "unchanged": true
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/StockReservation/commit",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+          "entity/ReservationPlan",
+          "entity/ReservationPlan/field/requestCeiling",
+          "entity/StockItem",
+          "entity/StockItem/field/reserved",
+          "entity/StockReservation",
+          "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status"
         ]
@@ -2559,6 +2930,28 @@
                 "state": "entity/StockReservation/state/status",
                 "value": "Pending"
               }
+            },
+            {
+              "handle": "subject/target",
+              "identity": "entity/StockItem"
+            },
+            {
+              "handle": "subject/value/plan",
+              "identity": "entity/ReservationPlan"
+            }
+          ],
+          "relations": [
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/plan",
+              "target": "subject/value/plan",
+              "condition": "resolved"
+            },
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/stock",
+              "target": "subject/target",
+              "condition": "resolved"
             }
           ]
         },
@@ -2567,7 +2960,68 @@
             "action": "action/StockReservation/commit",
             "subject": "subject/action",
             "dispatches": 1
-          }
+          },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ]
         },
         "expected": {
           "outcome": "accepted",
@@ -2585,7 +3039,20 @@
         },
         "sourceNodes": [
           "action/StockReservation/commit",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+          "entity/ReservationPlan",
+          "entity/ReservationPlan/field/requestCeiling",
+          "entity/StockItem",
+          "entity/StockItem/field/reserved",
           "entity/StockReservation",
+          "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
+          "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status"
         ]
       },
@@ -2614,6 +3081,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "enforcement": "authoritative",
           "subjects": [
             {
@@ -3434,6 +3902,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -3482,6 +3951,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -3530,6 +4000,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -3578,6 +4049,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4053,6 +4525,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4101,6 +4574,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4149,6 +4623,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4197,6 +4672,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4403,6 +4879,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4451,6 +4928,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4499,6 +4977,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4547,6 +5026,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4727,6 +5207,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4775,6 +5256,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4823,6 +5305,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -4871,6 +5354,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -5559,6 +6043,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -5607,6 +6092,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -5655,6 +6141,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -5703,6 +6190,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6250,6 +6738,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6298,6 +6787,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6346,6 +6836,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6394,6 +6885,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6600,6 +7092,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6648,6 +7141,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6696,6 +7190,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6744,6 +7239,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6924,6 +7420,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -6972,6 +7469,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -7020,6 +7518,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -7068,6 +7567,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -7505,6 +8005,67 @@
             "subject": "subject/action",
             "dispatches": 1
           },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ],
           "invariants": [
             {
               "invariant": "entity/StockItem/invariant/stockAvailable",
@@ -7605,8 +8166,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -7616,6 +8184,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations/view/list/StockReservation/action/commit"
@@ -7666,6 +8235,67 @@
             "subject": "subject/action",
             "dispatches": 1
           },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ],
           "invariants": [
             {
               "invariant": "entity/StockItem/invariant/stockAvailable",
@@ -7727,8 +8357,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -7738,6 +8375,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations/view/list/StockReservation/action/commit"
@@ -7810,12 +8448,20 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/reserved",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations/view/list/StockReservation/action/commit"
@@ -7892,12 +8538,20 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/reserved",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations/view/list/StockReservation/action/commit"
@@ -8014,6 +8668,160 @@
         ]
       },
       {
+        "id": "fact/page/Reservations/view/list/StockReservation/action/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
+        "kind": "action-precondition-unsatisfied",
+        "subject": "page/Reservations/view/list/StockReservation/action/commit",
+        "setup": {
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "identity": "entity/StockReservation",
+              "state": {
+                "state": "entity/StockReservation/state/status",
+                "value": "Pending"
+              }
+            },
+            {
+              "handle": "subject/target",
+              "identity": "entity/StockItem"
+            },
+            {
+              "handle": "subject/value/plan",
+              "identity": "entity/ReservationPlan"
+            }
+          ],
+          "relations": [
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/plan",
+              "target": "subject/value/plan",
+              "condition": "resolved"
+            },
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/stock",
+              "target": "subject/target",
+              "condition": "resolved"
+            }
+          ]
+        },
+        "input": {
+          "action": {
+            "action": "action/StockReservation/commit",
+            "reference": "page/Reservations/view/list/StockReservation/action/commit",
+            "subject": "subject/action",
+            "dispatches": 1
+          },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": false
+            }
+          ]
+        },
+        "expected": {
+          "outcome": "rejected",
+          "reason": "precondition-unsatisfied",
+          "feedback": [
+            "invalid"
+          ],
+          "enforcement": "authoritative",
+          "atomicity": "no-changes-committed",
+          "subjects": [
+            {
+              "handle": "subject/action",
+              "state": {
+                "state": "entity/StockReservation/state/status",
+                "value": "Pending"
+              },
+              "unchanged": true
+            },
+            {
+              "handle": "subject/target",
+              "unchanged": true
+            },
+            {
+              "handle": "subject/value/plan",
+              "unchanged": true
+            }
+          ]
+        },
+        "sourceNodes": [
+          "action/StockReservation/commit",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+          "entity/ReservationPlan",
+          "entity/ReservationPlan/field/requestCeiling",
+          "entity/StockItem",
+          "entity/StockItem/field/reserved",
+          "entity/StockReservation",
+          "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
+          "entity/StockReservation/field/stock",
+          "entity/StockReservation/state/status",
+          "page/Reservations/view/list/StockReservation/action/commit"
+        ]
+      },
+      {
         "id": "fact/page/Reservations/view/list/StockReservation/action/commit/transition/accepted/from/Pending",
         "kind": "action-transition-accepted",
         "subject": "page/Reservations/view/list/StockReservation/action/commit",
@@ -8026,6 +8834,28 @@
                 "state": "entity/StockReservation/state/status",
                 "value": "Pending"
               }
+            },
+            {
+              "handle": "subject/target",
+              "identity": "entity/StockItem"
+            },
+            {
+              "handle": "subject/value/plan",
+              "identity": "entity/ReservationPlan"
+            }
+          ],
+          "relations": [
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/plan",
+              "target": "subject/value/plan",
+              "condition": "resolved"
+            },
+            {
+              "source": "subject/action",
+              "field": "entity/StockReservation/field/stock",
+              "target": "subject/target",
+              "condition": "resolved"
             }
           ]
         },
@@ -8035,7 +8865,68 @@
             "reference": "page/Reservations/view/list/StockReservation/action/commit",
             "subject": "subject/action",
             "dispatches": 1
-          }
+          },
+          "preconditions": [
+            {
+              "precondition": "action/StockReservation/commit/precondition/withinRequestLimit",
+              "subject": "subject/action",
+              "expression": {
+                "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+                "kind": "binary-expression",
+                "resultType": "Bool",
+                "operator": "less-than-or-equal",
+                "left": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+                  "kind": "binary-expression",
+                  "resultType": "Quantity",
+                  "operator": "add",
+                  "left": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "relationPath": [
+                      "entity/StockReservation/field/stock"
+                    ],
+                    "field": "entity/StockItem/field/reserved"
+                  },
+                  "right": {
+                    "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                    "kind": "field-reference",
+                    "resultType": "Quantity",
+                    "binding": "self",
+                    "field": "entity/StockReservation/field/requestedReserved"
+                  }
+                },
+                "right": {
+                  "id": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "kind": "field-reference",
+                  "resultType": "Quantity",
+                  "binding": "self",
+                  "relationPath": [
+                    "entity/StockReservation/field/plan"
+                  ],
+                  "field": "entity/ReservationPlan/field/requestCeiling"
+                }
+              },
+              "bindings": [
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+                  "subject": "subject/target"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+                  "subject": "subject/action"
+                },
+                {
+                  "node": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+                  "subject": "subject/value/plan"
+                }
+              ],
+              "evaluation": "pre-state",
+              "result": true
+            }
+          ]
         },
         "expected": {
           "outcome": "accepted",
@@ -8053,7 +8944,20 @@
         },
         "sourceNodes": [
           "action/StockReservation/commit",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+          "entity/ReservationPlan",
+          "entity/ReservationPlan/field/requestCeiling",
+          "entity/StockItem",
+          "entity/StockItem/field/reserved",
           "entity/StockReservation",
+          "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
+          "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations/view/list/StockReservation/action/commit"
         ]
@@ -8084,6 +8988,7 @@
         },
         "expected": {
           "outcome": "rejected",
+          "reason": "source-state-mismatch",
           "feedback": [
             "invalid"
           ],
@@ -9196,8 +10101,8 @@
     ]
   },
   "reviewRequirements": {
-    "version": "forma/review-requirements/v0alpha5",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "version": "forma/review-requirements/v0alpha6",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "requirements": [
       {
         "id": "review/action/StockReservation/commit/atomic-changes-enforcement",
@@ -9210,8 +10115,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -9221,12 +10133,50 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "type/Quantity",
           "type/Quantity/constraint/min"
         ],
         "instruction": "Review the action implementation; confirm that target identity resolution, pre-state reads, invariant checks, and commit share one transaction, lock, or conflict-retry boundary, and that concurrent invocation or process failure cannot commit only part of the transition and explicit Changes."
+      },
+      {
+        "id": "review/action/StockReservation/commit/concurrent-action-precondition-enforcement",
+        "kind": "concurrent-action-precondition-enforcement",
+        "subject": "action/StockReservation/commit",
+        "sourceNodes": [
+          "action/StockReservation/commit",
+          "action/StockReservation/commit/change/stock/reserved",
+          "action/StockReservation/commit/change/stock/reserved/target",
+          "action/StockReservation/commit/change/stock/reserved/value",
+          "action/StockReservation/commit/change/stock/reserved/value/left",
+          "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+          "entity/ReservationPlan",
+          "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
+          "entity/StockItem",
+          "entity/StockItem/field/onHand",
+          "entity/StockItem/field/reserved",
+          "entity/StockItem/invariant/stockAvailable",
+          "entity/StockItem/invariant/stockAvailable/expression",
+          "entity/StockItem/invariant/stockAvailable/expression/left",
+          "entity/StockItem/invariant/stockAvailable/expression/right",
+          "entity/StockReservation",
+          "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
+          "entity/StockReservation/field/stock",
+          "entity/StockReservation/state/status",
+          "type/Quantity",
+          "type/Quantity/constraint/min"
+        ],
+        "instruction": "Review the action implementation; confirm that source-state validation, every Precondition binding and pre-state read, predicate evaluation, Changes and state-transition commit share one transaction, lock, or conflict-retry boundary, so a concurrent operation cannot make the predicate false before commit and enforcement is not limited to a user interface or single-threaded test."
       },
       {
         "id": "review/action/StockReservation/commit/cross-entity-value-read-authorization",
@@ -9239,8 +10189,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -9250,6 +10207,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations",
@@ -9278,8 +10236,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -9289,6 +10254,7 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "page/Reservations",
@@ -9316,8 +10282,15 @@
           "action/StockReservation/commit/change/stock/reserved/value",
           "action/StockReservation/commit/change/stock/reserved/value/left",
           "action/StockReservation/commit/change/stock/reserved/value/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+          "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
           "entity/ReservationPlan",
           "entity/ReservationPlan/field/approvedReserved",
+          "entity/ReservationPlan/field/requestCeiling",
           "entity/StockItem",
           "entity/StockItem/field/onHand",
           "entity/StockItem/field/reserved",
@@ -9327,12 +10300,13 @@
           "entity/StockItem/invariant/stockAvailable/expression/right",
           "entity/StockReservation",
           "entity/StockReservation/field/plan",
+          "entity/StockReservation/field/requestedReserved",
           "entity/StockReservation/field/stock",
           "entity/StockReservation/state/status",
           "type/Quantity",
           "type/Quantity/constraint/min"
         ],
-        "instruction": "Review the action's Int or Decimal representation, addition operation, storage boundary, and failure path; confirm that wrap, binary floating-point rounding, or silent saturation cannot commit as success and that an unrepresentable exact result leaves state and every changed subject unmodified."
+        "instruction": "Review the action's Int or Decimal representation, every addition in Changes and Precondition expressions, comparison, storage boundary, and failure path; confirm that wrap, binary floating-point rounding, or silent saturation cannot reverse a predicate or commit as success and that an unrepresentable stored result leaves state and every changed subject unmodified."
       },
       {
         "id": "review/entity/StockItem/invariant/stockAvailable/concurrent-invariant-enforcement",
@@ -9352,7 +10326,7 @@
   },
   "sourceMap": {
     "version": "forma/source-map/v0.6",
-    "intentVersion": "forma/resolved-intent/v0.11",
+    "intentVersion": "forma/resolved-intent/v0.12",
     "entries": [
       {
         "nodeId": "action/Order/approve",
@@ -9360,13 +10334,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1343,
-            "line": 59,
+            "offset": 1424,
+            "line": 61,
             "column": 1
           },
           "end": {
-            "offset": 1407,
-            "line": 59,
+            "offset": 1488,
+            "line": 61,
             "column": 65
           }
         }
@@ -9377,13 +10351,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1407,
-            "line": 60,
+            "offset": 1488,
+            "line": 62,
             "column": 1
           },
           "end": {
-            "offset": 1463,
-            "line": 60,
+            "offset": 1544,
+            "line": 62,
             "column": 57
           }
         }
@@ -9394,13 +10368,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1463,
-            "line": 61,
+            "offset": 1544,
+            "line": 63,
             "column": 1
           },
           "end": {
-            "offset": 1519,
-            "line": 61,
+            "offset": 1600,
+            "line": 63,
             "column": 57
           }
         }
@@ -9411,13 +10385,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1298,
-            "line": 58,
+            "offset": 1379,
+            "line": 60,
             "column": 1
           },
           "end": {
-            "offset": 1343,
-            "line": 58,
+            "offset": 1424,
+            "line": 60,
             "column": 46
           }
         }
@@ -9428,13 +10402,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1520,
-            "line": 63,
+            "offset": 1601,
+            "line": 65,
             "column": 1
           },
           "end": {
-            "offset": 1680,
-            "line": 67,
+            "offset": 1857,
+            "line": 71,
             "column": 2
           }
         }
@@ -9445,13 +10419,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1617,
-            "line": 65,
+            "offset": 1794,
+            "line": 69,
             "column": 9
           },
           "end": {
-            "offset": 1672,
-            "line": 65,
+            "offset": 1849,
+            "line": 69,
             "column": 64
           }
         }
@@ -9462,13 +10436,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1617,
-            "line": 65,
+            "offset": 1794,
+            "line": 69,
             "column": 9
           },
           "end": {
-            "offset": 1631,
-            "line": 65,
+            "offset": 1808,
+            "line": 69,
             "column": 23
           }
         }
@@ -9479,13 +10453,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1634,
-            "line": 65,
+            "offset": 1811,
+            "line": 69,
             "column": 26
           },
           "end": {
-            "offset": 1672,
-            "line": 65,
+            "offset": 1849,
+            "line": 69,
             "column": 64
           }
         }
@@ -9496,13 +10470,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1634,
-            "line": 65,
+            "offset": 1811,
+            "line": 69,
             "column": 26
           },
           "end": {
-            "offset": 1648,
-            "line": 65,
+            "offset": 1825,
+            "line": 69,
             "column": 40
           }
         }
@@ -9513,14 +10487,116 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1651,
-            "line": 65,
+            "offset": 1828,
+            "line": 69,
             "column": 43
           },
           "end": {
-            "offset": 1672,
-            "line": 65,
+            "offset": 1849,
+            "line": 69,
             "column": 64
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit",
+        "kind": "precondition",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1680,
+            "line": 66,
+            "column": 5
+          },
+          "end": {
+            "offset": 1771,
+            "line": 66,
+            "column": 96
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit/expression",
+        "kind": "binary-expression",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1713,
+            "line": 66,
+            "column": 38
+          },
+          "end": {
+            "offset": 1770,
+            "line": 66,
+            "column": 95
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left",
+        "kind": "binary-expression",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1713,
+            "line": 66,
+            "column": 38
+          },
+          "end": {
+            "offset": 1747,
+            "line": 66,
+            "column": 72
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/left",
+        "kind": "field-reference",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1713,
+            "line": 66,
+            "column": 38
+          },
+          "end": {
+            "offset": 1727,
+            "line": 66,
+            "column": 52
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit/expression/left/right",
+        "kind": "field-reference",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1730,
+            "line": 66,
+            "column": 55
+          },
+          "end": {
+            "offset": 1747,
+            "line": 66,
+            "column": 72
+          }
+        }
+      },
+      {
+        "nodeId": "action/StockReservation/commit/precondition/withinRequestLimit/expression/right",
+        "kind": "field-reference",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1751,
+            "line": 66,
+            "column": 76
+          },
+          "end": {
+            "offset": 1770,
+            "line": 66,
+            "column": 95
           }
         }
       },
@@ -9530,13 +10606,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 252,
-            "line": 10,
+            "offset": 294,
+            "line": 11,
             "column": 1
           },
           "end": {
-            "offset": 336,
-            "line": 13,
+            "offset": 378,
+            "line": 14,
             "column": 2
           }
         }
@@ -9547,13 +10623,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 306,
-            "line": 12,
+            "offset": 348,
+            "line": 13,
             "column": 5
           },
           "end": {
-            "offset": 335,
-            "line": 12,
+            "offset": 377,
+            "line": 13,
             "column": 34
           }
         }
@@ -9564,13 +10640,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 274,
-            "line": 11,
+            "offset": 316,
+            "line": 12,
             "column": 5
           },
           "end": {
-            "offset": 302,
-            "line": 11,
+            "offset": 344,
+            "line": 12,
             "column": 33
           }
         }
@@ -9581,13 +10657,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 637,
-            "line": 30,
+            "offset": 679,
+            "line": 31,
             "column": 1
           },
           "end": {
-            "offset": 824,
-            "line": 36,
+            "offset": 866,
+            "line": 37,
             "column": 2
           }
         }
@@ -9598,13 +10674,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 698,
-            "line": 32,
+            "offset": 740,
+            "line": 33,
             "column": 5
           },
           "end": {
-            "offset": 716,
-            "line": 32,
+            "offset": 758,
+            "line": 33,
             "column": 23
           }
         }
@@ -9615,13 +10691,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 707,
-            "line": 32,
+            "offset": 749,
+            "line": 33,
             "column": 14
           },
           "end": {
-            "offset": 715,
-            "line": 32,
+            "offset": 757,
+            "line": 33,
             "column": 22
           }
         }
@@ -9632,13 +10708,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 720,
-            "line": 33,
+            "offset": 762,
+            "line": 34,
             "column": 5
           },
           "end": {
-            "offset": 741,
-            "line": 33,
+            "offset": 783,
+            "line": 34,
             "column": 26
           }
         }
@@ -9649,13 +10725,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 729,
-            "line": 33,
+            "offset": 771,
+            "line": 34,
             "column": 14
           },
           "end": {
-            "offset": 740,
-            "line": 33,
+            "offset": 782,
+            "line": 34,
             "column": 25
           }
         }
@@ -9666,13 +10742,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 656,
-            "line": 31,
+            "offset": 698,
+            "line": 32,
             "column": 5
           },
           "end": {
-            "offset": 694,
-            "line": 31,
+            "offset": 736,
+            "line": 32,
             "column": 43
           }
         }
@@ -9683,13 +10759,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 746,
-            "line": 35,
+            "offset": 788,
+            "line": 36,
             "column": 5
           },
           "end": {
-            "offset": 823,
-            "line": 35,
+            "offset": 865,
+            "line": 36,
             "column": 82
           }
         }
@@ -9700,13 +10776,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 826,
-            "line": 38,
+            "offset": 868,
+            "line": 39,
             "column": 1
           },
           "end": {
-            "offset": 917,
-            "line": 42,
+            "offset": 959,
+            "line": 43,
             "column": 2
           }
         }
@@ -9717,13 +10793,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 849,
-            "line": 39,
+            "offset": 891,
+            "line": 40,
             "column": 5
           },
           "end": {
-            "offset": 864,
-            "line": 39,
+            "offset": 906,
+            "line": 40,
             "column": 20
           }
         }
@@ -9734,13 +10810,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 858,
-            "line": 39,
+            "offset": 900,
+            "line": 40,
             "column": 14
           },
           "end": {
-            "offset": 863,
-            "line": 39,
+            "offset": 905,
+            "line": 40,
             "column": 19
           }
         }
@@ -9751,13 +10827,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 868,
-            "line": 40,
+            "offset": 910,
+            "line": 41,
             "column": 5
           },
           "end": {
-            "offset": 885,
-            "line": 40,
+            "offset": 927,
+            "line": 41,
             "column": 22
           }
         }
@@ -9768,13 +10844,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 877,
-            "line": 40,
+            "offset": 919,
+            "line": 41,
             "column": 14
           },
           "end": {
-            "offset": 884,
-            "line": 40,
+            "offset": 926,
+            "line": 41,
             "column": 21
           }
         }
@@ -9785,13 +10861,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 889,
-            "line": 41,
+            "offset": 931,
+            "line": 42,
             "column": 5
           },
           "end": {
-            "offset": 916,
-            "line": 41,
+            "offset": 958,
+            "line": 42,
             "column": 32
           }
         }
@@ -9802,13 +10878,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 338,
-            "line": 15,
+            "offset": 380,
+            "line": 16,
             "column": 1
           },
           "end": {
-            "offset": 445,
-            "line": 19,
+            "offset": 487,
+            "line": 20,
             "column": 2
           }
         }
@@ -9819,13 +10895,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 389,
-            "line": 17,
+            "offset": 431,
+            "line": 18,
             "column": 5
           },
           "end": {
-            "offset": 417,
-            "line": 17,
+            "offset": 459,
+            "line": 18,
             "column": 33
           }
         }
@@ -9836,13 +10912,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 421,
-            "line": 18,
+            "offset": 463,
+            "line": 19,
             "column": 5
           },
           "end": {
-            "offset": 444,
-            "line": 18,
+            "offset": 486,
+            "line": 19,
             "column": 28
           }
         }
@@ -9853,13 +10929,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 359,
-            "line": 16,
+            "offset": 401,
+            "line": 17,
             "column": 5
           },
           "end": {
-            "offset": 385,
-            "line": 16,
+            "offset": 427,
+            "line": 17,
             "column": 31
           }
         }
@@ -9870,13 +10946,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1181,
-            "line": 53,
+            "offset": 1223,
+            "line": 54,
             "column": 1
           },
           "end": {
-            "offset": 1296,
-            "line": 56,
+            "offset": 1377,
+            "line": 58,
             "column": 2
           }
         }
@@ -9887,13 +10963,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1260,
-            "line": 55,
+            "offset": 1302,
+            "line": 56,
             "column": 5
           },
           "end": {
-            "offset": 1295,
-            "line": 55,
+            "offset": 1337,
+            "line": 56,
             "column": 40
           }
         }
@@ -9904,14 +10980,31 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1210,
-            "line": 54,
+            "offset": 1252,
+            "line": 55,
             "column": 5
           },
           "end": {
-            "offset": 1256,
-            "line": 54,
+            "offset": 1298,
+            "line": 55,
             "column": 51
+          }
+        }
+      },
+      {
+        "nodeId": "entity/ReservationPlan/field/requestCeiling",
+        "kind": "field",
+        "span": {
+          "file": "experiments/order-invariant-agent-e2e/app.forma",
+          "start": {
+            "offset": 1341,
+            "line": 57,
+            "column": 5
+          },
+          "end": {
+            "offset": 1376,
+            "line": 57,
+            "column": 40
           }
         }
       },
@@ -9921,13 +11014,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 447,
-            "line": 21,
+            "offset": 489,
+            "line": 22,
             "column": 1
           },
           "end": {
-            "offset": 635,
-            "line": 28,
+            "offset": 677,
+            "line": 29,
             "column": 2
           }
         }
@@ -9938,13 +11031,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 491,
-            "line": 23,
+            "offset": 533,
+            "line": 24,
             "column": 5
           },
           "end": {
-            "offset": 522,
-            "line": 23,
+            "offset": 564,
+            "line": 24,
             "column": 36
           }
         }
@@ -9955,13 +11048,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 526,
-            "line": 24,
+            "offset": 568,
+            "line": 25,
             "column": 5
           },
           "end": {
-            "offset": 553,
-            "line": 24,
+            "offset": 595,
+            "line": 25,
             "column": 32
           }
         }
@@ -9972,13 +11065,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 470,
-            "line": 22,
+            "offset": 512,
+            "line": 23,
             "column": 5
           },
           "end": {
-            "offset": 487,
-            "line": 22,
+            "offset": 529,
+            "line": 23,
             "column": 22
           }
         }
@@ -9989,13 +11082,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 479,
-            "line": 22,
+            "offset": 521,
+            "line": 23,
             "column": 14
           },
           "end": {
-            "offset": 486,
-            "line": 22,
+            "offset": 528,
+            "line": 23,
             "column": 21
           }
         }
@@ -10006,13 +11099,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 557,
-            "line": 25,
+            "offset": 599,
+            "line": 26,
             "column": 5
           },
           "end": {
-            "offset": 584,
-            "line": 25,
+            "offset": 626,
+            "line": 26,
             "column": 32
           }
         }
@@ -10023,13 +11116,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 589,
-            "line": 27,
+            "offset": 631,
+            "line": 28,
             "column": 5
           },
           "end": {
-            "offset": 634,
-            "line": 27,
+            "offset": 676,
+            "line": 28,
             "column": 50
           }
         }
@@ -10040,13 +11133,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 615,
-            "line": 27,
+            "offset": 657,
+            "line": 28,
             "column": 31
           },
           "end": {
-            "offset": 633,
-            "line": 27,
+            "offset": 675,
+            "line": 28,
             "column": 49
           }
         }
@@ -10057,13 +11150,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 615,
-            "line": 27,
+            "offset": 657,
+            "line": 28,
             "column": 31
           },
           "end": {
-            "offset": 623,
-            "line": 27,
+            "offset": 665,
+            "line": 28,
             "column": 39
           }
         }
@@ -10074,13 +11167,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 627,
-            "line": 27,
+            "offset": 669,
+            "line": 28,
             "column": 43
           },
           "end": {
-            "offset": 633,
-            "line": 27,
+            "offset": 675,
+            "line": 28,
             "column": 49
           }
         }
@@ -10091,13 +11184,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 919,
-            "line": 44,
+            "offset": 961,
+            "line": 45,
             "column": 1
           },
           "end": {
-            "offset": 1179,
-            "line": 51,
+            "offset": 1221,
+            "line": 52,
             "column": 2
           }
         }
@@ -10108,13 +11201,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 949,
-            "line": 45,
+            "offset": 991,
+            "line": 46,
             "column": 5
           },
           "end": {
-            "offset": 996,
-            "line": 45,
+            "offset": 1038,
+            "line": 46,
             "column": 52
           }
         }
@@ -10125,13 +11218,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1041,
-            "line": 47,
+            "offset": 1083,
+            "line": 48,
             "column": 5
           },
           "end": {
-            "offset": 1084,
-            "line": 47,
+            "offset": 1126,
+            "line": 48,
             "column": 48
           }
         }
@@ -10142,13 +11235,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1059,
-            "line": 47,
+            "offset": 1101,
+            "line": 48,
             "column": 23
           },
           "end": {
-            "offset": 1074,
-            "line": 47,
+            "offset": 1116,
+            "line": 48,
             "column": 38
           }
         }
@@ -10159,13 +11252,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1088,
-            "line": 48,
+            "offset": 1130,
+            "line": 49,
             "column": 5
           },
           "end": {
-            "offset": 1124,
-            "line": 48,
+            "offset": 1166,
+            "line": 49,
             "column": 41
           }
         }
@@ -10176,13 +11269,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1000,
-            "line": 46,
+            "offset": 1042,
+            "line": 47,
             "column": 5
           },
           "end": {
-            "offset": 1037,
-            "line": 46,
+            "offset": 1079,
+            "line": 47,
             "column": 42
           }
         }
@@ -10193,13 +11286,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1018,
-            "line": 46,
+            "offset": 1060,
+            "line": 47,
             "column": 23
           },
           "end": {
-            "offset": 1027,
-            "line": 46,
+            "offset": 1069,
+            "line": 47,
             "column": 32
           }
         }
@@ -10210,13 +11303,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1129,
-            "line": 50,
+            "offset": 1171,
+            "line": 51,
             "column": 5
           },
           "end": {
-            "offset": 1178,
-            "line": 50,
+            "offset": 1220,
+            "line": 51,
             "column": 54
           }
         }
@@ -10227,13 +11320,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1959,
-            "line": 82,
+            "offset": 2136,
+            "line": 86,
             "column": 1
           },
           "end": {
-            "offset": 2073,
-            "line": 89,
+            "offset": 2250,
+            "line": 93,
             "column": 2
           }
         }
@@ -10244,13 +11337,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1999,
-            "line": 85,
+            "offset": 2176,
+            "line": 89,
             "column": 5
           },
           "end": {
-            "offset": 2071,
-            "line": 88,
+            "offset": 2248,
+            "line": 92,
             "column": 6
           }
         }
@@ -10261,13 +11354,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2052,
-            "line": 87,
+            "offset": 2229,
+            "line": 91,
             "column": 9
           },
           "end": {
-            "offset": 2065,
-            "line": 87,
+            "offset": 2242,
+            "line": 91,
             "column": 22
           }
         }
@@ -10278,13 +11371,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2052,
-            "line": 87,
+            "offset": 2229,
+            "line": 91,
             "column": 9
           },
           "end": {
-            "offset": 2065,
-            "line": 87,
+            "offset": 2242,
+            "line": 91,
             "column": 22
           }
         }
@@ -10295,13 +11388,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2052,
-            "line": 87,
+            "offset": 2229,
+            "line": 91,
             "column": 9
           },
           "end": {
-            "offset": 2065,
-            "line": 87,
+            "offset": 2242,
+            "line": 91,
             "column": 22
           }
         }
@@ -10312,13 +11405,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2075,
-            "line": 91,
+            "offset": 2252,
+            "line": 95,
             "column": 1
           },
           "end": {
-            "offset": 2257,
-            "line": 98,
+            "offset": 2434,
+            "line": 102,
             "column": 2
           }
         }
@@ -10329,13 +11422,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2092,
-            "line": 91,
+            "offset": 2269,
+            "line": 95,
             "column": 18
           },
           "end": {
-            "offset": 2104,
-            "line": 91,
+            "offset": 2281,
+            "line": 95,
             "column": 30
           }
         }
@@ -10346,13 +11439,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2135,
-            "line": 94,
+            "offset": 2312,
+            "line": 98,
             "column": 5
           },
           "end": {
-            "offset": 2255,
-            "line": 97,
+            "offset": 2432,
+            "line": 101,
             "column": 6
           }
         }
@@ -10363,13 +11456,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2228,
-            "line": 96,
+            "offset": 2405,
+            "line": 100,
             "column": 39
           },
           "end": {
-            "offset": 2235,
-            "line": 96,
+            "offset": 2412,
+            "line": 100,
             "column": 46
           }
         }
@@ -10380,13 +11473,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2228,
-            "line": 96,
+            "offset": 2405,
+            "line": 100,
             "column": 39
           },
           "end": {
-            "offset": 2235,
-            "line": 96,
+            "offset": 2412,
+            "line": 100,
             "column": 46
           }
         }
@@ -10397,13 +11490,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2212,
-            "line": 96,
+            "offset": 2389,
+            "line": 100,
             "column": 23
           },
           "end": {
-            "offset": 2218,
-            "line": 96,
+            "offset": 2395,
+            "line": 100,
             "column": 29
           }
         }
@@ -10414,13 +11507,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2212,
-            "line": 96,
+            "offset": 2389,
+            "line": 100,
             "column": 23
           },
           "end": {
-            "offset": 2218,
-            "line": 96,
+            "offset": 2395,
+            "line": 100,
             "column": 29
           }
         }
@@ -10431,13 +11524,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2206,
-            "line": 96,
+            "offset": 2383,
+            "line": 100,
             "column": 17
           },
           "end": {
-            "offset": 2210,
-            "line": 96,
+            "offset": 2387,
+            "line": 100,
             "column": 21
           }
         }
@@ -10448,13 +11541,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2206,
-            "line": 96,
+            "offset": 2383,
+            "line": 100,
             "column": 17
           },
           "end": {
-            "offset": 2210,
-            "line": 96,
+            "offset": 2387,
+            "line": 100,
             "column": 21
           }
         }
@@ -10465,13 +11558,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2237,
-            "line": 96,
+            "offset": 2414,
+            "line": 100,
             "column": 48
           },
           "end": {
-            "offset": 2243,
-            "line": 96,
+            "offset": 2420,
+            "line": 100,
             "column": 54
           }
         }
@@ -10482,13 +11575,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2237,
-            "line": 96,
+            "offset": 2414,
+            "line": 100,
             "column": 48
           },
           "end": {
-            "offset": 2243,
-            "line": 96,
+            "offset": 2420,
+            "line": 100,
             "column": 54
           }
         }
@@ -10499,13 +11592,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2245,
-            "line": 96,
+            "offset": 2422,
+            "line": 100,
             "column": 56
           },
           "end": {
-            "offset": 2249,
-            "line": 96,
+            "offset": 2426,
+            "line": 100,
             "column": 60
           }
         }
@@ -10516,13 +11609,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2245,
-            "line": 96,
+            "offset": 2422,
+            "line": 100,
             "column": 56
           },
           "end": {
-            "offset": 2249,
-            "line": 96,
+            "offset": 2426,
+            "line": 100,
             "column": 60
           }
         }
@@ -10533,13 +11626,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2220,
-            "line": 96,
+            "offset": 2397,
+            "line": 100,
             "column": 31
           },
           "end": {
-            "offset": 2226,
-            "line": 96,
+            "offset": 2403,
+            "line": 100,
             "column": 37
           }
         }
@@ -10550,13 +11643,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2220,
-            "line": 96,
+            "offset": 2397,
+            "line": 100,
             "column": 31
           },
           "end": {
-            "offset": 2226,
-            "line": 96,
+            "offset": 2403,
+            "line": 100,
             "column": 37
           }
         }
@@ -10567,13 +11660,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2259,
-            "line": 100,
+            "offset": 2436,
+            "line": 104,
             "column": 1
           },
           "end": {
-            "offset": 2382,
-            "line": 107,
+            "offset": 2559,
+            "line": 111,
             "column": 2
           }
         }
@@ -10584,13 +11677,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2274,
-            "line": 100,
+            "offset": 2451,
+            "line": 104,
             "column": 16
           },
           "end": {
-            "offset": 2286,
-            "line": 100,
+            "offset": 2463,
+            "line": 104,
             "column": 28
           }
         }
@@ -10601,13 +11694,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2310,
-            "line": 103,
+            "offset": 2487,
+            "line": 107,
             "column": 5
           },
           "end": {
-            "offset": 2380,
-            "line": 106,
+            "offset": 2557,
+            "line": 110,
             "column": 6
           }
         }
@@ -10618,13 +11711,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2363,
-            "line": 105,
+            "offset": 2540,
+            "line": 109,
             "column": 9
           },
           "end": {
-            "offset": 2374,
-            "line": 105,
+            "offset": 2551,
+            "line": 109,
             "column": 20
           }
         }
@@ -10635,13 +11728,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2363,
-            "line": 105,
+            "offset": 2540,
+            "line": 109,
             "column": 9
           },
           "end": {
-            "offset": 2374,
-            "line": 105,
+            "offset": 2551,
+            "line": 109,
             "column": 20
           }
         }
@@ -10652,13 +11745,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2363,
-            "line": 105,
+            "offset": 2540,
+            "line": 109,
             "column": 9
           },
           "end": {
-            "offset": 2374,
-            "line": 105,
+            "offset": 2551,
+            "line": 109,
             "column": 20
           }
         }
@@ -10669,13 +11762,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1682,
-            "line": 69,
+            "offset": 1859,
+            "line": 73,
             "column": 1
           },
           "end": {
-            "offset": 1957,
-            "line": 80,
+            "offset": 2134,
+            "line": 84,
             "column": 2
           }
         }
@@ -10686,13 +11779,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1724,
-            "line": 72,
+            "offset": 1901,
+            "line": 76,
             "column": 5
           },
           "end": {
-            "offset": 1955,
-            "line": 79,
+            "offset": 2132,
+            "line": 83,
             "column": 6
           }
         }
@@ -10703,13 +11796,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1928,
-            "line": 78,
+            "offset": 2105,
+            "line": 82,
             "column": 53
           },
           "end": {
-            "offset": 1935,
-            "line": 78,
+            "offset": 2112,
+            "line": 82,
             "column": 60
           }
         }
@@ -10720,13 +11813,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1928,
-            "line": 78,
+            "offset": 2105,
+            "line": 82,
             "column": 53
           },
           "end": {
-            "offset": 1935,
-            "line": 78,
+            "offset": 2112,
+            "line": 82,
             "column": 60
           }
         }
@@ -10737,13 +11830,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1892,
-            "line": 78,
+            "offset": 2069,
+            "line": 82,
             "column": 17
           },
           "end": {
-            "offset": 1898,
-            "line": 78,
+            "offset": 2075,
+            "line": 82,
             "column": 23
           }
         }
@@ -10754,13 +11847,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1892,
-            "line": 78,
+            "offset": 2069,
+            "line": 82,
             "column": 17
           },
           "end": {
-            "offset": 1898,
-            "line": 78,
+            "offset": 2075,
+            "line": 82,
             "column": 23
           }
         }
@@ -10771,13 +11864,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1912,
-            "line": 78,
+            "offset": 2089,
+            "line": 82,
             "column": 37
           },
           "end": {
-            "offset": 1918,
-            "line": 78,
+            "offset": 2095,
+            "line": 82,
             "column": 43
           }
         }
@@ -10788,13 +11881,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1912,
-            "line": 78,
+            "offset": 2089,
+            "line": 82,
             "column": 37
           },
           "end": {
-            "offset": 1918,
-            "line": 78,
+            "offset": 2095,
+            "line": 82,
             "column": 43
           }
         }
@@ -10805,13 +11898,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1906,
-            "line": 78,
+            "offset": 2083,
+            "line": 82,
             "column": 31
           },
           "end": {
-            "offset": 1910,
-            "line": 78,
+            "offset": 2087,
+            "line": 82,
             "column": 35
           }
         }
@@ -10822,13 +11915,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1906,
-            "line": 78,
+            "offset": 2083,
+            "line": 82,
             "column": 31
           },
           "end": {
-            "offset": 1910,
-            "line": 78,
+            "offset": 2087,
+            "line": 82,
             "column": 35
           }
         }
@@ -10839,13 +11932,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1937,
-            "line": 78,
+            "offset": 2114,
+            "line": 82,
             "column": 62
           },
           "end": {
-            "offset": 1943,
-            "line": 78,
+            "offset": 2120,
+            "line": 82,
             "column": 68
           }
         }
@@ -10856,13 +11949,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1937,
-            "line": 78,
+            "offset": 2114,
+            "line": 82,
             "column": 62
           },
           "end": {
-            "offset": 1943,
-            "line": 78,
+            "offset": 2120,
+            "line": 82,
             "column": 68
           }
         }
@@ -10873,13 +11966,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1945,
-            "line": 78,
+            "offset": 2122,
+            "line": 82,
             "column": 70
           },
           "end": {
-            "offset": 1949,
-            "line": 78,
+            "offset": 2126,
+            "line": 82,
             "column": 74
           }
         }
@@ -10890,13 +11983,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1945,
-            "line": 78,
+            "offset": 2122,
+            "line": 82,
             "column": 70
           },
           "end": {
-            "offset": 1949,
-            "line": 78,
+            "offset": 2126,
+            "line": 82,
             "column": 74
           }
         }
@@ -10907,13 +12000,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1920,
-            "line": 78,
+            "offset": 2097,
+            "line": 82,
             "column": 45
           },
           "end": {
-            "offset": 1926,
-            "line": 78,
+            "offset": 2103,
+            "line": 82,
             "column": 51
           }
         }
@@ -10924,13 +12017,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1920,
-            "line": 78,
+            "offset": 2097,
+            "line": 82,
             "column": 45
           },
           "end": {
-            "offset": 1926,
-            "line": 78,
+            "offset": 2103,
+            "line": 82,
             "column": 51
           }
         }
@@ -10941,13 +12034,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1900,
-            "line": 78,
+            "offset": 2077,
+            "line": 82,
             "column": 25
           },
           "end": {
-            "offset": 1904,
-            "line": 78,
+            "offset": 2081,
+            "line": 82,
             "column": 29
           }
         }
@@ -10958,13 +12051,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1900,
-            "line": 78,
+            "offset": 2077,
+            "line": 82,
             "column": 25
           },
           "end": {
-            "offset": 1904,
-            "line": 78,
+            "offset": 2081,
+            "line": 82,
             "column": 29
           }
         }
@@ -10975,13 +12068,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 1840,
-            "line": 76,
+            "offset": 2017,
+            "line": 80,
             "column": 9
           },
           "end": {
-            "offset": 1851,
-            "line": 76,
+            "offset": 2028,
+            "line": 80,
             "column": 20
           }
         }
@@ -10992,13 +12085,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2940,
-            "line": 140,
+            "offset": 3117,
+            "line": 144,
             "column": 1
           },
           "end": {
-            "offset": 3096,
-            "line": 147,
+            "offset": 3273,
+            "line": 151,
             "column": 2
           }
         }
@@ -11009,13 +12102,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2981,
-            "line": 143,
+            "offset": 3158,
+            "line": 147,
             "column": 5
           },
           "end": {
-            "offset": 3094,
-            "line": 146,
+            "offset": 3271,
+            "line": 150,
             "column": 6
           }
         }
@@ -11026,13 +12119,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 3082,
-            "line": 145,
+            "offset": 3259,
+            "line": 149,
             "column": 17
           },
           "end": {
-            "offset": 3088,
-            "line": 145,
+            "offset": 3265,
+            "line": 149,
             "column": 23
           }
         }
@@ -11043,13 +12136,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 3082,
-            "line": 145,
+            "offset": 3259,
+            "line": 149,
             "column": 17
           },
           "end": {
-            "offset": 3088,
-            "line": 145,
+            "offset": 3265,
+            "line": 149,
             "column": 23
           }
         }
@@ -11060,13 +12153,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2628,
-            "line": 122,
+            "offset": 2805,
+            "line": 126,
             "column": 1
           },
           "end": {
-            "offset": 2788,
-            "line": 129,
+            "offset": 2965,
+            "line": 133,
             "column": 2
           }
         }
@@ -11077,13 +12170,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2649,
-            "line": 122,
+            "offset": 2826,
+            "line": 126,
             "column": 22
           },
           "end": {
-            "offset": 2664,
-            "line": 122,
+            "offset": 2841,
+            "line": 126,
             "column": 37
           }
         }
@@ -11094,13 +12187,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2695,
-            "line": 125,
+            "offset": 2872,
+            "line": 129,
             "column": 5
           },
           "end": {
-            "offset": 2786,
-            "line": 128,
+            "offset": 2963,
+            "line": 132,
             "column": 6
           }
         }
@@ -11111,13 +12204,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2776,
-            "line": 127,
+            "offset": 2953,
+            "line": 131,
             "column": 17
           },
           "end": {
-            "offset": 2780,
-            "line": 127,
+            "offset": 2957,
+            "line": 131,
             "column": 21
           }
         }
@@ -11128,13 +12221,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2776,
-            "line": 127,
+            "offset": 2953,
+            "line": 131,
             "column": 17
           },
           "end": {
-            "offset": 2780,
-            "line": 127,
+            "offset": 2957,
+            "line": 131,
             "column": 21
           }
         }
@@ -11145,13 +12238,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2790,
-            "line": 131,
+            "offset": 2967,
+            "line": 135,
             "column": 1
           },
           "end": {
-            "offset": 2938,
-            "line": 138,
+            "offset": 3115,
+            "line": 142,
             "column": 2
           }
         }
@@ -11162,13 +12255,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2809,
-            "line": 131,
+            "offset": 2986,
+            "line": 135,
             "column": 20
           },
           "end": {
-            "offset": 2824,
-            "line": 131,
+            "offset": 3001,
+            "line": 135,
             "column": 35
           }
         }
@@ -11179,13 +12272,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2848,
-            "line": 134,
+            "offset": 3025,
+            "line": 138,
             "column": 5
           },
           "end": {
-            "offset": 2936,
-            "line": 137,
+            "offset": 3113,
+            "line": 141,
             "column": 6
           }
         }
@@ -11196,13 +12289,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2919,
-            "line": 136,
+            "offset": 3096,
+            "line": 140,
             "column": 9
           },
           "end": {
-            "offset": 2930,
-            "line": 136,
+            "offset": 3107,
+            "line": 140,
             "column": 20
           }
         }
@@ -11213,13 +12306,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2919,
-            "line": 136,
+            "offset": 3096,
+            "line": 140,
             "column": 9
           },
           "end": {
-            "offset": 2930,
-            "line": 136,
+            "offset": 3107,
+            "line": 140,
             "column": 20
           }
         }
@@ -11230,13 +12323,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2919,
-            "line": 136,
+            "offset": 3096,
+            "line": 140,
             "column": 9
           },
           "end": {
-            "offset": 2930,
-            "line": 136,
+            "offset": 3107,
+            "line": 140,
             "column": 20
           }
         }
@@ -11247,13 +12340,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2384,
-            "line": 109,
+            "offset": 2561,
+            "line": 113,
             "column": 1
           },
           "end": {
-            "offset": 2626,
-            "line": 120,
+            "offset": 2803,
+            "line": 124,
             "column": 2
           }
         }
@@ -11264,13 +12357,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2430,
-            "line": 112,
+            "offset": 2607,
+            "line": 116,
             "column": 5
           },
           "end": {
-            "offset": 2624,
-            "line": 119,
+            "offset": 2801,
+            "line": 123,
             "column": 6
           }
         }
@@ -11281,13 +12374,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2614,
-            "line": 118,
+            "offset": 2791,
+            "line": 122,
             "column": 23
           },
           "end": {
-            "offset": 2618,
-            "line": 118,
+            "offset": 2795,
+            "line": 122,
             "column": 27
           }
         }
@@ -11298,13 +12391,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2614,
-            "line": 118,
+            "offset": 2791,
+            "line": 122,
             "column": 23
           },
           "end": {
-            "offset": 2618,
-            "line": 118,
+            "offset": 2795,
+            "line": 122,
             "column": 27
           }
         }
@@ -11315,13 +12408,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2608,
-            "line": 118,
+            "offset": 2785,
+            "line": 122,
             "column": 17
           },
           "end": {
-            "offset": 2612,
-            "line": 118,
+            "offset": 2789,
+            "line": 122,
             "column": 21
           }
         }
@@ -11332,13 +12425,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2608,
-            "line": 118,
+            "offset": 2785,
+            "line": 122,
             "column": 17
           },
           "end": {
-            "offset": 2612,
-            "line": 118,
+            "offset": 2789,
+            "line": 122,
             "column": 21
           }
         }
@@ -11349,13 +12442,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 2554,
-            "line": 116,
+            "offset": 2731,
+            "line": 120,
             "column": 9
           },
           "end": {
-            "offset": 2567,
-            "line": 116,
+            "offset": 2744,
+            "line": 120,
             "column": 22
           }
         }
@@ -11366,13 +12459,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 158,
-            "line": 4,
+            "offset": 200,
+            "line": 5,
             "column": 1
           },
           "end": {
-            "offset": 169,
-            "line": 4,
+            "offset": 211,
+            "line": 5,
             "column": 12
           }
         }
@@ -11383,13 +12476,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 169,
-            "line": 5,
+            "offset": 211,
+            "line": 6,
             "column": 1
           },
           "end": {
-            "offset": 180,
-            "line": 5,
+            "offset": 222,
+            "line": 6,
             "column": 12
           }
         }
@@ -11400,13 +12493,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 225,
-            "line": 8,
+            "offset": 267,
+            "line": 9,
             "column": 1
           },
           "end": {
-            "offset": 251,
-            "line": 8,
+            "offset": 293,
+            "line": 9,
             "column": 27
           }
         }
@@ -11417,13 +12510,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 245,
-            "line": 8,
+            "offset": 287,
+            "line": 9,
             "column": 21
           },
           "end": {
-            "offset": 250,
-            "line": 8,
+            "offset": 292,
+            "line": 9,
             "column": 26
           }
         }
@@ -11434,13 +12527,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 181,
-            "line": 7,
+            "offset": 223,
+            "line": 8,
             "column": 1
           },
           "end": {
-            "offset": 225,
-            "line": 7,
+            "offset": 267,
+            "line": 8,
             "column": 45
           }
         }
@@ -11451,13 +12544,13 @@
         "span": {
           "file": "experiments/order-invariant-agent-e2e/app.forma",
           "start": {
-            "offset": 204,
-            "line": 7,
+            "offset": 246,
+            "line": 8,
             "column": 24
           },
           "end": {
-            "offset": 224,
-            "line": 7,
+            "offset": 266,
+            "line": 8,
             "column": 44
           }
         }
@@ -11494,6 +12587,7 @@
       "fact/action/StockReservation/commit/changes/invariant/entity/StockItem/invariant/stockAvailable/rejected/from/Pending",
       "fact/action/StockReservation/commit/changes/target-unavailable/from/Pending",
       "fact/action/StockReservation/commit/changes/value-unavailable/via/plan/from/Pending",
+      "fact/action/StockReservation/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
       "fact/action/StockReservation/commit/transition/accepted/from/Pending",
       "fact/action/StockReservation/commit/transition/rejected/from/Committed",
       "fact/entity/Order/field/customer/relation/resolved",
@@ -11691,6 +12785,7 @@
       "fact/page/Reservations/view/list/StockReservation/action/commit/confirmation/declined",
       "fact/page/Reservations/view/list/StockReservation/action/commit/feedback",
       "fact/page/Reservations/view/list/StockReservation/action/commit/navigation",
+      "fact/page/Reservations/view/list/StockReservation/action/commit/precondition/withinRequestLimit/unsatisfied/from/Pending",
       "fact/page/Reservations/view/list/StockReservation/action/commit/transition/accepted/from/Pending",
       "fact/page/Reservations/view/list/StockReservation/action/commit/transition/rejected/from/Committed",
       "fact/page/Reservations/view/list/StockReservation/actions",
@@ -11751,6 +12846,7 @@
     ],
     "displayReviewRequirementIds": [
       "review/action/StockReservation/commit/atomic-changes-enforcement",
+      "review/action/StockReservation/commit/concurrent-action-precondition-enforcement",
       "review/action/StockReservation/commit/cross-entity-value-read-authorization",
       "review/action/StockReservation/commit/cross-entity-write-authorization",
       "review/action/StockReservation/commit/exact-numeric-expression-enforcement",

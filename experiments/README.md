@@ -10,7 +10,7 @@ Formaの実験は、language semanticsとagent generation boundaryを実例か�
 - [`membership-build-repair-loop`](membership-build-repair-loop/README.md) — 同じtargetでcompile failure → `stage: build`のfailed feedback → repair → successを1回実測。web依存81 factsが`not-run`、store-only 4 factsが`passed`
 - [`membership-repair-integrity`](membership-repair-integrity/README.md) — test・coverage map・要求を弱めてgreenにするrepairを、retry baselineとの比較で拒否できるかを実測。implementation-only repairだけ通す
 - [`membership-automated-repair-loop`](membership-automated-repair-loop/README.md) — trusted guard・feedback generator・verifierの外側でfresh agent processを自動反復し、test/build failureを1 attemptでcurrent 85/85へ戻し、Forma intent gapはrepositoryを変えず`test/blocked` handoffへ返す
-- [`order-invariant-agent-e2e`](order-invariant-agent-e2e/README.md) — Invariant、bounded Changes、relation value expression、exact binary numeric `+`をstandalone Go applicationへ実装し、278/278 factsと5 human Review Requirementsを測定
+- [`order-invariant-agent-e2e`](order-invariant-agent-e2e/README.md) — Invariant、bounded Changes、relation value expression、exact binary numeric `+`、Action Preconditionをstandalone Go applicationへ実装し、280/280 factsと6 human Review Requirementsを測定
 
 ## Frozen prototypes
 

@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（79 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（82 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -343,7 +343,7 @@ feedbackを残せば、`forma verify`はそのfileを読んで85/85を報告し�
 ## 記録したhash
 
 ```text
-retry-baseline.json（このworking tree、repository外）  411fd01bae314fb31db8953031bd8915f8b2e2b854c8208ddec425bc3454c2b4
+retry-baseline.json（このworking tree、repository外）  9c2c8605053e236b3452ec78d04af7d29fae201fb3e0fca910a550d28a3d5198
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
 weakening-coverage.patch             d26940cb7904dba18a488bf3bafda4465774c4de7a7f31812c50e15f80b2565d
@@ -368,7 +368,7 @@ faultとweakening patchから決まるので、再実行で動かない。
 
 `retry-baseline.json`はrepositoryへcommitしない。trusted側が持つものをtree内へ置けば
 agentが書き換えられるためである。hashだけを記録する。このhashは、generator、gate、verifier、
-orchestratorと次runのbuild inputを含む79 pathのdigestから決まるので、それらを編集すれば変わる。
+orchestratorと次runのbuild inputを含む82 pathのdigestから決まるので、それらを編集すれば変わる。
 上の値はこのworking treeで再導出した記録であり、compiler sourceを変更すると更新される。
 
 ## 追加したnegative test

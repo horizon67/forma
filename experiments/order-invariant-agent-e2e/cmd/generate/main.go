@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	expectedFacts   = 278
-	expectedReviews = 5
+	expectedFacts   = 280
+	expectedReviews = 6
 )
 
 func main() {
@@ -138,6 +138,10 @@ func coverageForFact(fact compiler.AcceptanceFact) ([]string, error) {
 	case "changes-accepted", "changes-invariant-rejected", "changes-target-unavailable", "changes-value-unavailable":
 		return []string{storeTests + "TestStockReservationCommitIsAtomicAcrossReservationAndStock"}, nil
 	case "action-changes-accepted", "action-changes-invariant-rejected", "action-changes-target-unavailable", "action-changes-value-unavailable":
+		return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
+	case "precondition-unsatisfied":
+		return []string{storeTests + "TestStockReservationCommitIsAtomicAcrossReservationAndStock"}, nil
+	case "action-precondition-unsatisfied":
 		return []string{webTests + "TestReservationCommitSurfaceObservesEveryAtomicOutcome"}, nil
 	case "action-observable-feedback":
 		if strings.Contains(subject, "StockReservation") {

@@ -5,6 +5,7 @@ Review Requirements:
 ```text
 review/entity/StockItem/invariant/stockAvailable/concurrent-invariant-enforcement
 review/action/StockReservation/commit/atomic-changes-enforcement
+review/action/StockReservation/commit/concurrent-action-precondition-enforcement
 review/action/StockReservation/commit/cross-entity-write-authorization
 review/action/StockReservation/commit/cross-entity-value-read-authorization
 review/action/StockReservation/commit/exact-numeric-expression-enforcement
@@ -34,15 +35,15 @@ The pure `domain.Allowed` role-matrix tests remain useful repository tests but r
 | `PutStockItem` | initial `product`, `location`, `onHand`, `reserved` | holds `Store.mu`, calls `domain.ValidateStock` before insertion |
 | `UpdateStockItem` | form-editable `product`, `location`, `onHand`, `reserved` | holds `Store.mu` across read, post-state construction, `ValidateStock`, and commit |
 | `ReserveStock` | increments `reserved` | holds `Store.mu` across read, increment, `ValidateStock`, and commit |
-| `CommitStockReservation` | sets `StockReservation.status` and adds to related `StockItem.reserved` | holds `Store.mu` across source-state check, StockItem target resolution, both operand reads, checked addition, candidate validation, and both commits |
+| `CommitStockReservation` | sets `StockReservation.status` and adds to related `StockItem.reserved` | holds `Store.mu` across source-state check, target/value resolution, Precondition reads and comparison, Changes addition, candidate validation, and both commits |
 
 No other package can write the private `stockItems` map. The HTTP handler calls `UpdateStockItem`; it does not own or duplicate the invariant.
 
 ## Atomic Changes evidence
 
-`internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock` observes accepted, invariant-rejected, target-unavailable, value-unavailable, and source-state-rejected outcomes. Every rejected case rereads the source and resolved target and asserts that neither changed. `TestConcurrentStockReservationCommitsCannotPartiallyViolateInvariant` starts valid and invalid commits together; the valid pair commits, the invalid reservation remains Pending, and stock remains within the invariant.
+`internal/store/store_test.go#TestStockReservationCommitIsAtomicAcrossReservationAndStock` observes accepted, Precondition-rejected, invariant-rejected, target-unavailable, value-unavailable, and source-state-rejected outcomes. Every rejected case rereads the source and resolved target and asserts that neither changed. `TestConcurrentStockReservationCommitsRecheckPreconditionBeforeCommit` starts two individually valid commits together; one commits, the other is rejected after the first consumes the request ceiling, and stock remains at the single accepted post-state.
 
-The same store test changes both the backing ReservationPlan and StockItem through an unexported test synchronization hook after the action has captured its pre-state but before candidate construction. The committed stock must remain `2 + 6 = 8`, not any combination containing the later backing-map values. Replacing either local operand with a late map reread makes this case fail.
+The same store test changes the backing ReservationPlan, StockItem, and reservation through an unexported test synchronization hook after the action has captured its pre-state but before predicate and candidate construction. The predicate and committed stock must use the captured values, including `2 + 3 <= 6` and `2 + 6 = 8`, not any combination containing the later backing-map values. Replacing a local operand with a late map reread makes this case fail. The hook exists only to make this in-process snapshot boundary deterministic; production execution never assigns it.
 
 `internal/web/server_test.go#TestReservationCommitSurfaceObservesEveryAtomicOutcome` repeats those outcome checks through the shipped HTTP surface. `TestReservationCommitConfirmationAndCrossEntityAuthorization` additionally proves that declining confirmation dispatches zero repository calls while acceptance dispatches exactly once.
 
@@ -60,9 +61,15 @@ The action remains staff-owned. ReservationPlan has no direct page in this bound
 
 ## Exact numeric expression evidence
 
-The target represents Forma `Quantity = Int min 0` with Go `int`. `CommitStockReservation` captures both operands, calls `checkedAddInt` before candidate construction, and returns `ErrNumericRepresentation` without writing either map when the mathematical result is outside that representation. The store and HTTP subtests use `MaxInt` as the related plan operand while the stored target operand is 2; both require `failure` and reread the reservation and stock to prove that neither changed. Replacing the checked addition with native wrapping, selecting either operand, or mapping the representation error to `invalid` makes the focused tests fail.
+The target represents Forma `Quantity = Int min 0` with Go `int`. `CommitStockReservation` evaluates the Precondition sum with `exactNonNegativeSumLessEqual`, so `MaxInt + 1 <= MaxInt` is false without wrapping and returns `invalid`. After a true predicate, it calls `checkedAddInt` before candidate construction and returns `ErrNumericRepresentation` without writing either map when the Changes result is outside that representation. Separate store and HTTP subtests keep these outcomes distinguishable. Replacing either exact operation with native wrapping, selecting the wrong operand, or mapping the representation error to `invalid` makes the focused tests fail.
 
 This proves the chosen bounded Go representation and action path. It is not a general proof for every generated language, Decimal precision, database numeric column, or serialization boundary.
+
+## Concurrent Action Precondition evidence
+
+`CommitStockReservation` checks source state, captures `stock.reserved`, `requestedReserved`, and `plan.requestCeiling`, evaluates the predicate, constructs Changes, validates the Invariant, and commits while holding `Store.mu`. `TestConcurrentStockReservationCommitsRecheckPreconditionBeforeCommit` races two Pending reservations whose predicates are individually true against the initial stock. Exactly one succeeds, the second receives `ErrPrecondition`, both reservations remain otherwise consistent, and the final stock is the single accepted value `reserved=8`.
+
+The test would expose a stale-true implementation that evaluates both predicates outside the lock and commits both. The HTTP test separately proves that Precondition rejection is surfaced as `invalid` with no success redirect; it is not the authoritative enforcement path.
 
 ## Evidence that enforcement is not UI-only
 
@@ -87,4 +94,6 @@ The test would expose a stale-read implementation in which both operations valid
 - Are target identity resolution and all pre-state reads inside the same boundary as validation and both commits?
 - Is staff use of `ReservationPlan.approvedReserved`, and its downstream disclosure as `StockItem.reserved`, intentional without inheriting an undeclared ReservationPlan surface role?
 - Does every repository representation and storage boundary preserve exact numeric addition or fail before any partial commit?
+- Are source-state validation, all Precondition bindings and reads, predicate evaluation, Changes, Invariant validation, and commit in one concurrency boundary?
+- Can concurrent invocation make a once-true predicate false before commit, or can UI-only validation bypass the store rejection?
 - Can cancellation, process failure, or an error after the first write leave only one entity changed?

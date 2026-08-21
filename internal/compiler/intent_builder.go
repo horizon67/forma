@@ -120,6 +120,16 @@ func (c *checker) buildIntent() (*ResolvedIntent, *SourceMap) {
 				}
 			}
 		}
+		for _, precondition := range action.Preconditions {
+			preconditionID := actionPreconditionID(id, precondition.Name.Text)
+			expressionID := semanticID(string(preconditionID), "expression")
+			item.Preconditions = append(item.Preconditions, IRActionPrecondition{
+				ID: preconditionID, Name: precondition.Name.Text,
+				Predicate:  c.buildExpressionIR(c.entities[action.Entity.Text], precondition.Predicate, expressionID, sourceMap),
+				Evaluation: "pre-state",
+			})
+			sourceMap.add(preconditionID, "precondition", precondition.Span)
+		}
 		if len(action.Changes) == 1 && len(action.Changes[0].Assignments) == 1 {
 			assignment := action.Changes[0].Assignments[0]
 			resolved, ok := c.resolvedChanges[assignment]

@@ -7,9 +7,10 @@ effect syntaxを先に決めることではなく、[`roadmap.md`](roadmap.md)�
 derived value、entity invariant、state以外のaction precondition、複数entityをまたぐeffect、
 transaction boundary、runtime由来fieldが、実例のどこで必要になるかを実測することである。
 
-規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書に現れる`effect`、`on`、`emit`、
-Derived Value、Action Preconditionなどの式は現在のParserでは受理されず、最終的なlanguage designも
-未決定である。probe後、reference compilerには規範v0外のexperimental sliceとして、名前付きInvariantと
+規範仕様は[`v0-primitives.md`](v0-primitives.md)である。本書に現れる`effect`、`on`、`emit`、Derived Valueは
+現在のParserでは受理されず、最終的なlanguage designも未決定である。Action Preconditionは
+[`action-precondition-proposal.md`](action-precondition-proposal.md)で最小candidateを定め、compilerへ実装したが、
+規範v0外である。probe後、reference compilerには規範v0外のexperimental sliceとして、名前付きInvariantと
 selfのrequired field同士の`<=`、およびaction-ownedなbounded Changesを実装した。範囲と現在地は
 [Minimal Expression Layer Proposal](expression-proposal.md)と[Changes Proposal](changes-proposal.md)に記録する。
 
@@ -18,9 +19,9 @@ selfのrequired field同士の`<=`、およびaction-ownedなbounded Changesを�
 
 このprobeから先行して切り出したself-only Invariantは、
 [`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で通常のGo applicationへ実装した。続くbounded
-Changes、required relation value、二項`+`も統合し、current 278/278 Acceptance Factsを実測した。exact additionの境界は
+Changes、required relation value、二項`+`、Action Preconditionも統合し、current 280/280 Acceptance Factsを実測した。exact additionの境界は
 [`numeric-addition-expression-proposal.md`](numeric-addition-expression-proposal.md)へ分離して実装済みである。concurrent invariant enforcement、
-atomic Changes、cross-entity write/value-read authorization、exact numeric enforcementの人間Review Requirementsは未完了である。本書に残るfull Changes、Occurrence、Effectの
+atomic Changes、cross-entity write/value-read authorization、exact numeric enforcement、concurrent Precondition enforcementの人間Review Requirementsは未完了である。本書に残るfull Changes、Occurrence、Effectの
 候補は後続の設計入力であり、まだ採用済み構文ではない。
 
 Changesの最小sliceは[`changes-proposal.md`](changes-proposal.md)へ分離し実装した。最終対象は本書の`Order.approve`だが、
@@ -272,7 +273,7 @@ Milestone 6の「最初の追加例候補」は本書と[`examples/orders.forma`
 2. changesの事後条件semantics + invariant + atomic boundary（最小slice実装・repository E2E完了）
 3. Changes RHSのrequired relation value参照（最初のslice実装・repository E2E完了）
 4. 二項`+`（最初のslice実装・repository E2E完了）
-5. full Order.approveに必要なprecondition、multiple assignment、collection traversal、record creationへ段階化
+5. full Order.approveに必要なprecondition（最小candidateは[`action-precondition-proposal.md`](action-precondition-proposal.md)へ分離）、multiple assignment、collection traversal、record creationへ段階化
 6. Derived Valueを独立consumerとして検証
 7. occurrence model（actionから導出するか、明示するか）
 8. effect / on proposal

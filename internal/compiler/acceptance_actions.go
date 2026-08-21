@@ -21,6 +21,9 @@ func deriveActionContractFacts(intent *ResolvedIntent) ([]AcceptanceFact, error)
 		if err := b.addTransitionFacts(item); err != nil {
 			return nil, err
 		}
+		if err := b.addPreconditionFacts(item, nil); err != nil {
+			return nil, err
+		}
 		if err := b.addChangeFacts(item, nil); err != nil {
 			return nil, err
 		}
@@ -56,13 +59,21 @@ func (b *acceptanceBuilder) addTransitionFacts(action IRAction) error {
 	if !ok || entity.State == nil {
 		return fmt.Errorf("build Acceptance Facts: action %s has no stateful entity", action.ID)
 	}
+	var plan *actionBindingPlan
+	if len(action.Preconditions) != 0 {
+		resolved, err := b.resolveActionBindingPlan(entity, action)
+		if err != nil {
+			return err
+		}
+		plan = &resolved
+	}
 	for _, source := range action.Sources {
-		b.add(transitionFact(entity, action, nil, source, true))
+		b.add(transitionFact(entity, action, nil, source, true, plan))
 	}
 	sources := stringSet(action.Sources)
 	for _, state := range entity.State.Values {
 		if !sources[state] {
-			b.add(transitionFact(entity, action, nil, state, false))
+			b.add(transitionFact(entity, action, nil, state, false, nil))
 		}
 	}
 	return nil
@@ -72,19 +83,27 @@ func (b *acceptanceBuilder) addTransitionSurfaceFacts(entity IREntity, action IR
 	if entity.State == nil {
 		return fmt.Errorf("build Acceptance Facts: action reference %s has no stateful entity", ref.ID)
 	}
+	var plan *actionBindingPlan
+	if len(action.Preconditions) != 0 {
+		resolved, err := b.resolveActionBindingPlan(entity, action)
+		if err != nil {
+			return err
+		}
+		plan = &resolved
+	}
 	for _, source := range action.Sources {
-		b.add(transitionFact(entity, action, &ref, source, true))
+		b.add(transitionFact(entity, action, &ref, source, true, plan))
 	}
 	sources := stringSet(action.Sources)
 	for _, state := range entity.State.Values {
 		if !sources[state] {
-			b.add(transitionFact(entity, action, &ref, state, false))
+			b.add(transitionFact(entity, action, &ref, state, false, nil))
 		}
 	}
 	return nil
 }
 
-func transitionFact(entity IREntity, action IRAction, ref *IRActionRef, state string, accepted bool) AcceptanceFact {
+func transitionFact(entity IREntity, action IRAction, ref *IRActionRef, state string, accepted bool, plan *actionBindingPlan) AcceptanceFact {
 	subject := action.ID
 	kind := "transition-source-rejected"
 	caseName := "rejected"
@@ -116,18 +135,125 @@ func transitionFact(entity IREntity, action IRAction, ref *IRActionRef, state st
 	if !accepted {
 		expectation.Unchanged = true
 	}
+	setup := &FactSetup{Subjects: []FactSubjectSetup{{
+		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: state},
+	}}}
+	inputValue := FactInput{Action: input}
+	if accepted && plan != nil {
+		setup = plan.setup(state, "")
+		inputValue.Preconditions = plan.preconditionInputs(true)
+		sources = append(sources, plan.sourceNodes()...)
+	}
+	reason := ""
+	if !accepted {
+		reason = "source-state-mismatch"
+	}
 	return AcceptanceFact{
 		ID: factID(subject, "transition", caseName, "from", state), Kind: kind, Subject: subject,
-		Setup: &FactSetup{Subjects: []FactSubjectSetup{{
-			Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: state},
-		}}},
-		Input: &FactInput{Action: input},
+		Setup: setup,
+		Input: &inputValue,
 		Expected: FactExpectation{
-			Outcome: outcome, Feedback: feedback, AppliedMutations: applied, Enforcement: "authoritative",
+			Outcome: outcome, Reason: reason, Feedback: feedback, AppliedMutations: applied, Enforcement: "authoritative",
 			Subjects: []FactSubjectExpectation{expectation},
 		},
 		SourceNodes: sources,
 	}
+}
+
+func (b *acceptanceBuilder) addPreconditionFacts(action IRAction, ref *IRActionRef) error {
+	if len(action.Preconditions) == 0 {
+		return nil
+	}
+	entity, ok := b.entities[action.Entity]
+	if !ok || entity.State == nil {
+		return fmt.Errorf("build Acceptance Facts: Precondition action %s has no stateful entity", action.ID)
+	}
+	plan, err := b.resolveActionBindingPlan(entity, action)
+	if err != nil {
+		return err
+	}
+	for _, source := range action.Sources {
+		for _, precondition := range plan.preconditions {
+			b.add(preconditionUnsatisfiedFact(plan, precondition, ref, source))
+			for _, relation := range plan.preconditionOnlyRelations() {
+				used := false
+				for _, leaf := range precondition.value.leaves {
+					used = used || leaf.relation != nil && leaf.relation.ID == relation.field.ID
+				}
+				if used {
+					b.add(preconditionValueUnavailableFact(plan, precondition, relation, ref, source))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func preconditionUnsatisfiedFact(plan actionBindingPlan, precondition resolvedActionPrecondition, ref *IRActionRef, source string) AcceptanceFact {
+	subject := plan.action.ID
+	kind := "precondition-unsatisfied"
+	actionInput := &FactActionInput{Action: plan.action.ID, Subject: "subject/action", Dispatches: 1}
+	sources := plan.sourceNodes()
+	var feedback []string
+	if ref != nil {
+		subject = ref.ID
+		kind = "action-precondition-unsatisfied"
+		actionInput.Reference = ref.ID
+		sources = append(sources, ref.ID)
+		feedback = []string{"invalid"}
+	}
+	setup := plan.setup(source, "")
+	return AcceptanceFact{
+		ID:   factID(subject, "precondition", precondition.precondition.Name, "unsatisfied", "from", source),
+		Kind: kind, Subject: subject, Setup: setup,
+		Input: &FactInput{Action: actionInput, Preconditions: plan.preconditionInputs(false)},
+		Expected: FactExpectation{
+			Outcome: "rejected", Reason: "precondition-unsatisfied", Feedback: feedback,
+			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
+			Subjects: unchangedPlanSubjects(plan, setup, source),
+		},
+		SourceNodes: canonicalSemanticIDs(sources),
+	}
+}
+
+func preconditionValueUnavailableFact(plan actionBindingPlan, precondition resolvedActionPrecondition, relation actionRelationBinding, ref *IRActionRef, source string) AcceptanceFact {
+	subject := plan.action.ID
+	kind := "precondition-value-unavailable"
+	actionInput := &FactActionInput{Action: plan.action.ID, Subject: "subject/action", Dispatches: 1}
+	sources := append(plan.sourceNodes(), relation.field.ID, relation.entity.ID)
+	var feedback []string
+	if ref != nil {
+		subject = ref.ID
+		kind = "action-precondition-value-unavailable"
+		actionInput.Reference = ref.ID
+		sources = append(sources, ref.ID)
+		feedback = []string{"failure"}
+	}
+	setup := plan.setup(source, relation.field.ID)
+	return AcceptanceFact{
+		ID:   factID(subject, "precondition", precondition.precondition.Name, "value-unavailable", "via", relation.field.Name, "from", source),
+		Kind: kind, Subject: subject, Setup: setup,
+		Input: &FactInput{Action: actionInput},
+		Expected: FactExpectation{
+			Outcome: "rejected", Reason: "value-unavailable", Feedback: feedback,
+			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
+			Subjects: unchangedPlanSubjects(plan, setup, source),
+		},
+		SourceNodes: canonicalSemanticIDs(sources),
+	}
+}
+
+func unchangedPlanSubjects(plan actionBindingPlan, setup *FactSetup, source string) []FactSubjectExpectation {
+	result := make([]FactSubjectExpectation, 0, len(setup.Subjects))
+	for _, subject := range setup.Subjects {
+		expectation := FactSubjectExpectation{Handle: subject.Handle, Unchanged: true}
+		if subject.Handle == "subject/action" {
+			expectation.State = &IRStateValueRef{State: plan.entity.State.ID, Value: source}
+		}
+		result = append(result, expectation)
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Handle < result[j].Handle })
+	return result
 }
 
 func (b *acceptanceBuilder) addConfirmationFacts(entity IREntity, action *IRAction, ref IRActionRef) {
@@ -177,28 +303,26 @@ func (b *acceptanceBuilder) addChangeFacts(action IRAction, ref *IRActionRef) er
 	if !ok || entity.State == nil {
 		return fmt.Errorf("build Acceptance Facts: Changes action %s has no stateful entity", action.ID)
 	}
+	plan, err := b.resolveActionBindingPlan(entity, action)
+	if err != nil {
+		return err
+	}
 	change := action.Changes[0]
-	targetEntity, targetField, relationField, err := b.resolveChangeTarget(entity, change)
-	if err != nil {
-		return err
-	}
-	value, err := b.resolveChangeValueExpression(entity, change.Value)
-	if err != nil {
-		return err
-	}
+	targetEntity, targetField, relationField := plan.targetEntity, *plan.targetField, plan.targetRelation
+	value := *plan.changeValue
 	for _, source := range action.Sources {
-		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, value, action, change, ref, source))
+		b.add(changeAcceptedFact(entity, targetEntity, targetField, relationField, value, action, change, ref, source, plan))
 		for _, invariant := range targetEntity.Invariants {
 			if !containsSemanticID(invariantFieldReferences(invariant), targetField.ID) {
 				continue
 			}
-			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, value, action, change, invariant, ref, source))
+			b.add(changeInvariantRejectedFact(entity, targetEntity, relationField, value, action, change, invariant, ref, source, plan))
 		}
 		if relationField != nil {
-			b.add(changeTargetUnavailableFact(entity, targetEntity, *relationField, value, action, change, ref, source))
+			b.add(changeTargetUnavailableFact(entity, targetEntity, *relationField, value, action, change, ref, source, plan))
 		}
 		for _, relation := range distinctChangeValueRelations(value.leaves, relationField) {
-			b.add(changeValueUnavailableFact(entity, targetEntity, relationField, value, relation, action, change, ref, source))
+			b.add(changeValueUnavailableFact(entity, targetEntity, relationField, value, relation, action, change, ref, source, plan))
 		}
 	}
 	return nil
@@ -207,6 +331,164 @@ func (b *acceptanceBuilder) addChangeFacts(action IRAction, ref *IRActionRef) er
 type resolvedChangeValue struct {
 	expression IRExpression
 	leaves     []changeValueLeaf
+}
+
+type resolvedActionPrecondition struct {
+	precondition IRActionPrecondition
+	value        resolvedChangeValue
+}
+
+type actionRelationBinding struct {
+	field  IRField
+	entity IREntity
+	handle string
+	owner  string
+}
+
+type actionBindingPlan struct {
+	entity         IREntity
+	action         IRAction
+	targetEntity   IREntity
+	targetField    *IRField
+	targetRelation *IRField
+	changeValue    *resolvedChangeValue
+	preconditions  []resolvedActionPrecondition
+	relations      []actionRelationBinding
+}
+
+func (b *acceptanceBuilder) resolveActionBindingPlan(entity IREntity, action IRAction) (actionBindingPlan, error) {
+	plan := actionBindingPlan{entity: entity, action: action, targetEntity: entity}
+	relations := map[SemanticID]actionRelationBinding{}
+	if len(action.Changes) == 1 {
+		change := action.Changes[0]
+		targetEntity, targetField, targetRelation, err := b.resolveChangeTarget(entity, change)
+		if err != nil {
+			return actionBindingPlan{}, err
+		}
+		value, err := b.resolveChangeValueExpression(entity, change.Value)
+		if err != nil {
+			return actionBindingPlan{}, err
+		}
+		plan.targetEntity = targetEntity
+		plan.targetField = &targetField
+		plan.targetRelation = targetRelation
+		plan.changeValue = &value
+		if targetRelation != nil {
+			relations[targetRelation.ID] = actionRelationBinding{field: *targetRelation, entity: targetEntity, handle: "subject/target", owner: "target"}
+		}
+		for _, leaf := range value.leaves {
+			if leaf.relation == nil {
+				continue
+			}
+			if _, exists := relations[leaf.relation.ID]; !exists {
+				relations[leaf.relation.ID] = actionRelationBinding{
+					field: *leaf.relation, entity: leaf.entity, handle: "subject/value/" + leaf.relation.Name, owner: "value",
+				}
+			}
+		}
+	}
+	for _, precondition := range action.Preconditions {
+		value, err := b.resolveChangeValueExpression(entity, precondition.Predicate)
+		if err != nil {
+			return actionBindingPlan{}, fmt.Errorf("build Acceptance Facts: precondition %s: %w", precondition.ID, err)
+		}
+		plan.preconditions = append(plan.preconditions, resolvedActionPrecondition{precondition: precondition, value: value})
+		for _, leaf := range value.leaves {
+			if leaf.relation == nil {
+				continue
+			}
+			if _, exists := relations[leaf.relation.ID]; !exists {
+				relations[leaf.relation.ID] = actionRelationBinding{
+					field: *leaf.relation, entity: leaf.entity, handle: "subject/precondition/" + leaf.relation.Name, owner: "precondition",
+				}
+			}
+		}
+	}
+	for _, relation := range relations {
+		plan.relations = append(plan.relations, relation)
+	}
+	sort.Slice(plan.relations, func(i, j int) bool { return plan.relations[i].field.ID < plan.relations[j].field.ID })
+	return plan, nil
+}
+
+func (plan actionBindingPlan) setup(source string, unavailable SemanticID) *FactSetup {
+	setup := &FactSetup{Subjects: []FactSubjectSetup{{
+		Handle: "subject/action", Identity: plan.entity.ID,
+		State: &IRStateValueRef{State: plan.entity.State.ID, Value: source},
+	}}}
+	for _, relation := range plan.relations {
+		item := FactRelationSetup{Source: "subject/action", Field: relation.field.ID, Target: relation.handle, Condition: "resolved"}
+		if relation.field.ID == unavailable {
+			item.Target = ""
+			if relation.owner == "target" {
+				item.Condition = "target-unavailable"
+			} else {
+				item.Condition = "value-unavailable"
+			}
+		} else {
+			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: relation.handle, Identity: relation.entity.ID})
+		}
+		setup.Relations = append(setup.Relations, item)
+	}
+	canonicalizeFactSetup(setup)
+	return setup
+}
+
+func (plan actionBindingPlan) handleForExpression(expression IRExpression) string {
+	if len(expression.RelationPath) == 0 {
+		return "subject/action"
+	}
+	for _, relation := range plan.relations {
+		if relation.field.ID == expression.RelationPath[0] {
+			return relation.handle
+		}
+	}
+	return ""
+}
+
+func (plan actionBindingPlan) expressionBindings(value resolvedChangeValue) []FactExpressionBinding {
+	bindings := make([]FactExpressionBinding, 0, len(value.leaves))
+	for _, leaf := range value.leaves {
+		bindings = append(bindings, FactExpressionBinding{Node: leaf.expression.ID, Subject: plan.handleForExpression(leaf.expression)})
+	}
+	return bindings
+}
+
+func (plan actionBindingPlan) preconditionInputs(result bool) []FactActionPreconditionInput {
+	inputs := make([]FactActionPreconditionInput, 0, len(plan.preconditions))
+	for _, precondition := range plan.preconditions {
+		inputs = append(inputs, FactActionPreconditionInput{
+			Precondition: precondition.precondition.ID, Subject: "subject/action",
+			Expression: cloneIRExpression(precondition.precondition.Predicate),
+			Bindings:   plan.expressionBindings(precondition.value), Evaluation: "pre-state", Result: result,
+		})
+	}
+	return inputs
+}
+
+func (plan actionBindingPlan) sourceNodes() []SemanticID {
+	sources := []SemanticID{plan.entity.ID, plan.entity.State.ID, plan.action.ID}
+	for _, relation := range plan.relations {
+		sources = append(sources, relation.field.ID, relation.entity.ID)
+	}
+	for _, precondition := range plan.preconditions {
+		sources = append(sources, precondition.precondition.ID)
+		sources = append(sources, expressionSemanticIDs(precondition.precondition.Predicate)...)
+		for _, leaf := range precondition.value.leaves {
+			sources = append(sources, leaf.entity.ID)
+		}
+	}
+	return canonicalSemanticIDs(sources)
+}
+
+func (plan actionBindingPlan) preconditionOnlyRelations() []actionRelationBinding {
+	var result []actionRelationBinding
+	for _, relation := range plan.relations {
+		if relation.owner == "precondition" {
+			result = append(result, relation)
+		}
+	}
+	return result
 }
 
 type changeValueLeaf struct {
@@ -284,11 +566,12 @@ func changeAcceptedFact(
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
+	plan actionBindingPlan,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "")
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "", plan)
 	return AcceptanceFact{
 		ID: factID(subject, "changes", "accepted", "from", source), Kind: kind + "accepted", Subject: subject,
-		Setup: input.setup, Input: &FactInput{Action: input.action, Invariants: invariantInputs(targetEntity, input.targetHandle, "")},
+		Setup: input.setup, Input: &FactInput{Action: input.action, Preconditions: plan.preconditionInputs(true), Invariants: invariantInputs(targetEntity, input.targetHandle, "")},
 		Expected: FactExpectation{
 			Outcome: "accepted", Atomicity: "all-changes-committed", AppliedMutations: 2,
 			Enforcement: "authoritative", Subjects: changeCommittedSubjects(entity, targetField, value, action, input.targetHandle, input.bindings),
@@ -306,8 +589,9 @@ func changeInvariantRejectedFact(
 	violated IRInvariant,
 	ref *IRActionRef,
 	source string,
+	plan actionBindingPlan,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "")
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, relationField, value, action, change, ref, source, "", plan)
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"invalid"}
@@ -315,7 +599,7 @@ func changeInvariantRejectedFact(
 	return AcceptanceFact{
 		ID:   factID(subject, "changes", "invariant", string(violated.ID), "rejected", "from", source),
 		Kind: kind + "invariant-rejected", Subject: subject,
-		Setup: input.setup, Input: &FactInput{Action: input.action, Invariants: invariantInputs(targetEntity, input.targetHandle, violated.ID)},
+		Setup: input.setup, Input: &FactInput{Action: input.action, Preconditions: plan.preconditionInputs(true), Invariants: invariantInputs(targetEntity, input.targetHandle, violated.ID)},
 		Expected: FactExpectation{
 			Outcome: "rejected", Reason: "invariant-violated", Violated: violated.ID, Feedback: feedback,
 			Atomicity: "no-changes-committed", AppliedMutations: 0, Enforcement: "authoritative",
@@ -334,8 +618,9 @@ func changeValueUnavailableFact(
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
+	plan actionBindingPlan,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, targetRelation, value, action, change, ref, source, unavailable.relation.ID)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, targetRelation, value, action, change, ref, source, unavailable.relation.ID, plan)
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"failure"}
@@ -360,8 +645,9 @@ func changeTargetUnavailableFact(
 	change IRActionChange,
 	ref *IRActionRef,
 	source string,
+	plan actionBindingPlan,
 ) AcceptanceFact {
-	subject, kind, input, sources := changeFactBase(entity, targetEntity, &relation, value, action, change, ref, source, relation.ID)
+	subject, kind, input, sources := changeFactBase(entity, targetEntity, &relation, value, action, change, ref, source, relation.ID, plan)
 	var feedback []string
 	if ref != nil {
 		feedback = []string{"failure"}
@@ -395,66 +681,27 @@ func changeFactBase(
 	ref *IRActionRef,
 	source string,
 	unavailableRelation SemanticID,
+	plan actionBindingPlan,
 ) (SemanticID, string, changeFactInput, []SemanticID) {
 	subject := action.ID
 	kind := "changes-"
 	actionInput := &FactActionInput{Action: action.ID, Subject: "subject/action", Dispatches: 1}
 	sources := []SemanticID{entity.ID, entity.State.ID, action.ID, change.ID, change.Target.ID, change.Target.Field}
 	sources = append(sources, expressionSemanticIDs(value.expression)...)
-	setup := &FactSetup{Subjects: []FactSubjectSetup{{
-		Handle: "subject/action", Identity: entity.ID, State: &IRStateValueRef{State: entity.State.ID, Value: source},
-	}}}
+	setup := plan.setup(source, unavailableRelation)
 	targetHandle := "subject/action"
 	if targetRelation != nil {
 		targetHandle = "subject/target"
-		relationSetup := FactRelationSetup{Source: "subject/action", Field: targetRelation.ID, Target: "subject/target", Condition: "resolved"}
-		if unavailableRelation == targetRelation.ID {
-			relationSetup.Target = ""
-			relationSetup.Condition = "target-unavailable"
-		} else {
-			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: "subject/target", Identity: targetEntity.ID})
-		}
-		setup.Relations = append(setup.Relations, relationSetup)
 		sources = append(sources, targetRelation.ID, targetEntity.ID)
 	}
-	for _, relation := range distinctChangeValueRelations(value.leaves, targetRelation) {
-		handle := "subject/value/" + relation.relation.Name
-		relationSetup := FactRelationSetup{Source: "subject/action", Field: relation.relation.ID, Target: handle, Condition: "resolved"}
-		if unavailableRelation == relation.relation.ID {
-			relationSetup.Target = ""
-			relationSetup.Condition = "value-unavailable"
-		} else {
-			setup.Subjects = append(setup.Subjects, FactSubjectSetup{Handle: handle, Identity: relation.entity.ID})
-		}
-		setup.Relations = append(setup.Relations, relationSetup)
-		sources = append(sources, relation.relation.ID, relation.entity.ID)
-	}
-	bindings := make([]FactExpressionBinding, 0, len(value.leaves))
-	for _, leaf := range value.leaves {
-		handle := "subject/action"
-		if leaf.relation != nil {
-			if targetRelation != nil && leaf.relation.ID == targetRelation.ID {
-				handle = targetHandle
-			} else {
-				handle = "subject/value/" + leaf.relation.Name
-			}
-		}
-		bindings = append(bindings, FactExpressionBinding{Node: leaf.expression.ID, Subject: handle})
-		sources = append(sources, leaf.entity.ID)
-	}
+	bindings := plan.expressionBindings(value)
+	sources = append(sources, plan.sourceNodes()...)
 	if ref != nil {
 		subject = ref.ID
 		kind = "action-changes-"
 		actionInput.Reference = ref.ID
 		sources = append(sources, ref.ID)
 	}
-	sort.Slice(setup.Subjects, func(i, j int) bool { return setup.Subjects[i].Handle < setup.Subjects[j].Handle })
-	sort.Slice(setup.Relations, func(i, j int) bool {
-		if setup.Relations[i].Source != setup.Relations[j].Source {
-			return setup.Relations[i].Source < setup.Relations[j].Source
-		}
-		return setup.Relations[i].Field < setup.Relations[j].Field
-	})
 	return subject, kind, changeFactInput{setup: setup, action: actionInput, targetHandle: targetHandle, bindings: bindings}, canonicalSemanticIDs(sources)
 }
 

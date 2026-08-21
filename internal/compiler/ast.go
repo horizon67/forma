@@ -100,14 +100,21 @@ type BinaryExpression struct {
 }
 
 type ActionDecl struct {
-	Entity      Name
-	Name        Name
-	Sources     []Name
-	Destination Name
-	Mods        []ActionModifier
-	HasBody     bool
-	Changes     []*ChangesDecl
-	Span        Span
+	Entity        Name
+	Name          Name
+	Sources       []Name
+	Destination   Name
+	Mods          []ActionModifier
+	HasBody       bool
+	Preconditions []*PreconditionDecl
+	Changes       []*ChangesDecl
+	Span          Span
+}
+
+type PreconditionDecl struct {
+	Name      Name
+	Predicate *Expression
+	Span      Span
 }
 
 type ChangesDecl struct {
