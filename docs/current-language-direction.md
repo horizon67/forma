@@ -193,10 +193,11 @@ Acceptance Facts `v0alpha10`、Outcome Projection `v0alpha5`、Review Requiremen
 配布baselineにする。
 
 [`roadmap.md`](roadmap.md)のFastest alpha cutに従い、次はlanguage feature追加ではなく、alpha profile、CLI version、install／release、
-quickstart、external AI handoff、clean-environment E2E、security boundary、fresh repository dogfoodを進める。multiple assignment、collection、
-record creation、Derived Value、Occurrence、Effect、`forma fmt`／`forma explain`完成はalpha blockerにしない。
+公開language docs、Codex CLIを使う最小`forma generate` reference runner、clean-environment E2E、security boundary、fresh repository dogfoodを進める。
+compiler-only commandの決定性は維持し、AI認証とrepository mutationは`generate`へ閉じる。multiple assignment、collection、record creation、
+Derived Value、Occurrence、Effect、`forma fmt`／`forma explain`完成はalpha blockerにしない。
 
-目標は`v0.1.0-alpha.1`を8–12 working days、review込み2–3 calendar weeksで公開することとする。alphaはlanguage完成宣言ではなく、
+目標は`v0.1.0-alpha.1`を11–16 working days、review込み3 calendar weeks前後で公開することとする。alphaはlanguage完成宣言ではなく、
 実application利用からpost-alpha P3の優先順位を決めるためのdistribution cutである。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には

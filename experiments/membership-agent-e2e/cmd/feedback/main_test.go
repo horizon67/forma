@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -577,6 +579,79 @@ func TestRetryBaselineProtectsEveryVerificationInput(t *testing.T) {
 			t.Errorf("the retry baseline protects implementation file %s", path)
 		}
 	}
+}
+
+func TestRetryBaselineReasonCountsMatchTheExperimentDocumentation(t *testing.T) {
+	root := formaRoot(t)
+	config := retryBaselineConfig(root)
+	entries, err := retryintegrity.Derive(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int{}
+	for _, entry := range entries {
+		got[entry.Reason]++
+	}
+	readmePath := filepath.Join(root, "experiments", "membership-repair-integrity", "README.md")
+	content, err := os.ReadFile(readmePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	documented, total := parseReasonTable(t, string(content))
+	if total != len(entries) {
+		t.Fatalf("%s says %d paths, derived %d; update the README header", readmePath, total, len(entries))
+	}
+	if !reflect.DeepEqual(documented, got) {
+		t.Fatalf("%s reason counts = %#v, derived %#v; update the README table", readmePath, documented, got)
+	}
+	automatedPath := filepath.Join(root, "experiments", "membership-automated-repair-loop", "README.md")
+	automated, err := os.ReadFile(automatedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantBoundary := "current baselineは" + strconv.Itoa(len(entries)) + " pathsと" + strconv.Itoa(len(config.RuleDirs)) + " directory listings"
+	if !strings.Contains(string(automated), wantBoundary) {
+		t.Fatalf("%s must record %q", automatedPath, wantBoundary)
+	}
+}
+
+func parseReasonTable(t *testing.T, content string) (map[string]int, int) {
+	t.Helper()
+	const marker = "固定するもの（"
+	start := strings.Index(content, marker)
+	if start < 0 {
+		t.Fatal("integrity README has no retry baseline boundary section")
+	}
+	section := content[start:]
+	if end := strings.Index(section, "\n\nさらに、"); end >= 0 {
+		section = section[:end]
+	}
+	header := strings.SplitN(section, "\n", 2)[0]
+	totalText, _, found := strings.Cut(strings.TrimPrefix(header, marker), " paths")
+	if !found {
+		t.Fatalf("invalid retry baseline header %q", header)
+	}
+	total, err := strconv.Atoi(totalText)
+	if err != nil {
+		t.Fatalf("invalid retry baseline total %q: %v", totalText, err)
+	}
+	counts := map[string]int{}
+	for _, line := range strings.Split(section, "\n") {
+		if !strings.HasPrefix(line, "| `") {
+			continue
+		}
+		cells := strings.Split(line, "|")
+		if len(cells) != 5 {
+			t.Fatalf("invalid retry baseline table row %q", line)
+		}
+		reason := strings.Trim(strings.TrimSpace(cells[1]), "`")
+		count, err := strconv.Atoi(strings.TrimSpace(cells[3]))
+		if err != nil {
+			t.Fatalf("invalid retry baseline count in %q: %v", line, err)
+		}
+		counts[reason] = count
+	}
+	return counts, total
 }
 
 func TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool(t *testing.T) {

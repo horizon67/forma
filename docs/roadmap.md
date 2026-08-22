@@ -622,24 +622,19 @@ current subsetをalphaとして先に使い、実applicationでどのgapが先�
 ### 目的
 
 言語研究の完了版を作ることではなく、current reference front-endを第三者がclean environmentへ導入し、Forma sourceから
-Generation Requestを作り、外部AI coding agentが通常のrepositoryへ実装し、そのrepository-native feedbackを
-`forma verify`で検査する一周を再現可能にする。
+Generation Requestを作り、同梱する最小reference runnerがCodex CLIを通じて通常のrepositoryへ実装し、その
+repository-native feedbackを`forma verify`で検査する一周を再現可能にする。
 
 alphaは「現在のlanguageが完成した」という宣言ではない。実利用から次のsemantic needとUX gapを得るためのdistribution cutである。
 
 ### freezeするexecutable baseline
 
 alphaのlanguage／artifact baselineは、Action Precondition sliceを実装したcurrent `main`とする。
+schema文字列を含むcurrent／historical artifact契約の正本は
+[alpha profileのArtifact baseline](alpha-language-profile.md#artifact-baseline)とし、roadmapへ複製しない。
 
-| Component | Alpha baseline |
+| Evidence | Alpha baseline |
 | --- | --- |
-| Resolved Intent | `forma/resolved-intent/v0.12` |
-| Source Map | `forma/source-map/v0.6` |
-| Acceptance Facts | `forma/acceptance-facts/v0alpha10` |
-| Outcome Projection | `forma/outcome-projection/v0alpha5` |
-| Review Requirements | `forma/review-requirements/v0alpha6` |
-| Generation Request | `forma/generation-request/v0alpha4` |
-| Generation Feedback | current `v0alpha2` feedback contract |
 | Membership evidence | 85/85 Facts、3 policies、3 Reviews |
 | Order evidence | 280/280 Facts、52 mapped tests、6 Reviews |
 
@@ -653,14 +648,16 @@ alpha準備中はsecurity／correctness bug以外のlanguage featureとschema sh
 - `forma request`: Source Map、Acceptance Facts、Review Requirements、Implementation Policy、incremental diffを含むGeneration Request
 - `forma project navigation|outcomes|states|flow`: read-onlyな人間向けprojection
 - `forma verify`: request／feedback／repository evidence、policy coverage、human Review Requirementsの検査
+- `forma generate`: Codex CLIをreference agentとして起動し、request handoffからrepository変更、feedback、verifyまでを束ねる最小runner
 - admin CRUD、Identity／membership、entry／surface-only transition、state transition
 - experimental self-only Invariant、1-assignment Changes、required relation value、exact binary numeric `+`、1 named Action Precondition
 - existing admin、membership、order examplesとgolden／negative tests
-- AI agentはForma core外で実装主体になる、という責任境界
+- compiler semanticsとAI実行を分離し、`check`／`resolve`／`request`／`project`／`verify`はnetworkやLLMへ依存しない責任境界
 
-alpha binaryがAI modelを内蔵・呼び出すことは要件にしない。quickstartは`forma request`のartifactをCodex等の外部agentへ渡し、
-agentがrepository-native code／testsとGeneration Feedbackを返す手順を示す。framework別generatorや汎用feedback adapterを
-Forma coreへ追加しない。
+`forma generate`はlanguage semanticsをLLMへ委ねず、決定的に生成済みのGeneration RequestをCodex CLIへ渡すだけの
+orchestration layerとする。alphaではCodex CLIだけを公式reference pathとし、Codexの保存済みloginまたは
+`CODEX_API_KEY`を利用する。keyをForma source、Generation Request、log、repository fileへ保存せず、CLI引数でも受け取らない。
+framework別generatorや全provider共通SDK、汎用feedback adapterはForma coreへ追加しない。
 
 ### alpha後へ明示的に送るもの
 
@@ -672,17 +669,22 @@ Forma coreへ追加しない。
 - `forma fmt`、`forma explain`の完成
 - editor／LSP integration
 - schema migration／long-term compatibilityのstable guarantee
-- framework generator、target profile、built-in AI runner
+- framework generator、target profile、複数provider対応、raw Responses APIを使う独自agent loop
 
 未実装項目を黙って推測・部分受理しない。alpha profile外のsourceはdiagnosticで拒否し、known limitationsへ記載する。
 
 ### 実施package
 
+2026-08-22時点の進捗は**4/47**（A 3/6、B 0/5、C 0/15、D 1/11、E 0/5、F 0/5）。
+同日までのalpha runner design reviewで具体化したcontainmentは実装scopeとして数え、proposalはここでfreezeする。以後は実装で見つかった
+security／correctness blockerだけをcontractへ戻し、pre-implementation reviewだけでscopeを増やさない。
+
 #### A. Alpha profileとversion boundary（1–2 working days）
 
-- [ ] `docs/alpha-language-profile.md`を追加し、受理するsyntax／semantics、experimental部分、known limitationsを列挙する。
+- [x] `docs/README.md`を公開document indexとし、learn／reference／integration／projectの所有関係を固定する。
+- [x] `docs/alpha-language-profile.md`を追加し、受理するsyntax／semantics、experimental部分、known limitationsを列挙する。
 - [ ] normative v0全体の完成を装わず、reference front-endとの差分をprofileから辿れるようにする。
-- [ ] binary／CLIへ`v0.1.0-alpha.1`候補のversion表示を追加する。
+- [x] binary／CLIへtagまたはrelease build metadataを表示する`forma version`／`forma --version`を追加する。
 - [ ] artifact version mismatch、unsupported intent、unknown commandのexit codeとmessageを固定する。
 - [ ] experiment専用orchestrator／generatorをalpha distributionに含めないことを明記する。
 
@@ -694,23 +696,59 @@ Forma coreへ追加しない。
 - [ ] tag、binary version、README quickstartのversionが一致しなければreleaseを止める。
 - [ ] rollback可能なpre-release tagとして公開し、stable互換性を約束しないことを表示する。
 
-#### C. End-user quickstart（2 working days）
+#### C. Codex reference runner（8–12 working days）
 
+2026-08-22 implementation checkpoint: `internal/agentrunner`にshellを介さないinjectable command runnerとrepository-only
+preflightを追加した。後者はtargetとcontaining Git worktreeをcanonical化し、worktree directory descriptorへ
+close-on-execのnon-blocking exclusive lockをdirty-tree検査より先に取り、HEAD／porcelain statusを保持する。
+same worktree、nested target、symlink alias、`--allow-dirty`経由の競合、distinct worktree、handled close、process kill、
+fd inheritanceを実process testで固定した。まだ`forma generate`へ接続しておらず、trusted run root／Codex auth／invocation／
+feedback／verificationも未実装なので、下の完了数は増やさない。最初のcode review後、Git evidence commandの環境を
+package所有の固定allowlistへ変更し、`GIT_*`注入によるdirty gate迂回を実Git testで固定した。command runnerはabsolute cwd、
+nil環境をemptyとして扱うこと、既定1秒のpipe drain bound、timeout時のbounded diagnostic保持も固定した。full package audit後、
+dirty gateをGit-visibleな利用者作業の保護と位置づけ直し、hidden index bitとunsafe ownershipを専用diagnosticで拒否した。
+exit codeに依存しないpipe cutoff記録とoptional dedicated process-group teardownも同じrunner境界へ実装済み。次のsliceでCLI
+option parsingとtrusted run root preflightへ接続する。
+
+- [ ] `forma generate --repository DIR <source...>`のcontractを固定し、Codex以外を自動選択しない。qualified versionとの差は既定で拒否し、alpha dogfoodだけ`--allow-unqualified-codex`で明示続行・画面／evidence分離を認め、release gateでは拒否する。
+- [ ] `codex exec --ephemeral --ignore-user-config --ignore-rules --sandbox workspace-write`をabsolute executable、target repository cwd、追加writable directoryなし、bounded attemptで起動する。targetからGit rootまでの`.codex` entryをpreflightで拒否するが、target外にあるexact existing user `CODEX_HOME`だけはuser stateとして除外する。API-key modeで明示homeが無い場合はこの例外を持たない。path-keyed untrusted overrideはCodexが採用したと主張しないdefense-in-depthに限定し、ordinary hooksとsandbox commandのnetworkも明示的に無効化する。
+- [ ] Generation Requestはstdinまたはrepository外の一時fileから渡し、credentialとtrusted verifier pathをtargetへ書かない。
+- [ ] local loginと`CODEX_API_KEY`の両経路、credential欠落、Codex未install、agent非0終了を明示的にdiagnoseする。saved loginは既存`CODEX_HOME`を要求し、明示homeの無いAPI-key modeはtrusted run root配下へcredential-bearingなprivate一時homeを排他作成して終了時に削除する。異常終了後はowner／marker／non-blocking run lockで非稼働を確認し、age待ちなしで次回startupに回収する。Codex processはversioned environment allowlistで起動し、resolved `CODEX_HOME`／origin／cleanup result／auth mode／`PATH`／proxy presenceをsecret値なしでevidence化し、auth modeとoriginはhome materialize後のCodex起動直前と最終画面に出す。repository shell childからは`CODEX_API_KEY`／`OPENAI_API_KEY`をargvでも明示除外し、state、proxy、credential-agent変数も除く。
+- [ ] canonical containing Git worktreeのdirectory descriptorへclose-on-execのnon-blocking exclusive advisory lockを取り、generate全体で保持する。同一worktreeへの並行runはsymlink alias／nested target／`--allow-dirty`でもpreflight exit 2とし、lock未対応filesystemもfail closedにする。その後Git repository／working tree policyを検査し、dirty treeは明示opt-inなしで拒否する。
+- [ ] agent終了後はkeyを除いた環境でrepository固有feedback commandを実行し、agentの最終messageではなく`forma verify`で成功を決める。
+- [ ] feedback commandはtarget外を既定とし、target内commandとagent作成／変更commandを別々の明示flagで許可する。
+- [ ] target、agentの全writable path、Git worktreeと交差しない単一のtrusted run rootをpreflightで確定し、run evidence、adapter copy、API-key modeの一時`CODEX_HOME`をそこに所有させる。既定はplatformのuser-state directory、`--artifacts`も同じ不変条件を満たす外部pathだけを認める。
+- [ ] Codexを専用process groupで起動・終了し、exec-capabilityをpreflight済みのtrusted run rootに、agent終了後初めてprivateな`0700` directoryを作る。検査したadapter bytesだけをそこへ排他作成してhost measurementし、`argv[0]`はcopy実path、失敗時にsource pathへfallbackなしとする。
+- [ ] usage／preflightのexit 2と、agent変更を残したreview待ちのexit 3を分離する。
+- [ ] agent-authored adapterの由来をexternal run artifactと画面へ記録し、後続runのagentから過去evidenceを書き換えられない形でmachine verify成功とhuman review待ちを視覚的に分ける。
+- [ ] Codex versionだけでなく実際に起動したabsolute executable、argv配列、project trust、network、writable path postureをrun evidenceへ記録する。alphaのpersistent evidenceは自動削除せず、無期限／手動削除を公開contractにする。
+- [ ] releaseが受理するCodex CLI versionを1つにpinし、同じuntrusted postureの使い捨てGit repositoryでfile editとharmless command executionが成功するintegration testをrelease gateにする。version変更時は再実測し、未検証versionは既定拒否、明示override runはrelease evidenceから拒否する。
+- [ ] alpha.1の`generate`はfull-requestだけとし、incremental `generate`をalpha.2へ送る（incremental `request`／`verify`は維持）。
+- [ ] runnerを無効化してもcompiler／artifact schemaの結果が変わらないことをtestで固定する。
+
+#### D. End-user documentationとquickstart（2–3 working days）
+
+- [ ] `docs/install.md`へsource install、release binary、PATH、upgrade／uninstall、`forma version` smoke testを書く。
+- [ ] `docs/ai-integration.md`へCodex install／login、`CODEX_API_KEY`、secret boundary、費用・network・timeoutの責任を書く。
+- [ ] `docs/language-guide.md`でalpha syntaxを例から学べるようにし、`docs/alpha-language-profile.md`を実装範囲の正本にする。
+- [ ] `docs/cli.md`へ全command、exit code、生成artifact、filesystem／process mutationの有無、既定／`--artifacts` run root、無期限／手動削除の保持契約を書く。
+- [x] `docs/language-reference.md`を公開仕様の入口とし、alpha contract、design draft v0、artifact schemaを混同しない。
+- [ ] GitHub Pagesはこれらversioned Markdownのprojectionとして作れるようにし、siteだけに規範情報を置かない。
 - [ ] 最小だがtoy CRUDだけではない`alpha-quickstart.forma`を用意する。
-- [ ] `check -> project -> request -> external AI implementation -> repository tests -> feedback -> verify`を一つの手順にする。
+- [ ] `check -> project -> generate(Codex) -> repository tests -> feedback -> verify`を一つの手順にする。
 - [ ] AIへ渡すinstruction templateと、requestを弱めない／target testを直接注入しない規則を提供する。
-- [ ] target repository側のfeedback command／coverage mappingのreference exampleを1つ提供するが、core protocolへframeworkを固定しない。
+- [ ] target repository側のfeedback command／coverage mappingのreference exampleを1つ提供するが、core protocolへframeworkを固定しない。exampleはrepository resourceをtarget cwdから解決し、copy実pathである`argv[0]`、`$0`、`BASH_SOURCE`の位置に依存しない。
 - [ ] 実行結果として何がForma保証、機械test、human Review Requirementなのかを画面出力と文書で区別する。
 
-#### D. Reliabilityとsecurity boundary（2–3 working days）
+#### E. Reliabilityとsecurity boundary（2–3 working days）
 
 - [ ] temporary clean environmentからinstallし、admin／membership／order sourceをcheck／resolve／request／projectできるtestを作る。
 - [ ] requestとprojectionのdeterminism、Source Map coverage、schema validator、historical request codecをrelease gateで再確認する。
-- [ ] `forma`本体がrepository commandやAI processを自動実行しないcurrent境界をsecurity noteへ記録する。
-- [ ] secret／credential valueをGeneration Requestへ含めないこと、repository scan対象、symlink／path boundaryをreviewする。
+- [ ] compiler-only commandはrepository commandやAI processを起動せず、`generate`だけが明示的に外部processを起動する境界をsecurity noteへ記録する。
+- [ ] secret／credential valueをGeneration Requestへ含めないこと、child processのenvironment、repository scan対象、symlink／path boundaryをreviewする。
 - [ ] known limitations、data lossを起こし得るunsupported workflow、untrusted repository実行責任を明記する。
 
-#### E. External dogfoodとrelease（1–2 working days + review）
+#### F. External dogfoodとrelease（1–2 working days + review）
 
 - [ ] repository内の既存experimentを手順の成功証明として流用せず、fresh target repositoryでquickstartを一周する。
 - [ ] 少なくとも1回、別task／clean contextのcoding agentへ文書だけを渡し、不足した暗黙知を記録・修正する。
@@ -723,24 +761,30 @@ Forma coreへ追加しない。
 ```text
 scope/profile freeze
   -> CLI version + install/release path
-  -> quickstart + external-agent handoff
+  -> Codex reference runner
+  -> public language docs + install/AI quickstart
   -> clean-environment reliability/security gate
   -> fresh repository dogfood
   -> v0.1.0-alpha.1 pre-release
 ```
 
-集中して進める場合は**8–12 working days**、これまでと同じ外部review roundを含めて**2–3 calendar weeks**を目安とする。
-新しいlanguage featureを途中でalpha blockerへ戻すとこの見積りは無効になる。multiple assignmentを含める場合は別に実装／E2E／reviewが
-必要なため、alpha cutを少なくとも1 review cycle後ろへ動かす。
+2026-08-22までに確定したcontainment、42件超のrunner negative test、injectable command-runner harnessを含め、ここから集中して
+**16–24 working days**、これまでと同じ外部review roundを含めて**4–6 calendar weeks**を目安とする。うちCだけで
+**8–12 working days**を見込む。version qualification、prefix別cleanup、exec probe、external evidenceはhost executionの
+安全境界なのでalpha.2へ送らず、この見積りへ含める。
+
+新しいlanguage featureを途中でalpha blockerへ戻すとこの見積りは再び無効になる。multiple assignmentを含める場合は別に
+実装／E2E／reviewが必要なため、alpha cutを少なくとも1 review cycle後ろへ動かす。
 
 ### Alpha exit criteria
 
 - cleanなmacOS／Linuxでversioned binaryをinstallできる。
 - documented commandだけでexampleをcheck／resolve／project／requestでき、outputがbyte-deterministicである。
-- external AI agentがfresh targetへ通常のapplication codeとrepository-native testsを実装できる。
+- documentedなCodex認証だけを追加設定し、`forma generate`がfresh targetへ通常のapplication codeとrepository-native testsを実装できる。
 - feedback commandから得たartifactを`forma verify`がaccepted／blockedで正しく判定する。
 - unsupported syntax、schema mismatch、missing evidenceを無言で受理しない。
 - alpha profile、known limitations、security boundary、human reviewの残りが公開文書から分かる。
+- install、AI認証、language guide、alpha reference、CLI referenceをrepository内のversioned Markdownから辿れる。
 - release gateがroot tests、vet、race、format、examples、clean install E2Eを通す。
 - `v0.1.0-alpha.1` tag、checksum付きbinary、quickstart、再現evidenceが同じcommitを指す。
 

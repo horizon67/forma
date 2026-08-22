@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（82 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（83 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ hashは一切読まない。
 | `coverage-map` | `coverage.go` | 1 |
 | `referenced-test` | coverage mapが参照する全test file | 7 |
 | `verification-build-input` | 次runのtrusted toolsをbuildする`go.mod` / `go.sum` | 2 |
-| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 64 |
+| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file | 69 |
 
 さらに、`verification-rule`の8 directoryは**file一覧そのもの**をsnapshotへ記録する。
 byte比較だけでは、snapshot後に追加されたfileが見えないためである（A4）。
@@ -342,8 +342,13 @@ feedbackを残せば、`forma verify`はそのfileを読んで85/85を報告し�
 
 ## 記録したhash
 
+retry baselineのSHA-256は、保護したverification inputの内容そのものであり、
+compilerの通常の変更で必ず動く。そのためREADMEには固定せず、このworking treeの値が
+必要なときは`-snapshot-out`でrepository外へ生成して計算する。path件数、
+directory件数、reason別内訳は引き続き本文とtestで同期する。
+以下の不変なfault、weakening、feedback artifactのhashは実験証拠として固定する。
+
 ```text
-retry-baseline.json（このworking tree、repository外）  9c2c8605053e236b3452ec78d04af7d29fae201fb3e0fca910a550d28a3d5198
 fault.patch                          36cc66aa3e6ddf8684e63c09a84ba35f8f65fd90e6c93fb45892e972622647cf
 weakening-assertion.patch            0126cc9c7142616e1b46b8a502513f90ba2ffac8aed94ddb2fb7667d6e735ec4
 weakening-coverage.patch             d26940cb7904dba18a488bf3bafda4465774c4de7a7f31812c50e15f80b2565d

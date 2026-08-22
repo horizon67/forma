@@ -26,6 +26,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if args[0] == "version" || args[0] == "--version" {
+		if len(args) != 1 {
+			fmt.Fprintf(stderr, "forma: %s does not accept arguments\n", args[0])
+			return 2
+		}
+		fmt.Fprintf(stdout, "forma %s\n", currentVersion())
+		return 0
+	}
 	command := args[0]
 	if command == "verify" {
 		return runVerify(args[1:], stdout, stderr)
@@ -434,6 +442,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "Forma compiler")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Usage:")
+	fmt.Fprintln(writer, "  forma version")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project navigation <file.forma | directory>...")
@@ -444,6 +453,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
+	fmt.Fprintln(writer, "  version  print the Forma binary version")
 	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
 	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
 	fmt.Fprintln(writer, "  project  emit a deterministic read-only view of resolved application meaning")

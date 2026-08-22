@@ -5,12 +5,188 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
+	"github.com/horizon67/forma/internal/implementationpolicy"
 )
+
+func TestVersionCommand(t *testing.T) {
+	previous := versionOverride
+	versionOverride = "v0.1.0-alpha.1"
+	t.Cleanup(func() { versionOverride = previous })
+
+	for _, command := range []string{"version", "--version"} {
+		t.Run(command, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if exitCode := run([]string{command}, &stdout, &stderr); exitCode != 0 {
+				t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+			}
+			if got, want := stdout.String(), "forma v0.1.0-alpha.1\n"; got != want {
+				t.Fatalf("stdout = %q, want %q", got, want)
+			}
+			if stderr.Len() != 0 {
+				t.Fatalf("stderr = %q", stderr.String())
+			}
+		})
+	}
+}
+
+func TestVersionCommandRejectsArguments(t *testing.T) {
+	for _, command := range []string{"version", "--version"} {
+		t.Run(command, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			if exitCode := run([]string{command, "unexpected"}, &stdout, &stderr); exitCode != 2 {
+				t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+			}
+			if got, want := stderr.String(), "forma: "+command+" does not accept arguments\n"; got != want {
+				t.Fatalf("stderr = %q, want %q", got, want)
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q", stdout.String())
+			}
+		})
+	}
+}
+
+func TestVersionFromBuildInfoDistinguishesReleasesAndSourceBuilds(t *testing.T) {
+	tests := []struct {
+		name     string
+		version  string
+		settings []debug.BuildSetting
+		want     string
+	}{
+		{name: "tagged module", version: "v0.1.0-alpha.1", want: "v0.1.0-alpha.1"},
+		{name: "development", version: "(devel)", want: "devel"},
+		{
+			name:    "proxy-installed pseudo version",
+			version: "v0.0.0-20260821225903-7c507abd0003",
+			want:    "devel 7c507ab",
+		},
+		{
+			name:    "clean pseudo version",
+			version: "v0.0.0-20260821225903-7c507abd0003",
+			settings: []debug.BuildSetting{
+				{Key: "vcs.revision", Value: "7c507abd0003deadbeef"},
+			},
+			want: "devel 7c507ab",
+		},
+		{
+			name:    "pseudo version after a tag",
+			version: "v0.1.1-0.20260821225903-7c507abd0003",
+			settings: []debug.BuildSetting{
+				{Key: "vcs.revision", Value: "7c507abd0003deadbeef"},
+			},
+			want: "devel 7c507ab",
+		},
+		{
+			name:    "dirty tagged checkout",
+			version: "v0.1.0-alpha.1",
+			settings: []debug.BuildSetting{
+				{Key: "vcs.revision", Value: "7c507abd0003deadbeef"},
+				{Key: "vcs.modified", Value: "true"},
+			},
+			want: "devel 7c507ab dirty",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := versionFromBuildInfo(test.version, test.settings); got != test.want {
+				t.Fatalf("versionFromBuildInfo() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestVersionCommandWithoutOverrideDoesNotReportAPseudoVersion(t *testing.T) {
+	previous := versionOverride
+	versionOverride = ""
+	t.Cleanup(func() { versionOverride = previous })
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := run([]string{"version"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if output := stdout.String(); !strings.HasPrefix(output, "forma devel") || strings.Contains(output, "v0.0.0-") {
+		t.Fatalf("source build reported an ambiguous version: %q", output)
+	}
+}
+
+func TestAlphaLanguageProfileArtifactVersionsMatchCode(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "docs", "alpha-language-profile.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const heading = "## Artifact baseline"
+	start := strings.Index(string(content), heading)
+	if start < 0 {
+		t.Fatal("alpha profile has no Artifact baseline section")
+	}
+	section := string(content[start+len(heading):])
+	var found bool
+	section, _, found = strings.Cut(section, "## Supported core declarations")
+	if !found {
+		t.Fatal("alpha profile Artifact baseline section has no closing heading")
+	}
+	currentSection, historicalSection, found := strings.Cut(section, "### Historical input compatibility")
+	if !found {
+		t.Fatal("alpha profile has no Historical input compatibility table")
+	}
+	got := map[string]string{}
+	for _, line := range strings.Split(currentSection, "\n") {
+		if !strings.HasPrefix(line, "| ") || strings.HasPrefix(line, "| Artifact ") || strings.HasPrefix(line, "| --- ") {
+			continue
+		}
+		cells := strings.Split(line, "|")
+		if len(cells) != 4 {
+			t.Fatalf("invalid artifact table row %q", line)
+		}
+		got[strings.TrimSpace(cells[1])] = strings.Trim(strings.TrimSpace(cells[2]), "`")
+	}
+	want := map[string]string{
+		"Resolved Intent":                compiler.ResolvedIntentVersion,
+		"Source Map":                     compiler.SourceMapVersion,
+		"Acceptance Facts":               compiler.AcceptanceFactsVersion,
+		"Navigation Projection":          compiler.NavigationProjectionVersion,
+		"Outcome Projection":             compiler.OutcomeProjectionVersion,
+		"Domain State Projection":        compiler.DomainStateProjectionVersion,
+		"Flow Projection":                compiler.FlowProjectionVersion,
+		"Review Requirements":            compiler.ReviewRequirementsVersion,
+		"Implementation Policy Manifest": implementationpolicy.Schema,
+		"Generation Request":             agentrequest.RequestSchema,
+		"Generation Feedback":            agentrequest.FeedbackSchema,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("alpha artifact table = %#v, want %#v", got, want)
+	}
+
+	historical := map[string]string{}
+	for _, line := range strings.Split(historicalSection, "\n") {
+		if !strings.HasPrefix(line, "| ") || strings.HasPrefix(line, "| Input position ") || strings.HasPrefix(line, "| --- ") {
+			continue
+		}
+		cells := strings.Split(line, "|")
+		if len(cells) != 5 {
+			t.Fatalf("invalid historical compatibility row %q", line)
+		}
+		historical[strings.TrimSpace(cells[1])] = strings.Trim(strings.TrimSpace(cells[2]), "`")
+	}
+	wantHistorical := map[string]string{
+		"Generation Request (historical full)":        agentrequest.LegacyRequestSchema,
+		"Generation Request (historical incremental)": agentrequest.HistoricalIncrementalRequestSchema,
+		"Generation Feedback (legacy pair)":           agentrequest.LegacyFeedbackSchema,
+		"Resolved Intent (historical request)":        agentrequest.HistoricalResolvedIntentVersion,
+		"Acceptance Facts (historical request)":       agentrequest.HistoricalAcceptanceFactsVersion,
+		"Source Map (historical request)":             agentrequest.HistoricalSourceMapVersion,
+	}
+	if !reflect.DeepEqual(historical, wantHistorical) {
+		t.Fatalf("alpha historical artifact table = %#v, want %#v", historical, wantHistorical)
+	}
+}
 
 func TestResolveCommand(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "users.forma")

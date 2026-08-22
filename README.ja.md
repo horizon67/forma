@@ -283,11 +283,16 @@ bounded Changes、required relation value、field reference 2個のexact binary 
 post-state Invariantを分離し、false時のauthoritativeな無変更拒否とconcurrent enforcementまで実測しました。
 6 Review Requirementsは人間確認待ちです。この実行可能baselineを最速`v0.1.0-alpha.1`のscopeとしてfreezeします。
 review済みのmultiple assignment設計は未実装のまま保存し、collection、record creation、Occurrence、Effectとともにpost-alphaへ送ります。
-alphaではinstall可能なCLI、external AI handoffのquickstart、clean-environment release gate、fresh repository dogfoodを優先します。
+alphaではinstall可能なCLI、公開language docs、Codex CLIを使う最小reference runner、clean-environment release gate、
+fresh repository dogfoodを優先します。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料
 
+- [ドキュメント一覧](docs/README.md)
+- [Alpha language profile](docs/alpha-language-profile.md)
+- [AI連携とcredential](docs/ai-integration.md)
+- [公開language reference](docs/language-reference.md)
 - [Forma v0仕様](docs/v0-primitives.md)
 - [Agent generation model](docs/agent-generation.md)
 - [Implementation Policy Manifest案](docs/implementation-policy-manifest-proposal.md)

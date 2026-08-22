@@ -142,7 +142,7 @@ func TestAdminAgentIncrementalGoldenRequest(t *testing.T) {
 		request.RequestedChange.UnchangedFacts != historical.RequestedChange.UnchangedFacts {
 		t.Fatal("current request changed historical admin semantics")
 	}
-	if request.RequestedChange.Baseline.SourceMapVersion != historicalSourceMapVersion ||
+	if request.RequestedChange.Baseline.SourceMapVersion != HistoricalSourceMapVersion ||
 		request.RequestedChange.Baseline.ReviewRequirementsVersion != noReviewRequirementsVersion {
 		t.Fatalf("B4 baseline versions = %#v", request.RequestedChange.Baseline)
 	}
@@ -176,7 +176,7 @@ func TestB4LineageFromAppliedHistoricalAdminToIdentity(t *testing.T) {
 	if request.Schema != RequestSchema || request.RequestedChange.Baseline.RequestSchema != HistoricalIncrementalRequestSchema {
 		t.Fatalf("B4 lineage boundary = %#v", request.RequestedChange.Baseline)
 	}
-	if request.RequestedChange.Baseline.SourceMapVersion != historicalSourceMapVersion ||
+	if request.RequestedChange.Baseline.SourceMapVersion != HistoricalSourceMapVersion ||
 		request.RequestedChange.Baseline.ReviewRequirementsVersion != noReviewRequirementsVersion {
 		t.Fatalf("B4 historical compiler versions = %#v", request.RequestedChange.Baseline)
 	}

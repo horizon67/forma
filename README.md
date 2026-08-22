@@ -337,10 +337,12 @@ The addition and Precondition slices carry the full expression trees and runtime
 remain pending. Action Precondition now separates source-state rejection,
 an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline is now frozen for the fastest `v0.1.0-alpha.1` cut. The reviewed multiple-assignment design remains unimplemented and moves,
 together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now focuses on an installable CLI,
-an external-agent quickstart, clean-environment release gates, and fresh-repository dogfood. Projection readability evaluation runs independently.
+public language documentation, a minimal Codex-backed reference runner, clean-environment release gates, and fresh-repository dogfood. Projection
+readability evaluation runs independently.
 
 ## Design documents
 
+- [Documentation index](docs/README.md)
 - [Forma v0 specification](docs/v0-primitives.md)
 - [Agent generation model](docs/agent-generation.md)
 - [Implementation Policy Manifest proposal](docs/implementation-policy-manifest-proposal.md)

@@ -92,11 +92,11 @@ page UserPage(user User) {
 			fact.Expected.Navigation.SuccessPage = compiler.SemanticID("page/" + sharedPage)
 		}
 	}
-	historical.ResolvedIntent.Version = historicalResolvedIntentVersion
-	historical.AcceptanceFacts.Version = historicalAcceptanceFactsVersion
-	historical.AcceptanceFacts.IntentVersion = historicalResolvedIntentVersion
-	historical.SourceMap.Version = historicalSourceMapVersion
-	historical.SourceMap.IntentVersion = historicalResolvedIntentVersion
+	historical.ResolvedIntent.Version = HistoricalResolvedIntentVersion
+	historical.AcceptanceFacts.Version = HistoricalAcceptanceFactsVersion
+	historical.AcceptanceFacts.IntentVersion = HistoricalResolvedIntentVersion
+	historical.SourceMap.Version = HistoricalSourceMapVersion
+	historical.SourceMap.IntentVersion = HistoricalResolvedIntentVersion
 
 	outputs, err := upgradeHistoricalCompilerOutputs(historical)
 	if err != nil {

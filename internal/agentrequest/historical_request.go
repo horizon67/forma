@@ -12,10 +12,16 @@ import (
 )
 
 const (
-	historicalResolvedIntentVersion  = "forma/resolved-intent/v0.4"
-	historicalAcceptanceFactsVersion = "forma/acceptance-facts/v0alpha1"
-	historicalSourceMapVersion       = "forma/source-map/v0.2"
-	noReviewRequirementsVersion      = "none"
+	// HistoricalResolvedIntentVersion is the only legacy Resolved Intent
+	// version accepted inside the pinned historical Generation Requests.
+	HistoricalResolvedIntentVersion = "forma/resolved-intent/v0.4"
+	// HistoricalAcceptanceFactsVersion is the only legacy Acceptance Facts
+	// version accepted inside the pinned historical Generation Requests.
+	HistoricalAcceptanceFactsVersion = "forma/acceptance-facts/v0alpha1"
+	// HistoricalSourceMapVersion is the only legacy Source Map version accepted
+	// inside the pinned historical Generation Requests.
+	HistoricalSourceMapVersion  = "forma/source-map/v0.2"
+	noReviewRequirementsVersion = "none"
 )
 
 type compilerOutputSet struct {
@@ -178,8 +184,8 @@ func emptyHistoricalChange(change RequestedChange) bool {
 func validateHistoricalIncrementalChange(request Request, outputs compilerOutputSet) error {
 	change := request.RequestedChange
 	if change.Baseline == nil || !validSHA256(change.Baseline.RequestSHA256) || change.Baseline.RequestSchema != LegacyRequestSchema ||
-		change.Baseline.ResolvedIntentVersion != historicalResolvedIntentVersion ||
-		change.Baseline.AcceptanceFactsVersion != historicalAcceptanceFactsVersion ||
+		change.Baseline.ResolvedIntentVersion != HistoricalResolvedIntentVersion ||
+		change.Baseline.AcceptanceFactsVersion != HistoricalAcceptanceFactsVersion ||
 		change.Baseline.SourceMapVersion != "" || change.Baseline.ReviewRequirementsVersion != "" {
 		return fmt.Errorf("validate historical Generation Request: invalid incremental baseline metadata")
 	}
@@ -215,10 +221,10 @@ func upgradeHistoricalCompilerOutputs(request Request) (compilerOutputSet, error
 	if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.SourceMap == nil {
 		return result, fmt.Errorf("upgrade historical Generation Request: compiler output is incomplete")
 	}
-	if request.ResolvedIntent.Version != historicalResolvedIntentVersion ||
-		request.AcceptanceFacts.Version != historicalAcceptanceFactsVersion ||
-		request.AcceptanceFacts.IntentVersion != historicalResolvedIntentVersion ||
-		request.SourceMap.Version != historicalSourceMapVersion || request.SourceMap.IntentVersion != historicalResolvedIntentVersion {
+	if request.ResolvedIntent.Version != HistoricalResolvedIntentVersion ||
+		request.AcceptanceFacts.Version != HistoricalAcceptanceFactsVersion ||
+		request.AcceptanceFacts.IntentVersion != HistoricalResolvedIntentVersion ||
+		request.SourceMap.Version != HistoricalSourceMapVersion || request.SourceMap.IntentVersion != HistoricalResolvedIntentVersion {
 		return result, fmt.Errorf("upgrade historical Generation Request: unsupported compiler output versions")
 	}
 	if len(request.ResolvedIntent.Identities) != 0 {
@@ -378,7 +384,7 @@ func reviewRequirementsVersion(request Request) string {
 func compilerVersionsForRequestSchema(schema string) (intent, facts, sourceMap, reviews string, ok bool) {
 	switch schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
-		return historicalResolvedIntentVersion, historicalAcceptanceFactsVersion, historicalSourceMapVersion, noReviewRequirementsVersion, true
+		return HistoricalResolvedIntentVersion, HistoricalAcceptanceFactsVersion, HistoricalSourceMapVersion, noReviewRequirementsVersion, true
 	case RequestSchema:
 		return compiler.ResolvedIntentVersion, compiler.AcceptanceFactsVersion, compiler.SourceMapVersion, compiler.ReviewRequirementsVersion, true
 	default:
