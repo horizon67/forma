@@ -211,7 +211,7 @@ Formaへ反映します。Formaはapplication codeのbyte-identicalな再生成�
 
 ## 現在地
 
-Formaは初期設計段階で、compilerは未releaseです。現在のGo front-endはdesign draft v0.4のgrammar、
+Formaは不安定な`v0.1.0-alpha.1`配布を準備中です。現在のGo front-endはdesign draft v0.4のgrammar、
 parser、名前解決、型検査、semantic validation、stable identity、Resolved Intent、Source Mapを部分実装し、
 管理画面flow向けの最小Acceptance Facts／Generation Request sliceも実装しています。v0外のself-only
 Invariant、bounded Changes、one-hop relation value、exact numeric addition、named Action Preconditionも実験的に含みます。
@@ -234,6 +234,18 @@ forbiddenの3経路も検証できました。
 `experiments/`配下の旧Go管理画面generatorとtarget-neutral conformance adapterは、正式architecture
 ではなく、**意味を発見するための凍結済みprototype**です。次に二つ目のframework generatorや共通
 runtime adapterを作る予定はありません。
+
+### tag済みalphaをinstallする
+
+GitHub Releasesでtagを公開後、次でinstallします。
+
+```bash
+go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
+forma version
+```
+
+macOS／Linuxのprebuilt archive、checksum、PATH、uninstallは[install guide](docs/install.md)を参照してください。
+その後、[end-to-end quickstart](docs/quickstart.md)へ進みます。
 
 ### Sourceから試す
 
@@ -301,8 +313,8 @@ review済みのmultiple assignment設計は未実装のまま保存し、collect
 alphaではversion一致済みの`forma authoring-context`と、Codexによる編集後に人のdiff reviewで停止する薄い`forma generate`を実装済みです。
 最初のfresh repository dogfoodでは通常のアプリ生成と実行まで確認済みです。そこで見つかったpage accessの欠落はcompilerで修正しました。
 同じ220-Fact requestの再dogfoodでは、Factだけではpure helperへ矮小化されたrunと、authoritative access／anonymous principalの
-一般instructionによりHTTP／browser境界まで実装されたrunを比較しました。page access blockerは閉じ、残る優先事項は
-clean-environment release gateです。
+一般instructionによりHTTP／browser境界まで実装されたrunを比較しました。page access blockerは閉じ、
+clean-environment release gateとmacOS／Linux release workflowは実装済みです。残る優先事項はexternal document-only dogfoodとtag qualificationです。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料

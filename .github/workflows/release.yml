@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: Qualify tag (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run the clean release gate
+        run: ./scripts/release-check.sh
+        env:
+          FORMA_RELEASE_VERSION: ${{ github.ref_name }}
+      - name: Require a public module installation surface
+        if: github.event.repository.private
+        run: |
+          echo "The release workflow verifies an unauthenticated public go install, but this repository is private." >&2
+          exit 1
+      - name: Verify installation from the pushed tag
+        shell: bash
+        env:
+          FORMA_RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          install_dir="$RUNNER_TEMP/tag-install"
+          mkdir -p "$install_dir"
+          GOBIN="$install_dir" GOPROXY=direct go install "github.com/horizon67/forma/cmd/forma@$FORMA_RELEASE_VERSION"
+          test "$("$install_dir/forma" version)" = "forma $FORMA_RELEASE_VERSION"
+
+  build:
+    name: Build release assets
+    needs: qualify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: ./scripts/build-release.sh "${{ github.ref_name }}" dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub pre-release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-assets
+          path: dist
+      - name: Reverify published checksums
+        run: (cd dist && sha256sum -c SHA256SUMS)
+      - name: Publish immutable tag assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORMA_RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          gh release create "$FORMA_RELEASE_VERSION" dist/* \
+            --verify-tag \
+            --prerelease \
+            --title "Forma $FORMA_RELEASE_VERSION" \
+            --notes-file "docs/releases/$FORMA_RELEASE_VERSION.md"

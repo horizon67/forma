@@ -681,7 +681,7 @@ repository固有commandを明示的に実行する。framework別generatorや全
 
 ### 実施package
 
-2026-08-23時点の進捗は**17/37**（A 3/6、B 0/5、C 7/7、D 5/9、E 0/5、F 2/5）。
+2026-08-23時点の進捗は**32/37**（A 6/6、B 3/5、C 7/7、D 9/9、E 5/5、F 2/5）。
 実物を触る前にhostile repository向けの完全自動runnerを作る方針は撤回し、alpha.1は利用者が所有・信頼するfresh repositoryで
 Codexへrequestを渡し、人が差分と実行を確認するthin runnerへ戻す。2026-08-22までのcontainment設計はpost-alphaの参考として保持するが、
 automatic feedback executionやexternal evidence isolationをalpha blockerへ戻さない。
@@ -690,18 +690,28 @@ automatic feedback executionやexternal evidence isolationをalpha blockerへ戻
 
 - [x] `docs/README.md`を公開document indexとし、learn／reference／integration／projectの所有関係を固定する。
 - [x] `docs/alpha-language-profile.md`を追加し、受理するsyntax／semantics、experimental部分、known limitationsを列挙する。
-- [ ] normative v0全体の完成を装わず、reference front-endとの差分をprofileから辿れるようにする。
+- [x] normative v0全体の完成を装わず、reference front-endとの差分をprofileから辿れるようにする。
 - [x] binary／CLIへtagまたはrelease build metadataを表示する`forma version`／`forma --version`を追加する。
-- [ ] artifact version mismatch、unsupported intent、unknown commandのexit codeとmessageを固定する。
-- [ ] experiment専用orchestrator／generatorをalpha distributionに含めないことを明記する。
+- [x] artifact version mismatch、unsupported intent、unknown commandのexit codeとmessageを固定する。
+- [x] experiment専用orchestrator／generatorをalpha distributionに含めないことを明記する。
 
 #### B. Installとrelease engineering（2–3 working days）
 
 - [ ] cleanなmacOS／Linuxで`go install github.com/horizon67/forma/cmd/forma@<tag>`を検証する。
-- [ ] GitHub Release用のversioned binariesとchecksumを作るCI workflowを追加する。
-- [ ] root test、vet、race、format、`git diff --check`、example compileをrelease gateにする。
-- [ ] tag、binary version、README quickstartのversionが一致しなければreleaseを止める。
+- [x] GitHub Release用のversioned binariesとchecksumを作るCI workflowを追加する。
+- [x] root test、vet、race、format、`git diff --check`、example compileをrelease gateにする。
+- [x] tag、binary version、README quickstartのversionが一致しなければreleaseを止める。
 - [ ] rollback可能なpre-release tagとして公開し、stable互換性を約束しないことを表示する。
+
+`scripts/release-check.sh`はrootとnested E2E targetのtest／vet／race、format／diff、fresh HOME／Go cacheからの
+source install、admin／membership／order／quickstartのdeterministic output、4 platform archive、checksum、embedded versionを
+一つのlocal gateで検査する。GitHub ActionsはmacOS／Linuxで同じgateを実行し、tag workflowは実tagからの
+`go install`も検査してからpre-releaseとchecksum付きarchiveを公開する。実tag installとGitHub上のmatrix実行は
+tag前に実測できないため未完了のまま残す。`go install` qualificationはend-userと同じ未認証のpublic module pathを
+検査するため、repositoryがpublicであることをrelease前提とし、privateな場合は専用diagnosticで止める。
+
+別の公開判断として、repositoryには現在`LICENSE`が無い。release workflowはlicenseを推測しないため、
+tag公開前にrepository ownerが採用licenseまたは非提供を明示する。
 
 #### C. AI authoring contextとCodex thin runner（2–3 working days）
 
@@ -726,23 +736,23 @@ exit codeに依存しないpipe cutoff記録とoptional dedicated process-group 
 
 #### D. End-user documentationとquickstart（1–2 working days）
 
-- [ ] `docs/install.md`へsource install、release binary、PATH、upgrade／uninstall、`forma version` smoke testを書く。
+- [x] `docs/install.md`へsource install、release binary、PATH、upgrade／uninstall、`forma version` smoke testを書く。
 - [x] `docs/ai-integration.md`へCodex install／login、API-key login、secret boundary、費用・network・timeoutの責任を書く。
 - [x] `docs/language-guide.md`でalpha syntaxを例から学べるようにし、`docs/alpha-language-profile.md`を実装範囲の正本にする。
-- [ ] `docs/cli.md`へ全command、exit code、生成artifact、filesystem／process mutationの有無を書く。
+- [x] `docs/cli.md`へ全command、exit code、生成artifact、filesystem／process mutationの有無を書く。
 - [x] `docs/language-reference.md`を公開仕様の入口とし、alpha contract、design draft v0、artifact schemaを混同しない。
 - [x] toy CRUDだけではない`docs/examples/alpha-quickstart.forma`とmembership例をauthoring contextへ同梱する。
-- [ ] `authoring-context -> check -> project -> generate(Codex) -> human review -> repository tests`を一つの手順にする。
+- [x] `authoring-context -> check -> project -> generate(Codex) -> human review -> repository tests`を一つの手順にする。
 - [x] AIへ渡す実装instruction templateと、requestを弱めない／Formaにない要件を捏造しない規則を提供する。authoritative accessはpublic boundaryで実装／検査し、missing identityを許可roleへ変換しない一般規則を含む。
-- [ ] 実行結果として何がForma保証、機械test、human Review Requirementなのかを画面出力と文書で区別する。
+- [x] 実行結果として何がForma保証、機械test、human Review Requirementなのかを画面出力と文書で区別する。
 
 #### E. Reliabilityとsecurity boundary（1–2 working days）
 
-- [ ] temporary clean environmentからinstallし、admin／membership／order sourceをcheck／resolve／request／projectできるtestを作る。
-- [ ] requestとprojectionのdeterminism、Source Map coverage、schema validator、historical request codecをrelease gateで再確認する。
-- [ ] compiler-only commandはrepository commandやAI processを起動せず、`generate`だけが明示的に外部processを起動する境界をsecurity noteへ記録する。
-- [ ] secret／credential valueをGeneration Requestへ含めず、Codex以外のchild processを自動起動しないことをreviewする。
-- [ ] known limitations、human review必須、alphaは利用者が所有・信頼するrepository専用であることを明記する。
+- [x] temporary clean environmentからinstallし、admin／membership／order sourceをcheck／resolve／request／projectできるtestを作る。
+- [x] requestとprojectionのdeterminism、Source Map coverage、schema validator、historical request codecをrelease gateで再確認する。
+- [x] compiler-only commandはrepository commandやAI processを起動せず、`generate`だけが明示的に外部processを起動する境界をsecurity noteへ記録する。
+- [x] secret／credential valueをGeneration Requestへ含めず、trusted Git preflightとCodex以外のapplication／agent child processを自動起動しないことをreviewする。
+- [x] known limitations、human review必須、alphaは利用者が所有・信頼するrepository専用であることを明記する。
 
 #### F. External dogfoodとrelease（1–2 working days + review）
 
@@ -776,9 +786,10 @@ scope/profile freeze
   -> v0.1.0-alpha.1 pre-release
 ```
 
-2026-08-23のscope correction後は、ここから集中して**5–8 working days**、外部reviewを含めておおむね**1–2 calendar weeks**を
-目安とする。利用者がまだ触っていない段階では、version qualification matrix、prefix別credential cleanup、adapter exec probe、
-external evidence storeをalpha blockerにしない。まずthin runnerで操作感とGeneration Requestの実用性を測る。
+clean-environment gateとrelease workflow実装後の残りは、別task／clean contextのdocument-only dogfood、license判断、
+review修正、GitHub ActionsのmacOS／Linux qualification、tag／pre-release公開である。ここからは**1–3 working days**を
+目安とする。version qualification matrix、prefix別credential cleanup、adapter exec probe、external evidence storeは
+alpha blockerに戻さない。まずthin runnerで操作感とGeneration Requestの実用性を測る。
 
 新しいlanguage featureを途中でalpha blockerへ戻すとこの見積りは再び無効になる。multiple assignmentを含める場合は別に
 実装／E2E／reviewが必要なため、alpha cutを少なくとも1 review cycle後ろへ動かす。

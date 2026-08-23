@@ -1,6 +1,6 @@
 # Install Forma
 
-Status: alpha preparation. No GitHub Release has been published yet.
+Status: installation contract for the `v0.1.0-alpha.1` release candidate.
 
 ## Requirements
 
@@ -9,8 +9,9 @@ Status: alpha preparation. No GitHub Release has been published yet.
 - Git for the reference generation workflow
 - Codex CLI for the `forma generate` reference runner
 
-Windows and prebuilt release binaries have not yet been qualified.
-The release notes will name the Codex CLI version used for alpha dogfood.
+Windows has not been qualified. The release workflow qualifies source install
+and the release binary on macOS and Linux. The release notes name the Codex CLI
+version used for alpha dogfood.
 Alpha.1 is a thin runner for repositories the invoking user owns and trusts;
 it does not claim hostile-repository containment from a version matrix.
 
@@ -31,10 +32,10 @@ followed by a short revision and `dirty` marker, for example
 `forma devel 7c507ab dirty`. It never presents a Go pseudo-version as a tagged
 Forma release.
 
-## Install the tagged alpha
+## Install the tagged alpha with Go
 
-The following command becomes supported only after `v0.1.0-alpha.1` is
-published:
+Use the explicit tag after it appears on the
+[GitHub Releases page](https://github.com/horizon67/forma/releases):
 
 ```sh
 go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
@@ -47,6 +48,38 @@ untagged `@latest` build when reproducing an alpha Generation Request.
 An untagged module-proxy build reports `forma devel <revision>` using the
 revision embedded in its Go pseudo-version, so two development binaries remain
 distinguishable even when VCS build settings are absent.
+
+## Install a prebuilt binary
+
+Download `SHA256SUMS` and the archive matching the machine from the same GitHub
+Release. The published archive names are:
+
+```text
+forma_0.1.0-alpha.1_darwin_amd64.tar.gz
+forma_0.1.0-alpha.1_darwin_arm64.tar.gz
+forma_0.1.0-alpha.1_linux_amd64.tar.gz
+forma_0.1.0-alpha.1_linux_arm64.tar.gz
+```
+
+Set the downloaded archive name and verify that one entry before extracting:
+
+```sh
+ARCHIVE=forma_0.1.0-alpha.1_darwin_arm64.tar.gz
+
+# Linux
+grep "  $ARCHIVE$" SHA256SUMS | sha256sum -c -
+
+# macOS
+grep "  $ARCHIVE$" SHA256SUMS | shasum -a 256 -c -
+```
+
+Extract the selected archive and place its single `forma` executable in a
+directory on `PATH`, for example `$HOME/.local/bin`. Then run:
+
+```sh
+forma version
+forma authoring-context > /tmp/forma-authoring-context.md
+```
 
 ## PATH
 
@@ -83,9 +116,19 @@ Forma reuses the resulting Codex login and does not accept an API key as a
 Forma argument or write it into the application repository. Continue with
 [AI integration and credentials](ai-integration.md).
 
-## Release blockers
+## Release qualification
 
-Before this document can be treated as a released installation contract, the
-project must verify clean installation on macOS and Linux, publish checksummed
-binaries, and test tag/binary/document version consistency. These checks are
-tracked in the [alpha roadmap](roadmap.md#fastest-alpha-cut--v010-alpha1current-priority).
+`scripts/release-check.sh` is the local release gate. CI runs it on clean macOS
+and Linux workers. It uses a fresh Go module/build cache to install Forma, runs
+the public compiler workflow twice to prove deterministic output, exercises the
+membership and order repository E2E targets, and builds all four release
+archives with checksums.
+
+On a tag, the release workflow additionally runs
+`GOPROXY=direct go install github.com/horizon67/forma/cmd/forma@<tag>` on both
+operating systems, checks the installed binary version, reverifies downloaded
+release-asset checksums, and publishes the immutable tag as a GitHub
+pre-release. This is deliberately an unauthenticated end-user installation
+probe and therefore requires the repository to remain public; the workflow
+stops with a dedicated diagnostic if it is private. See the
+[alpha roadmap](roadmap.md#fastest-alpha-cut--v010-alpha1current-priority).

@@ -197,13 +197,13 @@ Acceptance Facts `v0alpha11`、Outcome Projection `v0alpha6`、Review Requiremen
 full-request専用`forma generate`と最初のfresh repository dogfoodまで実施した。通常のNode.js applicationを生成し、独立test、HTTP、
 browser searchまで動作した。dogfoodで見つかったpage-only access Factの欠落はcompilerで閉じ、同じ220-Fact requestの
 再生成でanonymous拒否とmember／manager許可をHTTP／browser境界まで確認した。Factだけではpure helperへ矮小化されたrunもあったため、
-authoritative accessとanonymous principalの一般translation規則をthin runnerへ固定した。次はclean-environment E2Eとrelease gateへ進む。公開guide、通常flow、membership例は
+authoritative accessとanonymous principalの一般translation規則をthin runnerへ固定した。clean-environment E2Eとlocal release gateは実装・実測済みで、次はexternal document-only dogfood、GitHub Actionsのtag qualification、pre-release公開へ進む。公開guide、通常flow、membership例は
 `forma authoring-context`としてbinaryへ同梱済みで、authoring AIはweb参照なしにinstalled versionと同じcontextを取得できる。
 compiler-only commandの決定性は維持し、AI認証とrepository mutationは`generate`へ閉じる。alpha.1は利用者が所有・信頼するrepositoryで
 Codexが編集した後に停止し、agent生成codeをFormaがhost権限で自動実行しない。multiple assignment、collection、record creation、
 Derived Value、Occurrence、Effect、`forma fmt`／`forma explain`完成はalpha blockerにしない。
 
-2026-08-23のscope correction後は、`v0.1.0-alpha.1`まで残り5–8 working days、review込み1–2 calendar weeksを目安とする。
+clean-environment gate実装後は、`v0.1.0-alpha.1`まで残り1–3 working daysを目安とする。
 alphaはlanguage完成宣言ではなく、
 実application利用からpost-alpha P3の優先順位を決めるためのdistribution cutである。
 

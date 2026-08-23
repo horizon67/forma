@@ -4,8 +4,8 @@ Status: alpha.1 thin-runner contract. `forma authoring-context` and the first
 full-request-only `forma generate` path are implemented. The first
 fresh-repository dogfood created and ran an application. Its page-access
 finding is fixed in the compiler and the repeated generation now enforces it at
-the HTTP and browser boundaries. Clean-environment release qualification
-remains before tagging.
+the HTTP and browser boundaries. The clean-environment gate is implemented and
+locally qualified; GitHub's macOS/Linux tag workflow remains before release.
 
 Forma uses AI at two separate boundaries:
 

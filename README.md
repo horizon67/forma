@@ -240,8 +240,8 @@ require byte-identical application-code regeneration.
 
 ## Current status
 
-Forma is in an early design phase and has no compiler release yet. The current
-Go front end partially implements the design draft v0.4 grammar, parser, name
+Forma is preparing the unstable `v0.1.0-alpha.1` distribution. The current Go
+front end partially implements the design draft v0.4 grammar, parser, name
 resolution, type checking, semantic validation, stable identities, Resolved
 Intent, and Source Maps. It also implements a minimal admin-flow Acceptance
 Facts and Generation Request slice and exploratory non-v0 self-only Invariant,
@@ -277,6 +277,19 @@ The old Go admin generator and target-neutral conformance adapter under
 `experiments/` are **frozen meaning-discovery prototypes**, not the planned
 architecture. A second framework generator or shared runtime adapter is not the
 next step.
+
+### Install the tagged alpha
+
+After the tag is available on GitHub Releases:
+
+```bash
+go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
+forma version
+```
+
+Prebuilt macOS/Linux archives, checksums, PATH guidance, and uninstall steps
+are in the [installation guide](docs/install.md). Continue with the
+[end-to-end quickstart](docs/quickstart.md).
 
 ### Run from source
 
@@ -358,7 +371,7 @@ an exact consistent-pre-state predicate, and post-state Invariant rejection in t
 together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now includes a version-matched
 `forma authoring-context` and a thin Codex-backed `forma generate` runner that stops for human diff review. A controlled rerun of the same
 220-Fact request now observes anonymous denial and member/manager access at the HTTP and browser boundaries; it also established the general
-authoritative-access and anonymous-principal translation rules used by the runner. The remaining alpha work is clean-environment release gates. Projection
+authoritative-access and anonymous-principal translation rules used by the runner. The clean-environment release gate and macOS/Linux release workflows are now implemented; external documentation-only dogfood and tag qualification remain. Projection
 readability evaluation runs independently.
 
 ## Design documents

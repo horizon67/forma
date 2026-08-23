@@ -8,15 +8,17 @@ design.
 ## Start here
 
 - [Install Forma](install.md)
+- [End-to-end alpha quickstart](quickstart.md)
+- [CLI reference](cli.md)
 - [Write Forma for the alpha](language-guide.md)
 - [Alpha language profile](alpha-language-profile.md)
 - [Language reference](language-reference.md)
 - [AI integration and credentials](ai-integration.md)
+- [Security and trust boundary](security.md)
 - [Current language direction](current-language-direction.md)
 
-The end-to-end quickstart, CLI reference, security guide, and release process
-are release blockers tracked in
-the [roadmap](roadmap.md). They must be added before the alpha tag is created.
+The release-candidate process and its remaining external qualification are
+tracked in the [roadmap](roadmap.md).
 
 ## Language design and reference
 
@@ -42,6 +44,7 @@ An experimental construct is supported by the alpha only when the
 - [Current language direction](current-language-direction.md)
 - [First alpha quickstart dogfood](evaluations/alpha-dogfood-2026-08-23.md)
 - [Post-alpha hardened runner research](reference-agent-runner-proposal.md)
+- [Alpha.1 release notes](releases/v0.1.0-alpha.1.md)
 
 ## Document ownership
 

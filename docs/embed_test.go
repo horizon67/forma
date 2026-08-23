@@ -46,6 +46,60 @@ func TestAuthoringContextContainsTheEmbeddedGuideExampleAndVersion(t *testing.T)
 	}
 }
 
+func TestAlphaReleaseVersionMatchesPublicInstallationDocuments(t *testing.T) {
+	releaseVersion := strings.TrimPrefix(AlphaLanguageProfile, "v")
+	tests := []struct {
+		name  string
+		path  string
+		wants []string
+	}{
+		{name: "profile", path: "alpha-language-profile.md", wants: []string{"# Forma `" + AlphaLanguageProfile + "` Language Profile"}},
+		{name: "guide", path: "language-guide.md", wants: []string{"`" + AlphaLanguageProfile + "` reference front-end"}},
+		{name: "reference", path: "language-reference.md", wants: []string{"`" + AlphaLanguageProfile + "` release candidate"}},
+		{name: "cli", path: "cli.md", wants: []string{"`" + AlphaLanguageProfile + "` release candidate"}},
+		{name: "quickstart", path: "quickstart.md", wants: []string{
+			"workflow for `" + AlphaLanguageProfile + "`",
+			"github.com/horizon67/forma/cmd/forma@" + AlphaLanguageProfile,
+			"forma " + AlphaLanguageProfile,
+			"horizon67/forma/" + AlphaLanguageProfile + "/docs/examples/alpha-quickstart.forma",
+		}},
+		{name: "security", path: "security.md", wants: []string{"`" + AlphaLanguageProfile + "` thin runner"}},
+		{name: "install", path: "install.md", wants: []string{
+			"`" + AlphaLanguageProfile + "` release candidate",
+			"github.com/horizon67/forma/cmd/forma@" + AlphaLanguageProfile,
+			"forma_" + releaseVersion + "_darwin_amd64.tar.gz",
+			"forma_" + releaseVersion + "_darwin_arm64.tar.gz",
+			"forma_" + releaseVersion + "_linux_amd64.tar.gz",
+			"forma_" + releaseVersion + "_linux_arm64.tar.gz",
+		}},
+		{name: "readme", path: filepath.Join("..", "README.md"), wants: []string{
+			"unstable `" + AlphaLanguageProfile + "` distribution",
+			"github.com/horizon67/forma/cmd/forma@" + AlphaLanguageProfile,
+		}},
+		{name: "readme-ja", path: filepath.Join("..", "README.ja.md"), wants: []string{
+			"不安定な`" + AlphaLanguageProfile + "`配布",
+			"github.com/horizon67/forma/cmd/forma@" + AlphaLanguageProfile,
+		}},
+		{name: "release-notes", path: filepath.Join("releases", AlphaLanguageProfile+".md"), wants: []string{
+			"# Forma " + AlphaLanguageProfile,
+			"blob/" + AlphaLanguageProfile + "/docs/alpha-language-profile.md",
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			content, err := os.ReadFile(test.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(string(content), want) {
+					t.Fatalf("%s does not contain %q", test.path, want)
+				}
+			}
+		})
+	}
+}
+
 func TestAuthoringGuideDocumentsRequiredBlockNewlines(t *testing.T) {
 	const rule = "A declaration body opens with `{` followed by a newline, and each member is written on its own line."
 	if !strings.Contains(strings.Join(strings.Fields(languageGuide), " "), rule) {

@@ -35,6 +35,11 @@ command. It stops after Codex edits the target so a person can review the diff;
 it does not automatically execute agent-authored code or a feedback adapter on
 the host. All other commands remain deterministic and do not invoke an LLM.
 
+The release distribution contains only the `cmd/forma` executable and its
+embedded authoring documents. Experiment-specific orchestrators, generators,
+feedback commands, target applications, and frozen conformance adapters remain
+repository evidence and are not installed as alpha commands or runtimes.
+
 ## Artifact baseline
 
 | Artifact | Alpha version |
@@ -53,6 +58,10 @@ the host. All other commands remain deterministic and do not invoke an LLM.
 
 Schema version strings are semantic boundaries, not decorative metadata.
 Unknown or unsupported versions must fail validation.
+
+Command output, exit codes, process execution, and filesystem mutation are
+listed in the [CLI reference](cli.md). The trust and credential boundary is
+defined in the [security guide](security.md).
 
 ### Historical input compatibility
 
