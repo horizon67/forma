@@ -1,5 +1,8 @@
 # Membership Flow Evaluation Answer Key
 
+> このanswer keyはpage-local `entry` / `continue`導入前に固定した評価刺激だけを採点する。
+> T3の正答は現行Formaの表現力ではなく、その凍結刺激に対する正答である。
+
 このfileはsession完了まで参加者へ見せない。満点31点で、記載した部分点だけを使う。
 
 ## T1 — 6 points

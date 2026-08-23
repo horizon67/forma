@@ -681,7 +681,7 @@ repository固有commandを明示的に実行する。framework別generatorや全
 
 ### 実施package
 
-2026-08-23時点の進捗は**16/37**（A 3/6、B 0/5、C 7/7、D 4/9、E 0/5、F 2/5）。
+2026-08-23時点の進捗は**17/37**（A 3/6、B 0/5、C 7/7、D 5/9、E 0/5、F 2/5）。
 実物を触る前にhostile repository向けの完全自動runnerを作る方針は撤回し、alpha.1は利用者が所有・信頼するfresh repositoryで
 Codexへrequestを渡し、人が差分と実行を確認するthin runnerへ戻す。2026-08-22までのcontainment設計はpost-alphaの参考として保持するが、
 automatic feedback executionやexternal evidence isolationをalpha blockerへ戻さない。
@@ -733,7 +733,7 @@ exit codeに依存しないpipe cutoff記録とoptional dedicated process-group 
 - [x] `docs/language-reference.md`を公開仕様の入口とし、alpha contract、design draft v0、artifact schemaを混同しない。
 - [x] toy CRUDだけではない`docs/examples/alpha-quickstart.forma`とmembership例をauthoring contextへ同梱する。
 - [ ] `authoring-context -> check -> project -> generate(Codex) -> human review -> repository tests`を一つの手順にする。
-- [ ] AIへ渡す実装instruction templateと、requestを弱めない／Formaにない要件を捏造しない規則を提供する。
+- [x] AIへ渡す実装instruction templateと、requestを弱めない／Formaにない要件を捏造しない規則を提供する。authoritative accessはpublic boundaryで実装／検査し、missing identityを許可roleへ変換しない一般規則を含む。
 - [ ] 実行結果として何がForma保証、機械test、human Review Requirementなのかを画面出力と文書で区別する。
 
 #### E. Reliabilityとsecurity boundary（1–2 working days）
@@ -752,10 +752,15 @@ exit codeに依存しないpipe cutoff記録とoptional dedicated process-group 
 - [ ] blockerを修正し、`v0.1.0-alpha.1` tagとGitHub Releaseを作る。
 - [ ] release後に実applicationで見つかったgapをlanguage、tooling、documentationへ分類してpost-alpha backlogへ戻す。
 
-最初のrunは[`evaluations/alpha-dogfood-2026-08-23.md`](evaluations/alpha-dogfood-2026-08-23.md)に固定した。
-通常のNode.js application、6 repository tests、HTTP response、browser searchまで動いた一方、viewを持たないWelcome pageの
-`allow`がAcceptance Factへ届かず、signed-out userがURLから表示できるgapを検出した。compilerはpage-owned access Factと
-欠落／改変validatorを追加して閉じたため、alpha tag前に同じdogfoodで生成物側の修正を再確認する。
+最初のrunと2回の再dogfoodは[`evaluations/alpha-dogfood-2026-08-23.md`](evaluations/alpha-dogfood-2026-08-23.md)に固定した。
+最初のrunは通常のNode.js application、6 repository tests、HTTP response、browser searchまで動いた一方、viewを持たないWelcome pageの
+`allow`がAcceptance Factへ届かず、signed-out userがURLから表示できるgapを検出した。compilerへpage-owned access Factを追加した後、
+同一の220-Fact requestを2回生成した。Factだけのrunはpure role helperとmissing roleのmanager defaultでpage boundaryを守らなかった。
+authoritative accessをpublic boundaryで実装／検査し、anonymousをidentity／roleなしとして扱う一般instructionを加えたrunは、
+anonymous 403、member／manager 200とbrowserのWelcome境界を実測できた。生成clientにはreviewで直した1行のbutton不備があり、
+生成testにもsandbox socket failure時にHTTP検査をskipする弱さがあったため、human reviewをalpha contractから外さない。
+次回runからは完全なimplementation promptのSHA-256を標準出力へ残し、green summaryだけでなくboundary assertionが実行されたことを
+確認する案内を表示する。promptが参照する`expected.enforcement`は実Generation Requestのwire pathとtestで結んだ。
 required relation先のdelete policyをCodexがcascadeとして発明した点は、まずknown limitationとhuman review対象へ明記し、
 追加の実application evidenceなしに汎用delete semanticsを言語へ戻さない。
 

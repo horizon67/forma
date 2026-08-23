@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,12 +28,13 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 		deadline, ok := ctx.Deadline()
 		bounded = ok && !deadline.IsZero()
 		return agentrunner.GenerateResult{
-			Target:           repository,
-			Worktree:         repository,
-			InitialHead:      "head",
-			FinalStatusKnown: true,
-			FinalStatus:      "?? internal/app.go\n M README.md\n",
-			CodexMessage:     []byte("Implemented the application.\n"),
+			Target:                     repository,
+			Worktree:                   repository,
+			InitialHead:                "head",
+			FinalStatusKnown:           true,
+			FinalStatus:                "?? internal/app.go\n M README.md\n",
+			ImplementationPromptSHA256: "0123456789abcdef",
+			CodexMessage:               []byte("Implemented the application.\n"),
 		}, nil
 	}
 
@@ -52,13 +54,38 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 	if request.RequestedChange.Kind != "full" || request.ResolvedIntent == nil || len(request.AcceptanceFacts.Facts) == 0 {
 		t.Fatalf("request = %#v", request)
 	}
+	// Keep the dogfood-derived expected.enforcement instruction tied to the
+	// actual current Generation Request wire path instead of merely asserting
+	// that the prompt repeats its own spelling.
+	var wire struct {
+		AcceptanceFacts struct {
+			Facts []struct {
+				Expected map[string]json.RawMessage `json:"expected"`
+			} `json:"facts"`
+		} `json:"acceptanceFacts"`
+	}
+	if err := json.Unmarshal(observed.Request, &wire); err != nil {
+		t.Fatalf("decode generation request wire shape: %v", err)
+	}
+	foundAuthoritative := false
+	for _, fact := range wire.AcceptanceFacts.Facts {
+		if string(fact.Expected["enforcement"]) == `"authoritative"` {
+			foundAuthoritative = true
+			break
+		}
+	}
+	if !foundAuthoritative {
+		t.Fatal(`Generation Request has no expected.enforcement="authoritative" path named by the implementation prompt`)
+	}
 	output := stdout.String()
 	for _, want := range []string{
 		"starting Codex generation",
 		"Codex summary:\nImplemented the application.",
+		"implementation prompt SHA-256: 0123456789abcdef",
 		"current Git status:\n   M README.md\n  ?? internal/app.go",
 		"Forma did not run generated application code or repository tests.",
 		"review the Git diff",
+		"Confirm that boundary tests actually ran and did not skip assertions because the sandbox lacked a runtime capability.",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("stdout does not contain %q:\n%s", want, output)

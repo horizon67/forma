@@ -59,6 +59,11 @@ An experimental construct is supported by the alpha only when the
 - Proposal, probe, and evaluation documents retain evidence and decisions; they
   do not silently extend the released language.
 
+Release contracts and end-user guidance are maintained in English. Internal
+design decisions, proposals, probes, and evaluation records may be written in
+Japanese; [`README.ja.md`](../README.ja.md) is the maintained Japanese counterpart to the root
+README. Document language does not change the ownership rules above.
+
 The eventual documentation website must be generated from these versioned
 repository documents. The website is a projection, not a second source of
 truth.

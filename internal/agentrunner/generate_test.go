@@ -2,7 +2,9 @@ package agentrunner
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -83,14 +85,25 @@ func TestGeneratorPassesCanonicalRequestOnlyThroughCodexStdinAndStopsForReview(t
 		t.Fatalf("implementation boundary = %#v", implementation)
 	}
 	prompt := string(implementation.Stdin)
+	wantPromptDigest := fmt.Sprintf("%x", sha256.Sum256(implementation.Stdin))
+	if result.ImplementationPromptSHA256 != wantPromptDigest {
+		t.Fatalf("prompt SHA-256 = %q, want %q", result.ImplementationPromptSHA256, wantPromptDigest)
+	}
 	if !strings.Contains(prompt, "BEGIN FORMA GENERATION REQUEST JSON\n"+string(request)+"\nEND FORMA GENERATION REQUEST JSON") {
 		t.Fatalf("implementation prompt does not preserve request bytes:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "Do not create Generation Feedback") || !strings.Contains(prompt, "Do not modify .forma source files") {
 		t.Fatalf("implementation prompt omits the thin-runner boundary:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "A page, view, or action surface Fact cannot be satisfied only by testing a lower-layer helper") {
-		t.Fatalf("implementation prompt omits dogfood-derived review boundaries:\n%s", prompt)
+	for _, required := range []string{
+		"expected.enforcement=authoritative",
+		"the application's public boundary that presents or invokes the subject must enforce it",
+		"An anonymous principal means no authenticated identity and no roles",
+		"Never turn missing identity, session, or role state into an allowed default role",
+	} {
+		if !strings.Contains(prompt, required) {
+			t.Fatalf("implementation prompt omits dogfood-derived boundary %q:\n%s", required, prompt)
+		}
 	}
 	if len(git.calls) != 5 || !reflect.DeepEqual(git.calls[4].Arguments, gitArguments(canonicalTarget, "status", "--porcelain=v1", "--untracked-files=normal")) {
 		t.Fatalf("final Git status call = %#v", git.calls)

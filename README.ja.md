@@ -291,7 +291,7 @@ Identity probeはStage Dまで完了し、現在のartifactはResolved Intent `v
 完了しました。test failureとbuild failureは別々のfresh agent processが1 attemptで85/85へ戻し、
 implementationでは解決できないForma intent gapはcodeで回避せず、trusted再測定を経てtest観測を保った
 `test/blocked` handoffとして人間へ返しました。bounded navigation-language probeではpage-local ownershipを採用し、
-top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。P3は進行中で、self-only Invariant、
+top-levelの`entry`とsource page上のoperation-freeな`continue Page`を実装しました。実装済みのP3 alpha sliceはself-only Invariant、
 bounded Changes、required relation value、field reference 2個のexact binary `+`、named Action PreconditionをAcceptance Facts、Generation Request、
 通常のGo applicationによる280/280 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
 保持し、integer overflowは部分commitなしの`failure`になります。Action Preconditionはsource state、exactなpre-state predicate、
@@ -299,7 +299,10 @@ post-state Invariantを分離し、false時のauthoritativeな無変更拒否と
 6 Review Requirementsは人間確認待ちです。この実行可能baselineを最速`v0.1.0-alpha.1`のscopeとしてfreezeします。
 review済みのmultiple assignment設計は未実装のまま保存し、collection、record creation、Occurrence、Effectとともにpost-alphaへ送ります。
 alphaではversion一致済みの`forma authoring-context`と、Codexによる編集後に人のdiff reviewで停止する薄い`forma generate`を実装済みです。
-最初のfresh repository dogfoodでは通常のアプリ生成と実行まで確認済みです。そこで見つかったpage accessの欠落はcompilerで修正し、残る優先事項は再dogfoodとclean-environment release gateです。
+最初のfresh repository dogfoodでは通常のアプリ生成と実行まで確認済みです。そこで見つかったpage accessの欠落はcompilerで修正しました。
+同じ220-Fact requestの再dogfoodでは、Factだけではpure helperへ矮小化されたrunと、authoritative access／anonymous principalの
+一般instructionによりHTTP／browser境界まで実装されたrunを比較しました。page access blockerは閉じ、残る優先事項は
+clean-environment release gateです。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料

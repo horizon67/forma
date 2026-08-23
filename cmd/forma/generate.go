@@ -133,6 +133,9 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 		fmt.Fprintln(writer, strings.TrimSpace(string(result.CodexMessage)))
 	}
 	fmt.Fprintf(writer, "repository: %s\n", result.Target)
+	if result.ImplementationPromptSHA256 != "" {
+		fmt.Fprintf(writer, "implementation prompt SHA-256: %s\n", result.ImplementationPromptSHA256)
+	}
 	if result.InitialDirty {
 		fmt.Fprintln(writer, "warning: generation started from a dirty worktree; current status includes pre-existing changes")
 	}
@@ -150,6 +153,7 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 	}
 	fmt.Fprintln(writer, "Forma did not run generated application code or repository tests.")
 	fmt.Fprintln(writer, "Next: review the Git diff, then explicitly run the repository's build and test commands.")
+	fmt.Fprintln(writer, "Confirm that boundary tests actually ran and did not skip assertions because the sandbox lacked a runtime capability.")
 }
 
 func generationSetupError(err error) bool {

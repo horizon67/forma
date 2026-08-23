@@ -2,6 +2,10 @@
 
 Status: design draft 0.4 (reference implementation: partial; Resolved Intent schema under revision)
 
+> 本書はより大きいForma v0 design targetの規範であり、現行binaryがすべてを実装しているというrelease契約ではない。
+> `v0.1.0-alpha.1`で受理・検証する範囲は
+> [`alpha-language-profile.md`](alpha-language-profile.md)を正とする。
+
 > Forma is a high-level application programming language for expressing what
 > software should be, not how it should be implemented.
 
@@ -27,7 +31,7 @@ architecture、library、testを読み、incrementalに変更する。Forma sour
 source of truthであり、repository codeは実装のsource of truthである。同じ意味を両方で独立に定義せず、
 意味を変える場合はForma sourceへ反映する。
 
-本書をForma v0の規範仕様とする。
+本書をForma v0 design targetの規範仕様とする。現行alphaが未実装の範囲は公開profileで明示する。
 
 ## 1. v0が検証する仮説
 

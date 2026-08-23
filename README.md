@@ -348,7 +348,7 @@ unchanged when a protected test exceeded the immutable request; trusted
 remeasurement published the Forma intent gap as a structured `test/blocked`
 human handoff. The bounded navigation-language probe chose and implemented
 page-local ownership: one top-level `entry`, and operation-free `continue Page`
-members on their source pages. P3 is now in progress: self-only Invariant, the
+members on their source pages. The implemented P3 alpha slices include self-only Invariant, the
 first bounded Changes/atomic-post-state slice, and one required to-one relation
 value, one exact binary numeric addition on a Changes RHS, and one named Action Precondition reach the Parser, Resolved Intent, Acceptance Facts,
 Generation Request, and a 280/280 repository E2E in an ordinary Go application.
@@ -356,8 +356,9 @@ The addition and Precondition slices carry the full expression trees and runtime
 remain pending. Action Precondition now separates source-state rejection,
 an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline is now frozen for the fastest `v0.1.0-alpha.1` cut. The reviewed multiple-assignment design remains unimplemented and moves,
 together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now includes a version-matched
-`forma authoring-context` and a thin Codex-backed `forma generate` runner that stops for human diff review. The remaining alpha work is
-clean-environment release gates and closure of the first dogfood findings. Projection
+`forma authoring-context` and a thin Codex-backed `forma generate` runner that stops for human diff review. A controlled rerun of the same
+220-Fact request now observes anonymous denial and member/manager access at the HTTP and browser boundaries; it also established the general
+authoritative-access and anonymous-principal translation rules used by the runner. The remaining alpha work is clean-environment release gates. Projection
 readability evaluation runs independently.
 
 ## Design documents

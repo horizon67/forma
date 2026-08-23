@@ -3,6 +3,7 @@ package agentrunner
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -41,8 +42,12 @@ type GenerateResult struct {
 	InitialDirty     bool
 	FinalStatusKnown bool
 	FinalStatus      string
-	CodexMessage     []byte
-	CodexDiagnostics []byte
+	// ImplementationPromptSHA256 identifies the exact instructions and
+	// canonical request bytes passed to Codex without retaining either in the
+	// target repository.
+	ImplementationPromptSHA256 string
+	CodexMessage               []byte
+	CodexDiagnostics           []byte
 }
 
 // Generator connects the existing repository preflight to one Codex process.
@@ -97,6 +102,8 @@ func (generator Generator) Run(ctx context.Context, options GenerateOptions) (re
 	}
 
 	prompt := implementationPrompt(options.Request)
+	promptDigest := sha256.Sum256(prompt)
+	result.ImplementationPromptSHA256 = fmt.Sprintf("%x", promptDigest)
 	codex, codexErr := generator.Codex.Run(ctx, Command{
 		Executable: options.CodexExecutable,
 		Arguments: []string{
@@ -158,7 +165,8 @@ func implementationPrompt(request []byte) []byte {
 Rules:
 - Treat the request as structured application intent, not as repository-specific implementation instructions.
 - Implement every requested intent node and Acceptance Fact in ordinary application code appropriate for this repository.
-- Test each Acceptance Fact at its named subject boundary. A page, view, or action surface Fact cannot be satisfied only by testing a lower-layer helper.
+- Implement and test each Acceptance Fact at its named subject boundary. For an access Fact with expected.enforcement=authoritative, the application's public boundary that presents or invokes the subject must enforce it; a UI visibility check or direct call to a pure role helper is insufficient.
+- An anonymous principal means no authenticated identity and no roles. Never turn missing identity, session, or role state into an allowed default role.
 - Preserve existing repository conventions and do not weaken or delete existing tests to make the task appear complete.
 - Do not modify .forma source files or invent requirements that are absent from the request.
 - Human Review Requirements are not machine-verified; make the relevant implementation visible for later human review.

@@ -1,8 +1,14 @@
 # Membership Flow Human Evaluation
 
-Status: protocol and stimuli ready; no participant result recorded yet
+Status: frozen pre-Track-A protocol and stimuli; no participant result recorded yet
 
-この評価は、現行Forma sourceだけを読む条件Aと、同じsourceに決定的なprojectionを追加する条件Bを、
+> この評価はpage-local `entry` / `continue`を実装する前のsourceとsemanticを意図的に固定している。
+> T3の「実装不能」は配布刺激に対する正答であり、現行Formaの能力を説明するものではない。現行構文と採用判断は
+> [`../../current-language-direction.md`](../../current-language-direction.md)と
+> [`../../alpha-language-profile.md`](../../alpha-language-profile.md)を参照する。`common-reference.md`の
+> `goto` / Identity-only `continue`語彙は比較刺激の一部なので遡及して更新しない。
+
+この評価は、当時固定したForma sourceだけを読む条件Aと、同じsourceに決定的なprojectionを追加する条件Bを、
 実際の人間が同じtaskで比較するためのformative studyである。Candidate Cの`flow`構文は未実装のpseudocodeなので、
 定量比較へ混ぜない。
 
@@ -10,7 +16,7 @@ Status: protocol and stimuli ready; no participant result recorded yet
 
 - Bは、正常系、external boundary、state effectを理解するT1と、navigation regressionを見つけるT4を速く正確にする。
 - Bは、詳細outcomeを読むT2とIdentity policyを探すT5を悪化させない。
-- Bは、現行言語で表せないT3を「図へ線を足せば済む」と誤認させない。
+- Bは、固定した刺激のsemanticで表せないT3を「図へ線を足せば済む」と誤認させない。
 - Bは、admin CRUDを読むT6へ新しいsource boilerplateがあるかのような誤解を増やさない。
 
 ## Primary study
@@ -51,7 +57,7 @@ visual projectionを有効なreview viewと判断するのは、次をすべて�
 - BのT6 median timeがAより25%を超えて悪化しない。
 - Bでdefault entryまたはexternal deliveryを推測したhigh-confidence errorが2 session以上発生しない。
 
-T3はどちらの条件でも実装不能が正答である。Bの参加者が図を編集可能な正本だと答える場合は、language primitiveを
+T3はこの凍結protocolのどちらの条件でも実装不能が正答である。Bの参加者が図を編集可能な正本だと答える場合は、language primitiveを
 増やす前にviewの表示と説明を修正する。BがT1/T4を改善してもT3の要求自体は満たせないため、その後にだけCandidate C
 または汎用page transitionの最小semanticを別評価する。
 

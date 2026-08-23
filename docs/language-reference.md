@@ -19,17 +19,17 @@ The installed CLI emits the same guide plus complete examples with
 
 ## Current reference map
 
-| Topic | Authoritative document |
-| --- | --- |
-| Released syntax and known limits | [Alpha language profile](alpha-language-profile.md) |
-| Core primitives, modifiers, EBNF, static semantics | [v0 specification](v0-primitives.md) |
-| Identity syntax and semantics | [Identity semantic model](identity-semantic-model-proposal.md) and the alpha profile |
-| Generation Request and Feedback | [Agent generation model](agent-generation.md) |
-| Invariant and bounded expressions | [Expression proposal](expression-proposal.md) and the alpha profile |
-| Action-owned mutation | [Changes proposal](changes-proposal.md) and the alpha profile |
-| Relation values | [Relation-value proposal](relation-value-expression-proposal.md) |
-| Exact numeric addition | [Numeric-addition proposal](numeric-addition-expression-proposal.md) |
-| Named action predicate | [Action-precondition proposal](action-precondition-proposal.md) |
+| Topic | Current alpha contract | Broader target or design evidence |
+| --- | --- | --- |
+| Released syntax and known limits | [Alpha language profile](alpha-language-profile.md) | — |
+| Core primitives, modifiers, EBNF, static semantics | [Alpha language profile](alpha-language-profile.md) | [v0 design-target specification](v0-primitives.md) |
+| Identity syntax and semantics | [Alpha language profile](alpha-language-profile.md) | [Identity semantic-model proposal](identity-semantic-model-proposal.md) |
+| Generation Request and Feedback | [Agent generation model](agent-generation.md) | — |
+| Invariant and bounded expressions | [Alpha language profile](alpha-language-profile.md) | [Expression proposal](expression-proposal.md) |
+| Action-owned mutation | [Alpha language profile](alpha-language-profile.md) | [Changes proposal](changes-proposal.md) |
+| Relation values | [Alpha language profile](alpha-language-profile.md) | [Relation-value proposal](relation-value-expression-proposal.md) |
+| Exact numeric addition | [Alpha language profile](alpha-language-profile.md) | [Numeric-addition proposal](numeric-addition-expression-proposal.md) |
+| Named action predicate | [Alpha language profile](alpha-language-profile.md) | [Action-precondition proposal](action-precondition-proposal.md) |
 
 Proposal documents provide detailed rationale and test evidence. When a
 proposal and the alpha profile differ in scope, the alpha profile wins for the

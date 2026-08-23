@@ -4,7 +4,8 @@ Status: current design decision — language grammar remains experimental
 
 この文書は、これまでのForma実験、会員登録flow probe、外部design research（DR）を踏まえ、
 「何を検証したか」「何が決まったか」「次に何を言語へ入れるか」を一か所にまとめる。
-個別syntaxの規範は[`v0-primitives.md`](v0-primitives.md)、各proposalの詳細はリンク先を正とする。
+現行releaseが受理するsyntaxとsemanticsの契約は[`alpha-language-profile.md`](alpha-language-profile.md)、
+より大きいv0 design targetの規範は[`v0-primitives.md`](v0-primitives.md)、各判断の根拠はリンク先proposalとする。
 
 ## 結論
 
@@ -88,15 +89,15 @@ Preconditionはsource state不一致、exactなpre-state predicate、post-state 
 | DRで整理されたfacet | Formaの現在地 | 方針 |
 | --- | --- | --- |
 | Structure / relation | `type`、`entity`、field、entity reference | 現行を維持し、必要なrelation semanticsだけ追加する |
-| State / transition | entity `state`、`action A -> B` | 現行を維持し、Changesとpreconditionへ接続する |
+| State / transition | entity `state`、`action A -> B`、bounded Changes、named Action Precondition | alpha sliceの接続は完了。multiple assignment以降は実application evidenceを得てpost-alphaで拡張する |
 | Interaction | `page`、`list`、`detail`、`form`、`interact` | 現行のpage-local ownershipを基本にする |
-| Navigation / task flow | action/submit/interaction destinationのみ | `entry`とsurface transitionを直近で追加検討する |
+| Navigation / task flow | top-level `entry`、action/submit/interaction destination、page-local `continue Page` | page-local ownershipを採用済み。編集可能な`flow` blockは置かず、global overviewはprojectionとして生成する |
 | Policy / authorization | `allow`、`require authenticated/owner`、Implementation Policy | application ruleとimplementation policyを混同せず、汎用ruleはExpression利用者として拡張する |
-| Invariant / declarative constraint | self-only Invariantの最小Expression slice | P3で型付きExpressionと利用contextを段階的に拡張する |
+| Invariant / declarative constraint | self-only Invariantとauthoritative mutation拒否のalpha slice | alpha scopeはfreeze済み。新しいExpression consumerはpost-alphaで個別に検証する |
 | Mandatory / possible / forbidden | 一部をcompiler invariant、Acceptance Fact、`must not`として導出 | 汎用modifierを先に入れず、導出不能なsafety/recovery要件が現れた時点でsource syntaxを設計する |
 | Scenario / example | Acceptance Factsとtest scenarioを原則生成 | 重複するscenario正本は作らない。導出不能な補助exampleだけを将来候補にする |
-| Event / occurrence | Identity operationとnoticeに専用semanticがある | P3でdomain-neutralなOccurrenceへ一般化する |
-| Effect / recovery | Identity notice emission/delivery failureに専用semanticがある | P3でEffect bindingとdelivery contractへ一般化する |
+| Event / occurrence | Identity operationとnoticeに専用semanticがある | domain-neutralなOccurrenceはpost-alphaで実例から設計する |
+| Effect / recovery | Identity notice emission/delivery failureに専用semanticがある | Effect bindingとdelivery contractはOccurrence後のpost-alpha sliceとする |
 | State table / task tree / diagram | states、outcomes、flow projection | 原則viewとして生成する。layoutをsourceへ入れない |
 | Nested / parallel / interruptible flow | 未対応 | 具体的applicationで必要になるまでgrammarへ入れない |
 
@@ -194,8 +195,9 @@ Acceptance Facts `v0alpha11`、Outcome Projection `v0alpha6`、Review Requiremen
 
 [`roadmap.md`](roadmap.md)のFastest alpha cutに従い、次はlanguage feature追加ではなく、install／release、Codex CLIを使う薄い
 full-request専用`forma generate`と最初のfresh repository dogfoodまで実施した。通常のNode.js applicationを生成し、独立test、HTTP、
-browser searchまで動作した。dogfoodで見つかったpage-only access Factの欠落はcompilerで閉じたため、次は同じquickstartの
-再生成とclean-environment E2Eへ進む。公開guide、通常flow、membership例は
+browser searchまで動作した。dogfoodで見つかったpage-only access Factの欠落はcompilerで閉じ、同じ220-Fact requestの
+再生成でanonymous拒否とmember／manager許可をHTTP／browser境界まで確認した。Factだけではpure helperへ矮小化されたrunもあったため、
+authoritative accessとanonymous principalの一般translation規則をthin runnerへ固定した。次はclean-environment E2Eとrelease gateへ進む。公開guide、通常flow、membership例は
 `forma authoring-context`としてbinaryへ同梱済みで、authoring AIはweb参照なしにinstalled versionと同じcontextを取得できる。
 compiler-only commandの決定性は維持し、AI認証とrepository mutationは`generate`へ閉じる。alpha.1は利用者が所有・信頼するrepositoryで
 Codexが編集した後に停止し、agent生成codeをFormaがhost権限で自動実行しない。multiple assignment、collection、record creation、

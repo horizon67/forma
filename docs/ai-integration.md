@@ -2,9 +2,10 @@
 
 Status: alpha.1 thin-runner contract. `forma authoring-context` and the first
 full-request-only `forma generate` path are implemented. The first
-fresh-repository dogfood created and ran an application; its page-access
-finding is fixed in the compiler and awaits a repeat run alongside the
-remaining release qualification before tagging.
+fresh-repository dogfood created and ran an application. Its page-access
+finding is fixed in the compiler and the repeated generation now enforces it at
+the HTTP and browser boundaries. Clean-environment release qualification
+remains before tagging.
 
 Forma uses AI at two separate boundaries:
 
@@ -73,11 +74,27 @@ intentional dirty-tree experiment, `--allow-dirty` is explicit and the output
 warns that the final status cannot be attributed solely to Codex.
 
 The command stops after Codex returns. It prints Codex's final summary, the
-target's current porcelain status, and the next review steps. Forma does not
+SHA-256 of the exact implementation prompt (instructions plus canonical
+request), the target's current porcelain status, and the next review steps.
+The digest identifies the exact combined agent input in a saved run log; when
+paired with the canonical request digest it distinguishes a template change
+without writing the prompt into the target. Forma does not
 automatically execute application code, tests, or an agent-authored feedback
 adapter on the host. The user reviews the Git diff and explicitly runs the
-repository's normal commands. Codex may use commands inside its own workspace
-sandbox while implementing the request.
+repository's normal commands. A green summary is not sufficient by itself: the
+reviewer confirms that boundary tests really ran and did not skip their
+assertions because Codex's sandbox lacked sockets or another runtime
+capability. Codex may use commands inside its own workspace sandbox while
+implementing the request.
+
+The implementation instructions preserve an important semantic distinction in
+the request: an access Fact whose expected enforcement is `authoritative` must
+be implemented and tested at the public boundary that presents or invokes its
+subject. A UI visibility check or direct pure role-helper test is not enough.
+An anonymous principal has no authenticated identity and no roles; missing
+identity, session, or role state must not be converted into an allowed default
+role. These are general request-translation rules, not application-specific
+Welcome-page behavior.
 
 Alpha.1 is for a fresh repository, or another repository the invoking user
 owns and trusts. Running untrusted repository code automatically, publishing a
@@ -132,10 +149,11 @@ person still reviews the generated diff, security-sensitive implementation
 choices, migrations, dependencies, and any human Review Requirements before
 running or shipping the application.
 
-The first recorded run of this exact workflow is the
+The first recorded run and its two page-access reruns are in the
 [alpha quickstart dogfood](evaluations/alpha-dogfood-2026-08-23.md). It is
-evidence that the handoff can produce a runnable application, and also records
-the first semantic and review gaps found by using it.
+evidence that the handoff can produce a runnable application. It also records
+why the Acceptance Fact and its general public-boundary translation rule were
+both needed, plus the generated-code defects that kept human review necessary.
 
 ## Post-alpha automation
 
