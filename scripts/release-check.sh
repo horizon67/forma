@@ -151,13 +151,20 @@ clean_go go mod download
 clean_go go install ./cmd/forma
 forma="$scratch/bin/forma"
 version_output=$($forma version)
-case "$version_output" in
-    "forma devel"*) ;;
-    *)
-        echo "release-check: clean source install reported unexpected version: $version_output" >&2
+if [ -n "${FORMA_RELEASE_VERSION:-}" ]; then
+    if [ "$version_output" != "forma $profile_version" ]; then
+        echo "release-check: tagged source install reported unexpected version: $version_output" >&2
         exit 1
-        ;;
-esac
+    fi
+else
+    case "$version_output" in
+        "forma devel"*|"forma $profile_version") ;;
+        *)
+            echo "release-check: clean source install reported unexpected version: $version_output" >&2
+            exit 1
+            ;;
+    esac
+fi
 binary_version=${version_output#forma }
 
 $forma authoring-context > "$scratch/output/authoring-context-1.md"
