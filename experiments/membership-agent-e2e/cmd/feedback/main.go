@@ -308,6 +308,12 @@ func retryBaselineConfig(root string) retryintegrity.Config {
 			"internal/agentrequest/testdata/admin.incremental.request.json": retryintegrity.ReasonBaseline,
 			"go.mod": retryintegrity.ReasonVerificationBuild,
 			"go.sum": retryintegrity.ReasonVerificationBuild,
+			// These files are embedded into cmd/forma. They are compiler inputs
+			// even though they are not Go source, so protect them with the same
+			// verification-rule boundary as the importing package.
+			"docs/language-guide.md":                        retryintegrity.ReasonVerificationRule,
+			"docs/examples/alpha-quickstart.forma":          retryintegrity.ReasonVerificationRule,
+			"docs/examples/email-verified-membership.forma": retryintegrity.ReasonVerificationRule,
 		},
 		TestRoot:       experiment + "/target",
 		TestReferences: references,
@@ -320,6 +326,8 @@ func retryBaselineConfig(root string) retryintegrity.Config {
 			// Go file listings prevents a retry from changing what the next run
 			// promotes into that trusted boundary.
 			"cmd/forma",
+			"docs",
+			"internal/agentrunner",
 			"internal/agentrequest",
 			"internal/compiler",
 			"internal/implementationpolicy",

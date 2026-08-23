@@ -604,7 +604,7 @@ entity StockItem {
 `invariant-satisfied`と`invariant-violated`を導出し、該当form submitから
 `invariant-validation-rejected`を導出する。これらは他のrequirementを満たした隔離scenario、
 解決済みExpression tree、`post-state`評価、authoritative enforcement、
-`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha10`へ固定する。
+`all-changes-committed` / `no-changes-committed`をcurrent `forma/acceptance-facts/v0alpha11`へ固定する。
 concurrencyはcurrent `forma/review-requirements/v0alpha6`の独立要件として人間へ渡す。Factにtree全体を持たせるため、
 将来operatorやoperandが変われば同じsemantic IDでもFact diffが変わる。coding agentによるrepository固有testと
 保存境界の実測は、[`order-invariant-agent-e2e`](../experiments/order-invariant-agent-e2e/)で完了した。

@@ -283,6 +283,7 @@ next step.
 Go 1.24 or newer can run the checker and current generation workflow:
 
 ```bash
+go run ./cmd/forma authoring-context > /tmp/forma-authoring-context.md
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
@@ -301,6 +302,24 @@ go test ./...
 The files and directories passed to one `forma check` invocation form one
 compilation unit. Each example is an independent application and should be
 checked separately.
+
+`forma authoring-context` prints the installed binary version, the concise
+alpha authoring guide, and complete workflow and membership examples. An
+application can pass this output to the AI that translates a person's request
+into Forma without fetching documentation from the web.
+
+After checking and committing the Forma source, the thin alpha runner can ask
+an authenticated Codex CLI to implement a full request in another clean Git
+worktree:
+
+```bash
+codex login status
+go run ./cmd/forma generate --repository /path/to/target docs/examples/alpha-quickstart.forma
+```
+
+It stops with a Git status and human-review instructions. Forma does not run
+the generated application's build or tests on the host; review the diff and
+run the target repository's commands explicitly.
 
 `forma resolve` emits canonical Resolved Intent JSON. `forma project navigation`
 emits a deterministic, read-only text view of the navigation already present in
@@ -336,8 +355,9 @@ Generation Request, and a 280/280 repository E2E in an ordinary Go application.
 The addition and Precondition slices carry the full expression trees and runtime-bound operands into Facts, reject unsupported type bounds and named-type chains, and detect repository integer overflow without partial commit. Six human Review Requirements
 remain pending. Action Precondition now separates source-state rejection,
 an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline is now frozen for the fastest `v0.1.0-alpha.1` cut. The reviewed multiple-assignment design remains unimplemented and moves,
-together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now focuses on an installable CLI,
-public language documentation, a minimal Codex-backed reference runner, clean-environment release gates, and fresh-repository dogfood. Projection
+together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now includes a version-matched
+`forma authoring-context` and a thin Codex-backed `forma generate` runner that stops for human diff review. The remaining alpha work is
+clean-environment release gates and closure of the first dogfood findings. Projection
 readability evaluation runs independently.
 
 ## Design documents

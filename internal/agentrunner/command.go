@@ -131,8 +131,12 @@ func (runner OSCommandRunner) Run(ctx context.Context, command Command) (Command
 		WaitDelayed:     waitDelayed,
 		ExitCode:        0,
 	}
-	if groupErr != nil {
-		return result, fmt.Errorf("terminate process group for %s: %w", command.Executable, groupErr)
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
+		result.ExitCode = exitError.ExitCode()
+	}
+	if terminalErr := commandContextOrGroupError(ctx, command.Executable, groupErr, &result); terminalErr != nil {
+		return result, terminalErr
 	}
 	if err == nil {
 		if waitDelayed {
@@ -140,18 +144,27 @@ func (runner OSCommandRunner) Run(ctx context.Context, command Command) (Command
 		}
 		return result, nil
 	}
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
-		result.ExitCode = exitError.ExitCode()
-	}
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		result.TimedOut = errors.Is(ctxErr, context.DeadlineExceeded)
-		return result, ctxErr
-	}
 	if exitError == nil {
 		return result, fmt.Errorf("wait for %s: %w", command.Executable, err)
 	}
 	return result, nil
+}
+
+func commandContextOrGroupError(ctx context.Context, executable string, groupErr error, result *CommandResult) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		result.TimedOut = errors.Is(ctxErr, context.DeadlineExceeded)
+		if groupErr != nil {
+			// A context-triggered group kill can race with process exit and PID/group
+			// reuse. Preserve the cancellation as the primary outcome while keeping
+			// a real teardown error available to errors.Is and diagnostics.
+			return errors.Join(ctxErr, fmt.Errorf("terminate process group for %s: %w", executable, groupErr))
+		}
+		return ctxErr
+	}
+	if groupErr != nil {
+		return fmt.Errorf("terminate process group for %s: %w", executable, groupErr)
+	}
+	return nil
 }
 
 func captureOutput(reader *os.File, buffer *boundedBuffer, done chan<- struct{}) {

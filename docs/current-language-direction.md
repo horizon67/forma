@@ -118,7 +118,7 @@ semantic graphへ解決されることを意味する。
 
 [`../examples/email-verified-membership.forma`](../examples/email-verified-membership.forma)で
 `RegistrationComplete -> OnboardingGuide -> SignIn`を実際にcompileし、current Resolved Intent `v0.12`、Source Map `v0.6`、
-Acceptance Facts `v0alpha10`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
+Acceptance Facts `v0alpha11`、navigation/flow projection、incremental semantic diffまで通した。destinationだけを変える
 mutationは、owner pageとtransition node、および対応Factだけを変更する。既存admin CRUD sourceには新しい記述を要求しない。
 
 `flow` blockは、同じdestinationをpageと二重管理するか、既存のpage-owned action/submit navigationを全移動する必要があり、
@@ -189,15 +189,20 @@ compiler／Order E2E実装は最速alpha後へ送る。
 ### Track D — Fastest alpha distribution（現在の本線）
 
 Action Preconditionまでのcurrent executable semanticsをalpha scopeとしてfreezeする。Resolved Intent `v0.12`、Source Map `v0.6`、
-Acceptance Facts `v0alpha10`、Outcome Projection `v0alpha5`、Review Requirements `v0alpha6`と、membership 85/85、Order 280/280を
+Acceptance Facts `v0alpha11`、Outcome Projection `v0alpha6`、Review Requirements `v0alpha6`と、membership 85/85、Order 280/280を
 配布baselineにする。
 
-[`roadmap.md`](roadmap.md)のFastest alpha cutに従い、次はlanguage feature追加ではなく、alpha profile、CLI version、install／release、
-公開language docs、Codex CLIを使う最小`forma generate` reference runner、clean-environment E2E、security boundary、fresh repository dogfoodを進める。
-compiler-only commandの決定性は維持し、AI認証とrepository mutationは`generate`へ閉じる。multiple assignment、collection、record creation、
+[`roadmap.md`](roadmap.md)のFastest alpha cutに従い、次はlanguage feature追加ではなく、install／release、Codex CLIを使う薄い
+full-request専用`forma generate`と最初のfresh repository dogfoodまで実施した。通常のNode.js applicationを生成し、独立test、HTTP、
+browser searchまで動作した。dogfoodで見つかったpage-only access Factの欠落はcompilerで閉じたため、次は同じquickstartの
+再生成とclean-environment E2Eへ進む。公開guide、通常flow、membership例は
+`forma authoring-context`としてbinaryへ同梱済みで、authoring AIはweb参照なしにinstalled versionと同じcontextを取得できる。
+compiler-only commandの決定性は維持し、AI認証とrepository mutationは`generate`へ閉じる。alpha.1は利用者が所有・信頼するrepositoryで
+Codexが編集した後に停止し、agent生成codeをFormaがhost権限で自動実行しない。multiple assignment、collection、record creation、
 Derived Value、Occurrence、Effect、`forma fmt`／`forma explain`完成はalpha blockerにしない。
 
-目標は`v0.1.0-alpha.1`を11–16 working days、review込み3 calendar weeks前後で公開することとする。alphaはlanguage完成宣言ではなく、
+2026-08-23のscope correction後は、`v0.1.0-alpha.1`まで残り5–8 working days、review込み1–2 calendar weeksを目安とする。
+alphaはlanguage完成宣言ではなく、
 実application利用からpost-alpha P3の優先順位を決めるためのdistribution cutである。
 
 Effectから先に設計しない。recipient、発生条件、payload bindingにはExpressionが必要であり、Effectを発生させる事実には

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha5"
+const OutcomeProjectionVersion = "forma/outcome-projection/v0alpha6"
 
 // OutcomeProjection is a deterministic review view over observable Acceptance
 // Facts. It splits multi-case facts into rows but does not add outcomes that

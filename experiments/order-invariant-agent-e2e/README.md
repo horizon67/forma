@@ -58,7 +58,7 @@ human review required: 6 requirements are not machine-verified
 | Artifact | SHA-256 | Purpose |
 | --- | --- | --- |
 | [`app.forma`](app.forma) | — | Forma source copied into the measured boundary |
-| [`generation-request.json`](generation-request.json) | `8ecce21ea7555764477193ee0019e603734449590d99fbda24041c4f53e91461` | canonical full request with 280 Facts and six Review Requirements |
+| [`generation-request.json`](generation-request.json) | `6b9d45fb9742d48ef756a9dd8ef13450d16afd46d1fa1ed176faa22fbde5743f` | canonical full request with 280 Facts and six Review Requirements |
 | [`coverage.json`](coverage.json) | `b6c6bfbf516ed56f954c664134b80a7e0339128ba8178812c561a99172b3456d` | exact Fact-to-repository-test mapping; unknown or omitted Facts are rejected |
 | [`target/generation-feedback.json`](target/generation-feedback.json) | `834cd356bfe620188cbfb741863e054acd08d8a368c06752627d586b480cc228` | result derived from the actual target test run |
 | [`review-evidence.md`](review-evidence.md) | — | evidence for the six remaining human-only requirements |

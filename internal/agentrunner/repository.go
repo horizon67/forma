@@ -15,6 +15,12 @@ var (
 	// ErrNotGitWorktree identifies a target that Git cannot resolve to a
 	// containing worktree.
 	ErrNotGitWorktree = errors.New("target is not a Git worktree")
+	// ErrInvalidRepository identifies an absent target or a target that is not
+	// a directory before Git inspection begins.
+	ErrInvalidRepository = errors.New("target repository is invalid")
+	// ErrRepositoryHasNoCommit identifies an initialized worktree without the
+	// committed HEAD required for a reviewable before/after diff.
+	ErrRepositoryHasNoCommit = errors.New("Git worktree has no committed HEAD")
 	// ErrWorktreeLocked identifies another Forma generation run holding the
 	// containing worktree lock.
 	ErrWorktreeLocked = errors.New("Git worktree is already used by another Forma generation run")
@@ -89,7 +95,7 @@ func (preflight RepositoryPreflight) Prepare(ctx context.Context, options Reposi
 
 	target, err := canonicalDirectory(options.Repository)
 	if err != nil {
-		return nil, fmt.Errorf("resolve target repository: %w", err)
+		return nil, fmt.Errorf("%w: resolve target repository: %v", ErrInvalidRepository, err)
 	}
 	rootResult, err := preflight.runGit(ctx, options, target, "rev-parse", "--show-toplevel")
 	if err != nil {
@@ -138,7 +144,7 @@ func (preflight RepositoryPreflight) Prepare(ctx context.Context, options Reposi
 		return nil, err
 	}
 	if headResult.ExitCode != 0 {
-		return nil, fmt.Errorf("read Git HEAD: %s", commandFailure(headResult))
+		return nil, fmt.Errorf("%w; create an initial commit before generation: %s", ErrRepositoryHasNoCommit, commandFailure(headResult))
 	}
 	head, err := gitSingleLine(headResult.Stdout)
 	if err != nil {

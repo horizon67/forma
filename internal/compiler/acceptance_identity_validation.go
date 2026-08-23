@@ -142,6 +142,9 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 			return fmt.Errorf("validate Acceptance Facts: missing invariant mutation fact %s", expected.ID)
 		}
 	}
+	if err := validateSurfaceOnlyPageAccessFacts(intent, facts); err != nil {
+		return err
+	}
 	if err := validateVerificationRejectionReachability(facts.Facts); err != nil {
 		return err
 	}
@@ -150,6 +153,44 @@ func ValidateAcceptanceFacts(intent *ResolvedIntent, facts *AcceptanceFacts) err
 		return err
 	}
 	return validateCanonicalActionFacts(facts, canonical)
+}
+
+func validateSurfaceOnlyPageAccessFacts(intent *ResolvedIntent, facts *AcceptanceFacts) error {
+	builder := acceptanceBuilder{intent: intent}
+	pageSubjects := map[SemanticID]bool{}
+	for _, page := range intent.Pages {
+		pageSubjects[page.ID] = true
+		if len(page.Allows) == 0 || len(page.Views) != 0 || len(page.IdentityInteractions) != 0 {
+			continue
+		}
+		if err := builder.addSurfaceOnlyPageAccessFacts(page); err != nil {
+			return fmt.Errorf("validate Acceptance Facts: derive surface-only page access: %w", err)
+		}
+	}
+	want := make(map[SemanticID]AcceptanceFact, len(builder.facts))
+	for _, fact := range builder.facts {
+		want[fact.ID] = fact
+	}
+	seen := make(map[SemanticID]bool, len(want))
+	for _, fact := range facts.Facts {
+		if !pageSubjects[fact.Subject] || (fact.Kind != "access-allowed" && fact.Kind != "access-denied") {
+			continue
+		}
+		seen[fact.ID] = true
+		expected, ok := want[fact.ID]
+		if !ok {
+			return fmt.Errorf("validate Acceptance Facts: surface-only page access fact %s is not derived from Resolved Intent", fact.ID)
+		}
+		if !reflect.DeepEqual(fact, expected) {
+			return fmt.Errorf("validate Acceptance Facts: surface-only page access fact %s differs from its canonical derivation", fact.ID)
+		}
+	}
+	for id := range want {
+		if !seen[id] {
+			return fmt.Errorf("validate Acceptance Facts: missing surface-only page access fact %s", id)
+		}
+	}
+	return nil
 }
 
 func validateCanonicalActionFacts(actual *AcceptanceFacts, canonical []AcceptanceFact) error {

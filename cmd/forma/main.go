@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	formadocs "github.com/horizon67/forma/docs"
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
 	"github.com/horizon67/forma/internal/implementationpolicy"
@@ -34,6 +35,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "forma %s\n", currentVersion())
 		return 0
 	}
+	if args[0] == "authoring-context" {
+		if len(args) != 1 {
+			fmt.Fprintln(stderr, "forma: authoring-context does not accept arguments")
+			return 2
+		}
+		if _, err := io.WriteString(stdout, formadocs.AuthoringContext(currentVersion())); err != nil {
+			fmt.Fprintf(stderr, "forma: write authoring context: %v\n", err)
+			return 1
+		}
+		return 0
+	}
 	command := args[0]
 	if command == "verify" {
 		return runVerify(args[1:], stdout, stderr)
@@ -50,7 +62,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 	}
-	if command != "check" && command != "resolve" && command != "request" && command != "project" {
+	if command != "check" && command != "resolve" && command != "request" && command != "project" && command != "generate" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		printUsage(stderr)
 		return 2
@@ -63,6 +75,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if command == "request" {
 		var err error
 		requestOptions, sourceArguments, err = parseGenerationRequestOptions(sourceArguments)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: %v\n", err)
+			return 2
+		}
+	}
+	generateOptions := generateCommandOptions{}
+	if command == "generate" {
+		var err error
+		generateOptions, sourceArguments, err = parseGenerateOptions(sourceArguments)
 		if err != nil {
 			fmt.Fprintf(stderr, "forma: %v\n", err)
 			return 2
@@ -142,6 +163,24 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	}
+	if command == "generate" {
+		request, err := buildGenerationRequest(result, generationRequestOptions{manifestPath: generateOptions.manifestPath})
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
+			return 1
+		}
+		content, err := agentrequest.Marshal(request)
+		if err != nil {
+			fmt.Fprintf(stderr, "forma: marshal Generation Request: %v\n", err)
+			return 1
+		}
+		return runGeneration(generateInvocation{
+			Repository:         generateOptions.repository,
+			AllowDirty:         generateOptions.allowDirty,
+			Request:            content,
+			ReviewRequirements: request.ReviewRequirements,
+		}, stdout, stderr)
 	}
 	label := "files"
 	if len(paths) == 1 {
@@ -263,6 +302,53 @@ func runVerify(arguments []string, stdout, stderr io.Writer) int {
 type generationRequestOptions struct {
 	previousPath string
 	manifestPath string
+}
+
+type generateCommandOptions struct {
+	repository   string
+	manifestPath string
+	allowDirty   bool
+}
+
+func parseGenerateOptions(arguments []string) (generateCommandOptions, []string, error) {
+	var options generateCommandOptions
+	var sources []string
+	for index := 0; index < len(arguments); index++ {
+		switch arguments[index] {
+		case "--repository":
+			if options.repository != "" {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --repository was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --repository requires a directory")
+			}
+			options.repository = arguments[index]
+		case "--manifest":
+			if options.manifestPath != "" {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --manifest was repeated")
+			}
+			index++
+			if index >= len(arguments) || arguments[index] == "" {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --manifest requires a YAML path")
+			}
+			options.manifestPath = arguments[index]
+		case "--allow-dirty":
+			if options.allowDirty {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --allow-dirty was repeated")
+			}
+			options.allowDirty = true
+		default:
+			if strings.HasPrefix(arguments[index], "-") {
+				return generateCommandOptions{}, nil, fmt.Errorf("unknown generate option %q", arguments[index])
+			}
+			sources = append(sources, arguments[index])
+		}
+	}
+	if options.repository == "" {
+		return generateCommandOptions{}, nil, fmt.Errorf("generate requires --repository <directory>")
+	}
+	return options, sources, nil
 }
 
 func parseGenerationRequestOptions(arguments []string) (generationRequestOptions, []string, error) {
@@ -443,6 +529,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Usage:")
 	fmt.Fprintln(writer, "  forma version")
+	fmt.Fprintln(writer, "  forma authoring-context")
 	fmt.Fprintln(writer, "  forma check <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma resolve <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project navigation <file.forma | directory>...")
@@ -450,13 +537,16 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma project states <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project flow <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma generate --repository <directory> [--manifest <policy.yaml>] [--allow-dirty] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
-	fmt.Fprintln(writer, "  version  print the Forma binary version")
-	fmt.Fprintln(writer, "  check    parse, resolve, and validate one compilation unit")
-	fmt.Fprintln(writer, "  resolve  emit canonical Resolved Intent JSON for one compilation unit")
-	fmt.Fprintln(writer, "  project  emit a deterministic read-only view of resolved application meaning")
-	fmt.Fprintln(writer, "  request  emit a full or incremental Generation Request for a coding agent")
-	fmt.Fprintln(writer, "  verify   validate Generation Feedback against an immutable request")
+	fmt.Fprintln(writer, "  version            print the Forma binary version")
+	fmt.Fprintln(writer, "  authoring-context  print the bundled AI authoring guide and complete example")
+	fmt.Fprintln(writer, "  check              parse, resolve, and validate one compilation unit")
+	fmt.Fprintln(writer, "  resolve            emit canonical Resolved Intent JSON for one compilation unit")
+	fmt.Fprintln(writer, "  project            emit a deterministic read-only view of resolved application meaning")
+	fmt.Fprintln(writer, "  request            emit a full or incremental Generation Request for a coding agent")
+	fmt.Fprintln(writer, "  generate           ask Codex to implement a full request, then stop for human review")
+	fmt.Fprintln(writer, "  verify             validate Generation Feedback against an immutable request")
 }

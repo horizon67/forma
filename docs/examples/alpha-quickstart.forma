@@ -1,0 +1,109 @@
+// A small project/task application demonstrating the core alpha authoring path.
+
+role manager
+role member
+
+entry Welcome
+
+type ProjectCode = String matches /[A-Z0-9-]+/
+
+entity Project {
+    code  ProjectCode required unique label
+    name  String required
+    tasks [Task]
+}
+
+entity Task {
+    project  Project required
+    title    String required label
+    assignee String
+
+    state status Planned | Active | Done initial Planned
+}
+
+action Task.start:    Planned -> Active allow manager, member
+action Task.complete: Active  -> Done confirm allow manager, member
+
+page Welcome {
+    allow manager, member
+    continue Projects
+}
+
+page Projects {
+    allow manager, member
+
+    list Project {
+        columns code, name
+        search code, name
+        sort code asc
+        paginate 20
+        actions create, view, edit, delete
+    }
+}
+
+page ProjectCreate {
+    allow manager
+
+    form Project {
+        fields code, name
+        submit create
+    }
+}
+
+page ProjectDetail(project Project) {
+    allow manager, member
+
+    detail project {
+        fields code, name
+        actions edit, delete
+    }
+}
+
+page ProjectEdit(project Project) {
+    allow manager
+
+    form project {
+        fields code, name
+        submit edit
+    }
+}
+
+page Tasks {
+    allow manager, member
+
+    list Task {
+        columns title, project, assignee, status
+        search title
+        filter project, assignee, status
+        sort title asc
+        paginate 20
+        actions create, view, edit, delete, start, complete
+    }
+}
+
+page TaskCreate {
+    allow manager, member
+
+    form Task {
+        fields project, title, assignee
+        submit create
+    }
+}
+
+page TaskDetail(task Task) {
+    allow manager, member
+
+    detail task {
+        fields project, title, assignee, status
+        actions edit, delete, start, complete
+    }
+}
+
+page TaskEdit(task Task) {
+    allow manager, member
+
+    form task {
+        fields project, title, assignee
+        submit edit
+    }
+}

@@ -8,13 +8,14 @@ design.
 ## Start here
 
 - [Install Forma](install.md)
+- [Write Forma for the alpha](language-guide.md)
 - [Alpha language profile](alpha-language-profile.md)
 - [Language reference](language-reference.md)
 - [AI integration and credentials](ai-integration.md)
 - [Current language direction](current-language-direction.md)
 
-The end-user quickstart, language guide, CLI reference, security guide, and
-release process are release blockers tracked in
+The end-to-end quickstart, CLI reference, security guide, and release process
+are release blockers tracked in
 the [roadmap](roadmap.md). They must be added before the alpha tag is created.
 
 ## Language design and reference
@@ -39,14 +40,15 @@ An experimental construct is supported by the alpha only when the
 
 - [Development roadmap](roadmap.md)
 - [Current language direction](current-language-direction.md)
-- [Reference runner proposal](reference-agent-runner-proposal.md)
+- [First alpha quickstart dogfood](evaluations/alpha-dogfood-2026-08-23.md)
+- [Post-alpha hardened runner research](reference-agent-runner-proposal.md)
 
 ## Document ownership
 
 - `alpha-language-profile.md` defines what the released alpha accepts and what
   compatibility it promises.
-- The future `language-guide.md` teaches implemented syntax without redefining
-  it.
+- `language-guide.md` teaches implemented syntax without redefining it and is
+  embedded by `forma authoring-context` together with complete examples.
 - `language-reference.md` is the public navigation layer for the alpha
   contract, design-target specification, and artifact schemas.
 - `v0-primitives.md` defines the larger v0 design target. It must not be read as

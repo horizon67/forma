@@ -240,6 +240,7 @@ runtime adapterを作る予定はありません。
 Go 1.24以上でcheckerと現在のgeneration workflowを実行できます。
 
 ```bash
+go run ./cmd/forma authoring-context > /tmp/forma-authoring-context.md
 go run ./cmd/forma check examples/users.forma
 go run ./cmd/forma check examples/orders.forma
 go run ./cmd/forma check examples/public-membership.forma
@@ -257,6 +258,20 @@ go test ./...
 
 1回の`forma check`へ渡したfileとdirectoryが1つのcompilation unitになります。各exampleは独立した
 applicationなので、上記のように個別に検査します。
+
+`forma authoring-context`はinstalled binaryのversion、簡潔なalpha authoring guide、通常の業務flowと
+membershipの完全例を出力します。applicationはwebから文書を取得せず、この出力を人の要求からFormaへ
+変換するAIへ渡せます。
+
+Forma sourceをcheckしてcommitした後、thin alpha runnerは確認済みloginを持つCodex CLIへfull requestの実装を依頼できます。
+
+```bash
+codex login status
+go run ./cmd/forma generate --repository /path/to/target docs/examples/alpha-quickstart.forma
+```
+
+commandはGit statusと人間向けreview手順を表示して停止します。Forma自身は生成applicationのbuildやtestをhost上で実行しません。
+diffをreviewしてから、target repositoryのcommandを明示的に実行します。
 
 `forma resolve`はcanonicalなResolved Intent JSONを出力します。`forma project navigation`はResolved Intentに
 既にあるnavigationを決定的な読み取り専用text viewへ投影し、第二の正本にしたり、未宣言のdefault entryを
@@ -283,8 +298,8 @@ bounded Changes、required relation value、field reference 2個のexact binary 
 post-state Invariantを分離し、false時のauthoritativeな無変更拒否とconcurrent enforcementまで実測しました。
 6 Review Requirementsは人間確認待ちです。この実行可能baselineを最速`v0.1.0-alpha.1`のscopeとしてfreezeします。
 review済みのmultiple assignment設計は未実装のまま保存し、collection、record creation、Occurrence、Effectとともにpost-alphaへ送ります。
-alphaではinstall可能なCLI、公開language docs、Codex CLIを使う最小reference runner、clean-environment release gate、
-fresh repository dogfoodを優先します。
+alphaではversion一致済みの`forma authoring-context`と、Codexによる編集後に人のdiff reviewで停止する薄い`forma generate`を実装済みです。
+最初のfresh repository dogfoodでは通常のアプリ生成と実行まで確認済みです。そこで見つかったpage accessの欠落はcompilerで修正し、残る優先事項は再dogfoodとclean-environment release gateです。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料

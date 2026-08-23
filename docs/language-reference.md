@@ -13,6 +13,10 @@ Start with the alpha profile when writing an application today. Use the v0
 document to understand intended language direction and normative concepts that
 may graduate in later releases.
 
+For a concise tutorial, use the [alpha language guide](language-guide.md).
+The installed CLI emits the same guide plus complete examples with
+`forma authoring-context`, so an authoring AI does not need a live website.
+
 ## Current reference map
 
 | Topic | Authoritative document |
@@ -31,12 +35,7 @@ Proposal documents provide detailed rationale and test evidence. When a
 proposal and the alpha profile differ in scope, the alpha profile wins for the
 released binary.
 
-## Documentation still required before the tag
-
-A user-oriented `language-guide.md` will teach the supported subset through one
-complete application instead of requiring proposal-by-proposal reading. The
-guide must link every construct back to the alpha profile and must not define a
-second grammar.
+## Documentation website
 
 The future documentation website will publish this repository content with
 navigation and version selection. It is not the normative source itself.

@@ -1,10 +1,18 @@
-# Codex Reference Agent Runner Proposal
+# Post-alpha Hardened Codex Runner Research
 
-Status: alpha implementation contract — pre-implementation design frozen after
-the 2026-08-22 alpha release-preparation review. Reopen it only for a
-correctness or security blocker discovered during implementation.
+Status: superseded as an alpha.1 implementation contract on 2026-08-23. The
+design is retained as research for a later hostile-repository or automated
+feedback runner. It is not a release checklist for the thin alpha runner.
 
-## Decision
+The active alpha.1 scope is owned by the
+[roadmap](roadmap.md#fastest-alpha-cut--v010-alpha1current-priority) and
+[AI integration guide](ai-integration.md): compile a deterministic Generation
+Request, let Codex edit a repository the user owns and trusts, then stop for
+human diff review and explicit repository commands. Alpha.1 does not execute
+an agent-authored feedback adapter on the host or publish a tamper-resistant
+external evidence store.
+
+## Historical decision (superseded for alpha.1)
 
 The first public alpha must let a user write Forma and obtain application code,
 not merely stop at a Generation Request. It will therefore include one

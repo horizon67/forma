@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha10"
+const AcceptanceFactsVersion = "forma/acceptance-facts/v0alpha11"
 
 // AcceptanceFacts is the target-neutral set of observable properties that a
 // coding agent must translate into repository-native tests.
@@ -421,6 +421,9 @@ func (b *acceptanceBuilder) build() error {
 		}
 	}
 	for _, page := range b.intent.Pages {
+		if err := b.addSurfaceOnlyPageAccessFacts(page); err != nil {
+			return err
+		}
 		for _, transition := range page.SurfaceTransitions {
 			target, ok := b.pages[transition.TargetPage]
 			if !ok {
@@ -448,6 +451,21 @@ func (b *acceptanceBuilder) build() error {
 		}
 	}
 	return nil
+}
+
+// addSurfaceOnlyPageAccessFacts closes the access boundary for a page whose
+// observable surface is the page itself. Pages with an entity view or Identity
+// interaction already carry the composed page rule on those concrete
+// surfaces; emitting another page-level family there would duplicate the same
+// obligation. An omitted allow remains public and has no restriction to prove.
+func (b *acceptanceBuilder) addSurfaceOnlyPageAccessFacts(page IRPage) error {
+	if len(page.Allows) == 0 || len(page.Views) != 0 || len(page.IdentityInteractions) != 0 {
+		return nil
+	}
+	access := IRAccess{ID: page.ID, AllOf: []IRAccessRequirement{{
+		Source: page.ID, Kind: "roles", AnyOf: append([]string(nil), page.Allows...),
+	}}}
+	return b.addAccessFacts(page.ID, access, []SemanticID{page.ID})
 }
 
 func (b *acceptanceBuilder) addInvariantFacts(invariant IRInvariant) {

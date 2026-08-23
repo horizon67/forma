@@ -148,6 +148,42 @@ func TestRepositoryPreflightFailsBeforeLockingANonRepository(t *testing.T) {
 	}
 }
 
+func TestRepositoryPreflightRejectsAnAbsentTargetBeforeRunningGit(t *testing.T) {
+	runner := &scriptedCommandRunner{t: t}
+	locker := &recordingLocker{}
+	_, err := (RepositoryPreflight{Commands: runner, Locks: locker}).Prepare(context.Background(), RepositoryPreflightOptions{
+		Repository: filepath.Join(t.TempDir(), "absent"), GitExecutable: "/absolute/git",
+	})
+	if !errors.Is(err, ErrInvalidRepository) {
+		t.Fatalf("error = %v", err)
+	}
+	if len(runner.calls) != 0 || locker.calls != 0 {
+		t.Fatalf("invalid target reached Git/lock: %d / %d", len(runner.calls), locker.calls)
+	}
+}
+
+func TestRepositoryPreflightRequiresACommittedHeadAndReleasesItsLock(t *testing.T) {
+	root := t.TempDir()
+	canonicalRoot, err := canonicalDirectory(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	locker := &recordingLocker{}
+	runner := &scriptedCommandRunner{t: t, steps: []commandStep{
+		{stdout: canonicalRoot + "\n"},
+		{requireLocked: locker, exitCode: 128, stderr: "fatal: Needed a single revision\n"},
+	}}
+	_, err = (RepositoryPreflight{Commands: runner, Locks: locker}).Prepare(context.Background(), RepositoryPreflightOptions{
+		Repository: root, GitExecutable: "/absolute/git",
+	})
+	if !errors.Is(err, ErrRepositoryHasNoCommit) || !strings.Contains(err.Error(), "initial commit") {
+		t.Fatalf("error = %v", err)
+	}
+	if locker.locked {
+		t.Fatal("missing HEAD retained the worktree lock")
+	}
+}
+
 func TestRepositoryPreflightRejectsUnsafeRepositoryOwnershipWithDedicatedDiagnostic(t *testing.T) {
 	root := t.TempDir()
 	locker := &recordingLocker{}

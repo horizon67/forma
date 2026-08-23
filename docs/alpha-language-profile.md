@@ -21,15 +21,19 @@ versions rather than silently reinterpret them.
 The compiler profile includes:
 
 - `forma version`
+- `forma authoring-context`
 - `forma check`
 - `forma resolve`
 - `forma project navigation|outcomes|states|flow`
 - `forma request`
+- `forma generate`
 - `forma verify`
 
-`forma generate` is a release blocker and will be added as the one mutating,
-network-capable command. All other commands remain deterministic and do not
-invoke an LLM.
+`forma authoring-context` emits the public guide and complete examples embedded
+in the installed binary. `forma generate` is the one mutating, network-capable
+command. It stops after Codex edits the target so a person can review the diff;
+it does not automatically execute agent-authored code or a feedback adapter on
+the host. All other commands remain deterministic and do not invoke an LLM.
 
 ## Artifact baseline
 
@@ -37,9 +41,9 @@ invoke an LLM.
 | --- | --- |
 | Resolved Intent | `forma/resolved-intent/v0.12` |
 | Source Map | `forma/source-map/v0.6` |
-| Acceptance Facts | `forma/acceptance-facts/v0alpha10` |
+| Acceptance Facts | `forma/acceptance-facts/v0alpha11` |
 | Navigation Projection | `forma/navigation-projection/v0alpha2` |
-| Outcome Projection | `forma/outcome-projection/v0alpha5` |
+| Outcome Projection | `forma/outcome-projection/v0alpha6` |
 | Domain State Projection | `forma/domain-state-projection/v0alpha1` |
 | Flow Projection | `forma/flow-projection/v0alpha3` |
 | Review Requirements | `forma/review-requirements/v0alpha6` |
@@ -105,8 +109,14 @@ destinations where required.
   destinations require an explicit `goto`.
 - Page access, action access, and destination access are composed at the
   invoking surface.
+- A role-restricted page with no entity view or Identity interaction owns its
+  allowed and denied access Facts directly at the page boundary.
 - `delete` always requires confirmation. A domain action marked `confirm`
   requires confirmation before dispatch.
+- The alpha does not define cascade, detach, or restrict behavior when a
+  deleted record is referenced by another record. A generated implementation
+  must not present a destructive cascade as Forma-guaranteed behavior; this
+  repository-specific choice remains human review.
 - Source-state rejection, successful transition state, navigation, and
   observable feedback are represented in Acceptance Facts where supported.
 

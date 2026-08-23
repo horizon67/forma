@@ -130,6 +130,106 @@ page UserEdit(user User) {
 	}
 }
 
+func TestSurfaceOnlyPageAccessFactsOwnThePageBoundaryAndAreComplete(t *testing.T) {
+	result := Compile([]SourceFile{NewSourceFile("welcome.forma", `role manager
+role member
+role auditor
+
+entry Welcome
+
+entity Item {
+    name String required label
+}
+
+page Welcome {
+    allow manager, member
+    continue Home
+}
+
+page Public {
+    continue Home
+}
+
+page Home {
+    allow manager, member
+    list Item {
+        columns name
+    }
+}
+`)})
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnosticMessages(result.Diagnostics))
+	}
+	facts, err := BuildAcceptanceFacts(result.Intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[SemanticID]bool{
+		"fact/page/Welcome/access/allowed/manager":  false,
+		"fact/page/Welcome/access/allowed/member":   false,
+		"fact/page/Welcome/access/denied/anonymous": false,
+		"fact/page/Welcome/access/denied/auditor":   false,
+	}
+	for _, fact := range facts.Facts {
+		if (fact.Subject == "page/Home" || fact.Subject == "page/Public") &&
+			(fact.Kind == "access-allowed" || fact.Kind == "access-denied") {
+			t.Fatalf("ineligible page received a page-level access fact: %#v", fact)
+		}
+		if _, ok := want[fact.ID]; ok {
+			want[fact.ID] = true
+			if fact.Subject != "page/Welcome" || fact.Expected.Enforcement != "authoritative" {
+				t.Fatalf("surface-only page access fact = %#v", fact)
+			}
+		}
+	}
+	for id, found := range want {
+		if !found {
+			t.Errorf("missing surface-only page access fact %s", id)
+		}
+	}
+
+	missing := cloneFactsForTest(t, facts)
+	missing.Facts = removeAcceptanceFactForTest(missing.Facts, "fact/page/Welcome/access/denied/anonymous")
+	if err := ValidateAcceptanceFacts(result.Intent, missing); err == nil || !strings.Contains(err.Error(), "missing surface-only page access fact") {
+		t.Fatalf("missing page access validation error = %v", err)
+	}
+
+	tampered := cloneFactsForTest(t, facts)
+	fact, ok := acceptanceFactPointerByID(tampered, "fact/page/Welcome/access/allowed/manager")
+	if !ok {
+		t.Fatal("missing manager page access fact")
+	}
+	fact.Expected.Outcome = "denied"
+	if err := ValidateAcceptanceFacts(result.Intent, tampered); err == nil || !strings.Contains(err.Error(), "differs from its canonical derivation") {
+		t.Fatalf("tampered page access validation error = %v", err)
+	}
+
+	extra := cloneFactsForTest(t, facts)
+	extra.Facts = append(extra.Facts, AcceptanceFact{
+		ID:        "fact/page/Public/access/allowed/anonymous",
+		Kind:      "access-allowed",
+		Subject:   "page/Public",
+		Principal: &FactPrincipal{Kind: "anonymous"},
+		Expected: FactExpectation{
+			Outcome: "allowed", Enforcement: "authoritative",
+		},
+		SourceNodes: []SemanticID{"page/Public"},
+	})
+	if err := ValidateAcceptanceFacts(result.Intent, extra); err == nil || !strings.Contains(err.Error(), "is not derived from Resolved Intent") {
+		t.Fatalf("invented public-page access validation error = %v", err)
+	}
+}
+
+func removeAcceptanceFactForTest(facts []AcceptanceFact, id SemanticID) []AcceptanceFact {
+	result := make([]AcceptanceFact, 0, len(facts)-1)
+	for _, fact := range facts {
+		if fact.ID != id {
+			result = append(result, fact)
+		}
+	}
+	return result
+}
+
 func TestInvariantAcceptanceFactsPinPostStateAndAtomicRejection(t *testing.T) {
 	result := Compile([]SourceFile{NewSourceFile("stock.forma", invariantAcceptanceSource)})
 	if len(result.Diagnostics) != 0 {

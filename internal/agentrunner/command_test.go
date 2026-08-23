@@ -252,6 +252,21 @@ func TestOSCommandRunnerPreservesDiagnosticsOnContextDeadline(t *testing.T) {
 	}
 }
 
+func TestCommandContextRemainsPrimaryWhenProcessGroupCleanupAlsoFails(t *testing.T) {
+	ctx := newManualDeadlineContext()
+	ctx.expire()
+	groupErr := errors.New("group cleanup failed")
+	result := CommandResult{}
+
+	err := commandContextOrGroupError(ctx, "/absolute/tool", groupErr, &result)
+	if !errors.Is(err, context.DeadlineExceeded) || !errors.Is(err, groupErr) {
+		t.Fatalf("error = %v", err)
+	}
+	if !result.TimedOut {
+		t.Fatalf("result = %#v", result)
+	}
+}
+
 func TestCommandRunnerHelperProcess(t *testing.T) {
 	switch os.Getenv("FORMA_COMMAND_HELPER") {
 	case "":

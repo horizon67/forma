@@ -673,7 +673,7 @@ func TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool(t *testing.T) {
 	// Ask the Go toolchain for the dependency closure instead of restating the
 	// RuleDirs list this test is meant to check.
 	command := exec.Command(
-		"go", "list", "-deps", "-f", "{{if not .Standard}}{{.ImportPath}}{{end}}",
+		"go", "list", "-deps", "-f", `{{if not .Standard}}{{.ImportPath}}{{"\t"}}{{join .EmbedFiles ","}}{{end}}`,
 		"./cmd/forma",
 		"./experiments/membership-agent-e2e/cmd/feedback",
 		"./experiments/membership-agent-e2e/cmd/retryguard",
@@ -686,7 +686,8 @@ func TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool(t *testing.T) {
 	}
 	const module = "github.com/horizon67/forma/"
 	dependencies := map[string]bool{}
-	for _, importPath := range strings.Fields(string(output)) {
+	for _, line := range strings.Split(string(output), "\n") {
+		importPath, embedded, _ := strings.Cut(line, "\t")
 		if !strings.HasPrefix(importPath, module) {
 			continue
 		}
@@ -710,6 +711,15 @@ func TestRetryBaselineCoversEveryPackageCompiledIntoATrustedTool(t *testing.T) {
 			}
 			if protected[path] != wantReason {
 				t.Errorf("the retry baseline does not protect verification source %s", path)
+			}
+		}
+		for _, file := range strings.Split(embedded, ",") {
+			if file == "" {
+				continue
+			}
+			path := filepath.ToSlash(filepath.Join(directory, file))
+			if protected[path] != retryintegrity.ReasonVerificationRule {
+				t.Errorf("the retry baseline does not protect embedded verification input %s", path)
 			}
 		}
 	}

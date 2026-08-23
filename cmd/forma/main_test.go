@@ -53,6 +53,46 @@ func TestVersionCommandRejectsArguments(t *testing.T) {
 	}
 }
 
+func TestAuthoringContextCommandUsesTheInstalledBinaryVersion(t *testing.T) {
+	previous := versionOverride
+	versionOverride = "v0.1.0-alpha.1"
+	t.Cleanup(func() { versionOverride = previous })
+
+	var stdout, stderr bytes.Buffer
+	if exitCode := run([]string{"authoring-context"}, &stdout, &stderr); exitCode != 0 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	for _, want := range []string{
+		"Context schema: `forma/authoring-context/v0alpha1`",
+		"Forma binary: `v0.1.0-alpha.1`",
+		"Language profile: `v0.1.0-alpha.1`",
+		"## Authoring protocol",
+		"## Bundled complete example",
+		"entry Welcome",
+		"forma check app.forma",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Fatalf("stdout does not contain %q", want)
+		}
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
+func TestAuthoringContextCommandRejectsArguments(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if exitCode := run([]string{"authoring-context", "app.forma"}, &stdout, &stderr); exitCode != 2 {
+		t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
+	}
+	if got, want := stderr.String(), "forma: authoring-context does not accept arguments\n"; got != want {
+		t.Fatalf("stderr = %q, want %q", got, want)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
 func TestVersionFromBuildInfoDistinguishesReleasesAndSourceBuilds(t *testing.T) {
 	tests := []struct {
 		name     string

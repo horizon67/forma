@@ -50,7 +50,7 @@ cardinality制限ではない。
 設計成果は、1 block／最大2 assignments、canonical Change order、同一pre-state evaluation、type-disjoint target grouping、
 complete candidate Invariant、multi-field atomic Fact、relation別availability ID、Review Requirement拡張までである。
 compiler、Order fixture、Generation Request、schema versionはまだ変更しておらず、current executable baselineは
-Action Preconditionまでを実装したResolved Intent `v0.12`、Acceptance Facts `v0alpha10`、Outcome Projection `v0alpha5`、
+Action Preconditionとsurface-only page accessまでを実装したResolved Intent `v0.12`、Acceptance Facts `v0alpha11`、Outcome Projection `v0alpha6`、
 Review Requirements `v0alpha6`、Order 280/280 Factsである。
 
 最速alphaではこのcurrent executable baselineをscope freezeする。multiple assignmentは設計を失わずpost-alpha backlogへ置き、
@@ -410,9 +410,9 @@ Invariant、availability rowは、どのtarget bindingがreasonを所有する�
 compiler sliceで予定するversionは次である。
 
 - Resolved Intent: `v0.12` → `v0.13`（Changes cardinality、canonical order、distinct target type restriction）
-- Acceptance Facts: `v0alpha10` → `v0alpha11`（multi-field atomic expectation、target handle／availability ID）
+- Acceptance Facts: `v0alpha11` → `v0alpha12`（multi-field atomic expectation、target handle／availability ID）
 - Source Map: schema shapeは維持し、`intentVersion`だけ`v0.13`へ更新
-- Outcome Projection: `v0alpha5` → `v0alpha6`（multi-target atomic row）
+- Outcome Projection: `v0alpha6` → `v0alpha7`（multi-target atomic row）
 - Review Requirements: `v0alpha6` → `v0alpha7`（全Changeを含むatomic／authorization source contract）
 - Generation Request: envelope schemaは維持し、canonical componentとrequest digestを更新
 

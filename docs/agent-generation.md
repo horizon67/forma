@@ -122,8 +122,8 @@ Acceptance Factsは実装の合否をAIの自由判断へ委ねるためのpromp
 front-endが決定し、agentが決めるのはそのrepositoryでどう観測・検査するかである。
 
 各factは少なくとも次を持つ。現在のkindは
-`forma/acceptance-facts/v0alpha10`として実装し、admin flow、Identity専用29 Facts、application entry、
-surface-only transition、self-only Invariant、domain action transition/confirmation、experimental Changesのexpression result、Action Preconditionの入力と不成立outcomeを扱う。Invariantはentity単位の成立・違反に加え、
+`forma/acceptance-facts/v0alpha11`として実装し、admin flow、Identity専用29 Facts、application entry、
+surface-only transitionとそのpage access、self-only Invariant、domain action transition/confirmation、experimental Changesのexpression result、Action Preconditionの入力と不成立outcomeを扱う。Invariantはentity単位の成立・違反に加え、
 参照fieldを入力に含むform submitごとにauthoritativeな拒否Factを導出する。各Factは他のrequirementを満たした
 隔離scenarioとして、解決済みExpression tree、post-state評価、authoritative enforcement、atomic commit結果を
 持つ。追加domainのkindは引き続き実例から拡張する。
