@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	RequestSchema                      = "forma/generation-request/v0alpha4"
+	RequestSchema                      = "forma/generation-request/v0alpha5"
+	PreviousRequestSchema              = "forma/generation-request/v0alpha4"
 	HistoricalIncrementalRequestSchema = "forma/generation-request/v0alpha2"
 	FeedbackSchema                     = "forma/generation-feedback/v0alpha2"
 	LegacyRequestSchema                = "forma/generation-request/v0alpha1"
@@ -44,6 +45,9 @@ type RequestedChange struct {
 	UnchangedIntentNodes        int                   `json:"unchangedIntentNodes,omitempty"`
 	UnchangedFacts              int                   `json:"unchangedFacts,omitempty"`
 	UnchangedReviewRequirements int                   `json:"unchangedReviewRequirements,omitempty"`
+	PolicyChanges               []PolicyChange        `json:"policyChanges,omitempty"`
+	UnchangedPolicies           int                   `json:"unchangedPolicies,omitempty"`
+	ConventionChanges           []ConventionChange    `json:"conventionChanges,omitempty"`
 }
 
 type RequestBaseline struct {
@@ -140,66 +144,14 @@ func BuildFullWithPolicy(result compiler.Result, manifest *implementationpolicy.
 }
 
 func BuildIncremental(previous Request, result compiler.Result, manifest *implementationpolicy.Manifest) (Request, error) {
-	if err := ValidateRequest(previous); err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: invalid baseline: %w", err)
-	}
-	if manifest == nil && previous.ImplementationPolicy != nil {
-		preserved := *previous.ImplementationPolicy
-		manifest = &preserved
-	}
-	current, err := BuildFullWithPolicy(result, manifest)
+	plan, err := PlanGeneration(&previous, result, manifest)
 	if err != nil {
 		return Request{}, err
 	}
-	previousOutputs, err := compilerOutputsForDiff(previous)
-	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: upgrade baseline: %w", err)
+	if plan.NoOp {
+		return Request{}, ErrNoChanges
 	}
-	intentChanges, unchangedIntent, err := diffIntent(previousOutputs.intent, current.ResolvedIntent)
-	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: diff Resolved Intent: %w", err)
-	}
-	factChanges, unchangedFacts, err := diffFacts(previousOutputs.facts, current.AcceptanceFacts)
-	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: diff Acceptance Facts: %w", err)
-	}
-	reviewChanges, unchangedReviews, err := diffReviewRequirements(previousOutputs.reviews, current.ReviewRequirements)
-	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: diff Review Requirements: %w", err)
-	}
-	allChanges := append(append(append([]SemanticChange(nil), intentChanges...), factChanges...), reviewChanges...)
-	for _, change := range allChanges {
-		if change.Kind == "removed" {
-			return Request{}, fmt.Errorf("build incremental Generation Request: removed nodes are not supported by the first incremental slice")
-		}
-	}
-	if len(intentChanges) == 0 && len(factChanges) == 0 && len(reviewChanges) == 0 {
-		return Request{}, fmt.Errorf("build incremental Generation Request: baseline and current intent are identical")
-	}
-	baselineContent, err := Marshal(previous)
-	if err != nil {
-		return Request{}, fmt.Errorf("build incremental Generation Request: marshal baseline: %w", err)
-	}
-	digest := sha256.Sum256(baselineContent)
-	intentNodes := make([]compiler.SemanticID, 0, len(intentChanges))
-	for _, change := range intentChanges {
-		intentNodes = append(intentNodes, change.NodeID)
-	}
-	current.RequestedChange = RequestedChange{
-		Kind: "incremental",
-		Baseline: &RequestBaseline{
-			RequestSHA256: fmt.Sprintf("%x", digest), RequestSchema: previous.Schema,
-			ResolvedIntentVersion:  previous.ResolvedIntent.Version,
-			AcceptanceFactsVersion: previous.AcceptanceFacts.Version,
-			SourceMapVersion:       previous.SourceMap.Version, ReviewRequirementsVersion: reviewRequirementsVersion(previous),
-		},
-		IntentNodes: intentNodes, IntentChanges: intentChanges, FactChanges: factChanges, ReviewRequirementChanges: reviewChanges,
-		UnchangedIntentNodes: unchangedIntent, UnchangedFacts: unchangedFacts, UnchangedReviewRequirements: unchangedReviews,
-	}
-	if err := ValidateRequest(current); err != nil {
-		return Request{}, err
-	}
-	return current, nil
+	return plan.Request, nil
 }
 
 func Marshal(request Request) ([]byte, error) {
@@ -210,6 +162,20 @@ func UnmarshalRequest(content []byte) (Request, error) {
 	var request Request
 	if err := unmarshalExact(content, &request); err != nil {
 		return Request{}, fmt.Errorf("decode Generation Request: %w", err)
+	}
+	// New fields are unknown to older schemas even when explicitly empty.
+	if request.Schema != RequestSchema {
+		var wire struct {
+			RequestedChange map[string]json.RawMessage `json:"requestedChange"`
+		}
+		if err := json.Unmarshal(content, &wire); err != nil {
+			return Request{}, err
+		}
+		for _, key := range []string{"policyChanges", "unchangedPolicies", "conventionChanges"} {
+			if _, exists := wire.RequestedChange[key]; exists {
+				return Request{}, fmt.Errorf("decode Generation Request: %s is not supported by schema %q", key, request.Schema)
+			}
+		}
 	}
 	return request, nil
 }
@@ -227,14 +193,18 @@ func UnmarshalFeedback(content []byte) (Feedback, error) {
 // request as immutable input and must not validate against a copy returned by
 // the coding agent.
 func ValidateRequest(request Request) error {
+	if request.Schema != RequestSchema && hasPolicyMetadata(request.RequestedChange) {
+		return fmt.Errorf("validate Generation Request: policy change metadata requires %s", RequestSchema)
+	}
 	if request.Schema == LegacyRequestSchema || request.Schema == HistoricalIncrementalRequestSchema {
 		return validateHistoricalRequest(request)
 	}
-	// Only the current schema and the two pinned historical schemas are read.
+	// The previous schema shares current compiler outputs; older pinned schemas
+	// use their own codec. v0alpha3 remains unsupported.
 	// An intermediate schema would carry Acceptance Facts this binary can no
 	// longer reproduce, so claiming support for it would be a promise the
 	// version-dispatched validator cannot keep.
-	if request.Schema != RequestSchema {
+	if request.Schema != RequestSchema && request.Schema != PreviousRequestSchema {
 		return fmt.Errorf("validate Generation Request: unsupported schema %q", request.Schema)
 	}
 	if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.SourceMap == nil {
@@ -280,7 +250,7 @@ func ValidateRequest(request Request) error {
 	if err != nil {
 		return err
 	}
-	if request.Schema == RequestSchema {
+	if hasCurrentCompilerOutputs(request.Schema) {
 		if err := compiler.ValidateReviewRequirements(request.ResolvedIntent, request.ReviewRequirements); err != nil {
 			return err
 		}
@@ -303,7 +273,7 @@ func ValidateRequest(request Request) error {
 	case "full":
 		if request.RequestedChange.Baseline != nil || len(request.RequestedChange.IntentNodes) != 0 ||
 			len(request.RequestedChange.IntentChanges) != 0 || len(request.RequestedChange.FactChanges) != 0 || len(request.RequestedChange.ReviewRequirementChanges) != 0 ||
-			request.RequestedChange.UnchangedIntentNodes != 0 || request.RequestedChange.UnchangedFacts != 0 || request.RequestedChange.UnchangedReviewRequirements != 0 {
+			request.RequestedChange.UnchangedIntentNodes != 0 || request.RequestedChange.UnchangedFacts != 0 || request.RequestedChange.UnchangedReviewRequirements != 0 || hasPolicyMetadata(request.RequestedChange) {
 			return fmt.Errorf("validate Generation Request: full request contains incremental change metadata")
 		}
 	case "incremental":
@@ -436,7 +406,7 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 		recorded.AcceptanceFactsVersion != baseline.AcceptanceFacts.Version {
 		return fmt.Errorf("validate incremental baseline: baseline versions do not match recorded versions")
 	}
-	if request.Schema == RequestSchema {
+	if hasCurrentCompilerOutputs(request.Schema) {
 		if recorded.SourceMapVersion != baseline.SourceMap.Version ||
 			recorded.ReviewRequirementsVersion != reviewRequirementsVersion(baseline) {
 			return fmt.Errorf("validate incremental baseline: extended baseline versions do not match recorded versions")
@@ -472,7 +442,7 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 	if err != nil {
 		return fmt.Errorf("validate incremental baseline: diff Review Requirements: %w", err)
 	}
-	intentNodes := make([]compiler.SemanticID, 0, len(intentChanges))
+	var intentNodes []compiler.SemanticID
 	for _, change := range intentChanges {
 		intentNodes = append(intentNodes, change.NodeID)
 	}
@@ -481,7 +451,7 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 		reflect.DeepEqual(factChanges, requested.FactChanges) &&
 		reflect.DeepEqual(intentNodes, requested.IntentNodes) &&
 		unchangedIntent == requested.UnchangedIntentNodes && unchangedFacts == requested.UnchangedFacts
-	if request.Schema == RequestSchema {
+	if hasCurrentCompilerOutputs(request.Schema) {
 		changeSetsMatch = changeSetsMatch && reflect.DeepEqual(reviewChanges, requested.ReviewRequirementChanges) &&
 			unchangedReviews == requested.UnchangedReviewRequirements
 	} else {
@@ -489,6 +459,15 @@ func ValidateIncrementalBaseline(request, baseline Request) error {
 	}
 	if !changeSetsMatch {
 		return fmt.Errorf("validate incremental baseline: recorded semantic changes differ from baseline-derived changes")
+	}
+	if request.Schema == RequestSchema {
+		changes, unchanged, conventions, err := diffPolicies(baseline.ImplementationPolicy, request.ImplementationPolicy)
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(changes, requested.PolicyChanges) || unchanged != requested.UnchangedPolicies || !reflect.DeepEqual(conventions, requested.ConventionChanges) {
+			return fmt.Errorf("validate incremental baseline: recorded policy changes differ from baseline-derived changes")
+		}
 	}
 	return nil
 }
@@ -530,12 +509,15 @@ func validateIncrementalChange(request Request) error {
 	if !validSHA256(change.Baseline.RequestSHA256) {
 		return fmt.Errorf("validate Generation Request: incremental baseline has invalid SHA-256 digest")
 	}
+	if request.Schema == PreviousRequestSchema && change.Baseline.RequestSchema == RequestSchema {
+		return fmt.Errorf("validate Generation Request: previous request schema cannot refer to a newer baseline schema")
+	}
 	wantIntentVersion, wantFactsVersion, wantSourceMapVersion, wantReviewsVersion, ok := compilerVersionsForRequestSchema(change.Baseline.RequestSchema)
 	if !ok || change.Baseline.ResolvedIntentVersion != wantIntentVersion ||
 		change.Baseline.AcceptanceFactsVersion != wantFactsVersion {
 		return fmt.Errorf("validate Generation Request: incremental baseline versions are unsupported")
 	}
-	if request.Schema == RequestSchema {
+	if hasCurrentCompilerOutputs(request.Schema) {
 		if change.Baseline.SourceMapVersion != wantSourceMapVersion || change.Baseline.ReviewRequirementsVersion != wantReviewsVersion {
 			return fmt.Errorf("validate Generation Request: incremental extended baseline versions are unsupported")
 		}
@@ -543,7 +525,7 @@ func validateIncrementalChange(request Request) error {
 		len(change.ReviewRequirementChanges) != 0 || change.UnchangedReviewRequirements != 0 {
 		return fmt.Errorf("validate Generation Request: v0alpha3 cannot contain B4 review change metadata")
 	}
-	if len(change.IntentChanges) == 0 && len(change.FactChanges) == 0 && len(change.ReviewRequirementChanges) == 0 {
+	if !hasChanges(change) {
 		return fmt.Errorf("validate Generation Request: incremental request has no changes")
 	}
 	if change.UnchangedIntentNodes < 0 || change.UnchangedFacts < 0 || change.UnchangedReviewRequirements < 0 {
@@ -553,7 +535,7 @@ func validateIncrementalChange(request Request) error {
 	if err != nil {
 		return fmt.Errorf("validate Generation Request: index Resolved Intent: %w", err)
 	}
-	canonicalIntentNodes := make([]compiler.SemanticID, 0, len(change.IntentChanges))
+	var canonicalIntentNodes []compiler.SemanticID
 	if err := validateSemanticChanges("intent", change.IntentChanges, intentNodes); err != nil {
 		return err
 	}
@@ -576,6 +558,9 @@ func validateIncrementalChange(request Request) error {
 	}
 	if err := validateSemanticChanges("review requirement", change.ReviewRequirementChanges, reviewNodes); err != nil {
 		return err
+	}
+	if request.Schema == RequestSchema {
+		return validatePolicyChanges(request)
 	}
 	return nil
 }

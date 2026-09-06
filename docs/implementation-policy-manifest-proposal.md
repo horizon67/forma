@@ -228,7 +228,15 @@ request内のsnapshotに対して行う。現在fileを読み直して判定根�
 `requiredFactIds`で採用したtrust boundaryと同じである。
 
 incremental requestで新しいManifestを指定しない場合はbaseline requestのManifestを保持し、policyが暗黙に
-消えないようにする。policyの明示的な追加・変更・削除modelは後続probeで扱う。
+消えないようにする。開発版のGeneration Request `v0alpha5`は`policyChanges`へIDごとの追加・変更を記録し、
+`unchangedPolicies`と`conventionChanges`も運ぶ。mode・value・instructionの変更を検出し、Manifestだけの
+更新も受理する。Policy削除・ID変更は現段階では明示的に拒否する。conventionsは引き続き助言であり、
+変更の検出とその内容の機械検証は別である。
+
+`conventionChanges`は`kind: added | removed`と文言`value`をvalue昇順で記録し、編集は旧文言の削除と
+新文言の追加で表す。baselineから差分を再導出し、欠落・改変された差分を拒否する。助言の削除は
+その助言の撤回であり、逆の動作・コード削除・無関係なrefactoringを要求しない。助言だけの変更でも
+incremental requestを作るが、既存実装に変更が不要ならdiffゼロで完了できる。
 
 Manifestの正規化はGeneration Request作成処理の責務だが、application semanticsではない。Resolved Intent
 やAcceptance Factsへpolicyを混ぜない。同じForma sourceを別Manifestで実装しても、application behaviorの

@@ -15,6 +15,74 @@ import (
 	"github.com/horizon67/forma/internal/implementationpolicy"
 )
 
+func TestGenerateHelpDescribesAutomaticPlanSelection(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit %d: %s", code, &stderr)
+	}
+	if !strings.Contains(stdout.String(), "[--previous <request.json>]") || !strings.Contains(stdout.String(), "select full, incremental, or no-op") {
+		t.Fatalf("help omits generation plan selection: %s", &stdout)
+	}
+}
+
+func TestPathOptionsRejectMissingValuesConsistently(t *testing.T) {
+	for _, tc := range []struct {
+		command string
+		option  string
+		parse   func([]string) (string, error)
+	}{
+		{"generate", "--repository", func(args []string) (string, error) {
+			options, _, err := parseGenerateOptions(args)
+			return options.repository, err
+		}},
+		{"generate", "--previous", func(args []string) (string, error) {
+			options, _, err := parseGenerateOptions(append([]string{"--repository", "/target"}, args...))
+			return options.previousPath, err
+		}},
+		{"generate", "--manifest", func(args []string) (string, error) {
+			options, _, err := parseGenerateOptions(append([]string{"--repository", "/target"}, args...))
+			return options.manifestPath, err
+		}},
+		{"request", "--previous", func(args []string) (string, error) {
+			options, _, err := parseGenerationRequestOptions(args)
+			return options.previousPath, err
+		}},
+		{"request", "--manifest", func(args []string) (string, error) {
+			options, _, err := parseGenerationRequestOptions(args)
+			return options.manifestPath, err
+		}},
+		{"verify", "--repository", func(args []string) (string, error) {
+			options, _, err := parseVerifyOptions(args)
+			return options.repositoryRoot, err
+		}},
+		{"verify", "--baseline", func(args []string) (string, error) {
+			options, _, err := parseVerifyOptions(args)
+			return options.baselinePath, err
+		}},
+	} {
+		t.Run(tc.command+"/"+tc.option, func(t *testing.T) {
+			for _, suffix := range [][]string{nil, {""}, {"--manifest", "app.forma"}, {"--"}} {
+				args := append([]string{tc.option}, suffix...)
+				_, err := tc.parse(args)
+				want := tc.command + " option " + tc.option + " requires "
+				if err == nil || !strings.HasPrefix(err.Error(), want) {
+					t.Fatalf("%v: error %v, want %q", args, err, want)
+				}
+				var stdout, stderr bytes.Buffer
+				if code := run(append([]string{tc.command}, args...), &stdout, &stderr); code != 2 || !strings.Contains(stderr.String(), want) {
+					t.Fatalf("%v: exit %d, stderr %s", args, code, stderr.String())
+				}
+			}
+			for _, value := range []string{"relative/path", "./--literal-path", "/absolute/--literal-path", "path with spaces"} {
+				got, err := tc.parse([]string{tc.option, value})
+				if err != nil || got != value {
+					t.Fatalf("path %q: got %q, error %v", value, got, err)
+				}
+			}
+		})
+	}
+}
+
 func TestVersionCommand(t *testing.T) {
 	previous := versionOverride
 	versionOverride = "v0.1.0-alpha.1"
@@ -218,6 +286,7 @@ func TestAlphaLanguageProfileArtifactVersionsMatchCode(t *testing.T) {
 	wantHistorical := map[string]string{
 		"Generation Request (historical full)":        agentrequest.LegacyRequestSchema,
 		"Generation Request (historical incremental)": agentrequest.HistoricalIncrementalRequestSchema,
+		"Generation Request (previous alpha)":         agentrequest.PreviousRequestSchema,
 		"Generation Feedback (legacy pair)":           agentrequest.LegacyFeedbackSchema,
 		"Resolved Intent (historical request)":        agentrequest.HistoricalResolvedIntentVersion,
 		"Acceptance Facts (historical request)":       agentrequest.HistoricalAcceptanceFactsVersion,
@@ -359,7 +428,7 @@ func TestRequestCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &request); err != nil {
 		t.Fatalf("request output is not JSON: %v\n%s", err, stdout.String())
 	}
-	if request.Schema != "forma/generation-request/v0alpha4" || request.ResolvedIntent == nil {
+	if request.Schema != agentrequest.RequestSchema || request.ResolvedIntent == nil {
 		t.Fatalf("generation request = %#v", request)
 	}
 	if len(request.AcceptanceFacts.Facts) == 0 || len(request.AcceptanceFacts.Facts) != len(request.Verification.RequiredFactIDs) {

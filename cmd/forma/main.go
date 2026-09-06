@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -151,6 +152,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		request, err := buildGenerationRequest(result, requestOptions)
 		if err != nil {
 			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
+			if errors.Is(err, os.ErrNotExist) {
+				return 2
+			}
 			return 1
 		}
 		content, err := agentrequest.Marshal(request)
@@ -165,10 +169,23 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if command == "generate" {
-		request, err := buildGenerationRequest(result, generationRequestOptions{manifestPath: generateOptions.manifestPath})
+		plan, err := buildGenerationPlan(result, generationRequestOptions{
+			manifestPath: generateOptions.manifestPath, previousPath: generateOptions.previousPath,
+		})
 		if err != nil {
 			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
+			if errors.Is(err, os.ErrNotExist) {
+				return 2
+			}
 			return 1
+		}
+		if plan.NoOp {
+			return runNoOpGeneration(generateOptions, plan.Baseline, stdout, stderr)
+		}
+		request := plan.Request
+		fmt.Fprintf(stdout, "generation request: %s\n", request.RequestedChange.Kind)
+		if plan.Baseline != nil {
+			fmt.Fprintf(stdout, "baseline request SHA-256: %s\n", plan.Baseline.RequestSHA256)
 		}
 		content, err := agentrequest.Marshal(request)
 		if err != nil {
@@ -307,7 +324,14 @@ type generationRequestOptions struct {
 type generateCommandOptions struct {
 	repository   string
 	manifestPath string
+	previousPath string
 	allowDirty   bool
+}
+
+// Reject the next option as a missing path value. A literal path starting with
+// "--" can still be supplied as "./--name" or as an absolute path.
+func missingPathOptionValue(arguments []string, index int) bool {
+	return index >= len(arguments) || arguments[index] == "" || strings.HasPrefix(arguments[index], "--")
 }
 
 func parseGenerateOptions(arguments []string) (generateCommandOptions, []string, error) {
@@ -320,16 +344,25 @@ func parseGenerateOptions(arguments []string) (generateCommandOptions, []string,
 				return generateCommandOptions{}, nil, fmt.Errorf("generate option --repository was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return generateCommandOptions{}, nil, fmt.Errorf("generate option --repository requires a directory")
 			}
 			options.repository = arguments[index]
+		case "--previous":
+			if options.previousPath != "" {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --previous was repeated")
+			}
+			index++
+			if missingPathOptionValue(arguments, index) {
+				return generateCommandOptions{}, nil, fmt.Errorf("generate option --previous requires a request JSON path")
+			}
+			options.previousPath = arguments[index]
 		case "--manifest":
 			if options.manifestPath != "" {
 				return generateCommandOptions{}, nil, fmt.Errorf("generate option --manifest was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return generateCommandOptions{}, nil, fmt.Errorf("generate option --manifest requires a YAML path")
 			}
 			options.manifestPath = arguments[index]
@@ -361,7 +394,7 @@ func parseGenerationRequestOptions(arguments []string) (generationRequestOptions
 				return generationRequestOptions{}, nil, fmt.Errorf("request option --previous was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return generationRequestOptions{}, nil, fmt.Errorf("request option --previous requires a request JSON path")
 			}
 			options.previousPath = arguments[index]
@@ -370,7 +403,7 @@ func parseGenerationRequestOptions(arguments []string) (generationRequestOptions
 				return generationRequestOptions{}, nil, fmt.Errorf("request option --manifest was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return generationRequestOptions{}, nil, fmt.Errorf("request option --manifest requires a YAML path")
 			}
 			options.manifestPath = arguments[index]
@@ -385,30 +418,41 @@ func parseGenerationRequestOptions(arguments []string) (generationRequestOptions
 }
 
 func buildGenerationRequest(result compiler.Result, options generationRequestOptions) (agentrequest.Request, error) {
+	plan, err := buildGenerationPlan(result, options)
+	if err != nil {
+		return agentrequest.Request{}, err
+	}
+	if plan.NoOp {
+		return agentrequest.Request{}, agentrequest.ErrNoChanges
+	}
+	return plan.Request, nil
+}
+
+func buildGenerationPlan(result compiler.Result, options generationRequestOptions) (agentrequest.GenerationPlan, error) {
 	var manifest *implementationpolicy.Manifest
 	if options.manifestPath != "" {
 		content, err := os.ReadFile(options.manifestPath)
 		if err != nil {
-			return agentrequest.Request{}, fmt.Errorf("read Implementation Policy Manifest %s: %w", options.manifestPath, err)
+			return agentrequest.GenerationPlan{}, fmt.Errorf("read Implementation Policy Manifest %s: %w", options.manifestPath, err)
 		}
 		parsed, err := implementationpolicy.ParseYAML(content)
 		if err != nil {
-			return agentrequest.Request{}, err
+			return agentrequest.GenerationPlan{}, err
 		}
 		manifest = &parsed
 	}
 	if options.previousPath == "" {
-		return agentrequest.BuildFullWithPolicy(result, manifest)
+		return agentrequest.PlanGeneration(nil, result, manifest)
 	}
 	content, err := os.ReadFile(options.previousPath)
 	if err != nil {
-		return agentrequest.Request{}, fmt.Errorf("read previous Generation Request %s: %w", options.previousPath, err)
+		return agentrequest.GenerationPlan{}, fmt.Errorf("read previous Generation Request %s: %w", options.previousPath, err)
 	}
 	previous, err := agentrequest.UnmarshalRequest(content)
 	if err != nil {
-		return agentrequest.Request{}, err
+		return agentrequest.GenerationPlan{}, err
 	}
-	return agentrequest.BuildIncremental(previous, result, manifest)
+	return agentrequest.PlanGeneration(&previous, result, manifest)
 }
 
 type verifyOptions struct {
@@ -426,7 +470,7 @@ func parseVerifyOptions(arguments []string) (verifyOptions, []string, error) {
 				return verifyOptions{}, nil, fmt.Errorf("verify option --repository was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return verifyOptions{}, nil, fmt.Errorf("verify option --repository requires a directory")
 			}
 			options.repositoryRoot = arguments[index]
@@ -435,7 +479,7 @@ func parseVerifyOptions(arguments []string) (verifyOptions, []string, error) {
 				return verifyOptions{}, nil, fmt.Errorf("verify option --baseline was repeated")
 			}
 			index++
-			if index >= len(arguments) || arguments[index] == "" {
+			if missingPathOptionValue(arguments, index) {
 				return verifyOptions{}, nil, fmt.Errorf("verify option --baseline requires a request JSON path")
 			}
 			options.baselinePath = arguments[index]
@@ -537,7 +581,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma project states <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma project flow <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
-	fmt.Fprintln(writer, "  forma generate --repository <directory> [--manifest <policy.yaml>] [--allow-dirty] <file.forma | directory>...")
+	fmt.Fprintln(writer, "  forma generate --repository <directory> [--previous <request.json>] [--manifest <policy.yaml>] [--allow-dirty] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")
@@ -547,6 +591,6 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  resolve            emit canonical Resolved Intent JSON for one compilation unit")
 	fmt.Fprintln(writer, "  project            emit a deterministic read-only view of resolved application meaning")
 	fmt.Fprintln(writer, "  request            emit a full or incremental Generation Request for a coding agent")
-	fmt.Fprintln(writer, "  generate           ask Codex to implement a full request, then stop for human review")
+	fmt.Fprintln(writer, "  generate           select full, incremental, or no-op; stop after agent edits for human review")
 	fmt.Fprintln(writer, "  verify             validate Generation Feedback against an immutable request")
 }

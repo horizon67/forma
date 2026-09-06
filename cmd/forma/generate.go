@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/agentrunner"
 	"github.com/horizon67/forma/internal/compiler"
 )
@@ -124,6 +125,47 @@ func runGeneration(invocation generateInvocation, stdout, stderr io.Writer) int 
 	return 0
 }
 
+// No-op still checks the explicitly selected Git target, with the same clean
+// worktree policy as generation, but never looks up Codex or checks its login.
+func runNoOpGeneration(options generateCommandOptions, baseline *agentrequest.RequestBaseline, stdout, stderr io.Writer) int {
+	if baseline == nil {
+		fmt.Fprintln(stderr, "forma: no-op plan has no baseline identity")
+		return 1
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), alphaGenerationTimeout)
+	defer cancel()
+	gitExecutable, err := absoluteExecutable("git")
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: %v: %v\n", errGitUnavailable, err)
+		return 2
+	}
+	preflight := agentrunner.RepositoryPreflight{
+		Commands: agentrunner.OSCommandRunner{}, Locks: agentrunner.WorktreeLocker{},
+	}
+	state, err := preflight.Prepare(ctx, agentrunner.RepositoryPreflightOptions{
+		Repository: options.repository, GitExecutable: gitExecutable, AllowDirty: options.allowDirty,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "forma: %v\n", err)
+		if generationSetupError(err) {
+			return 2
+		}
+		return 1
+	}
+	if err := state.Close(); err != nil {
+		fmt.Fprintf(stderr, "forma: release Git worktree lock: %v\n", err)
+		return 1
+	}
+	fmt.Fprintln(stdout, "no application or policy changes; Codex was not started")
+	fmt.Fprintf(stdout, "baseline request SHA-256: %s\n", baseline.RequestSHA256)
+	fmt.Fprintf(stdout, "repository preflight passed: %s\n", state.Target)
+	if state.Dirty {
+		fmt.Fprintln(stdout, "existing uncommitted changes were left untouched (--allow-dirty)")
+	}
+	fmt.Fprintln(stdout, "No update was applied. Repository behavior and tests were not verified; no repair or audit was performed.")
+	return 0
+}
+
 func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) {
 	if result.Target == "" {
 		return
@@ -152,6 +194,7 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 		}
 	}
 	fmt.Fprintln(writer, "Forma did not run generated application code or repository tests.")
+	fmt.Fprintln(writer, "Codex completion is not verification success; unrun or skipped checks remain unverified.")
 	fmt.Fprintln(writer, "Next: review the Git diff, then explicitly run the repository's build and test commands.")
 	fmt.Fprintln(writer, "Confirm that boundary tests actually ran and did not skip assertions because the sandbox lacked a runtime capability.")
 }

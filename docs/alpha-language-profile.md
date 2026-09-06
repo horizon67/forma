@@ -53,11 +53,15 @@ repository evidence and are not installed as alpha commands or runtimes.
 | Flow Projection | `forma/flow-projection/v0alpha3` |
 | Review Requirements | `forma/review-requirements/v0alpha6` |
 | Implementation Policy Manifest | `forma/implementation-policy/v0alpha1` |
-| Generation Request | `forma/generation-request/v0alpha4` |
+| Generation Request | `forma/generation-request/v0alpha5` |
 | Generation Feedback | `forma/generation-feedback/v0alpha2` |
 
 Schema version strings are semantic boundaries, not decorative metadata.
 Unknown or unsupported versions must fail validation.
+
+The development compiler extends the alpha language profile with Request
+`v0alpha5` policy-change metadata. The published `v0.1.0-alpha.1` binary emits
+`v0alpha4`; its compiler-output schemas above are unchanged by this extension.
 
 Command output, exit codes, process execution, and filesystem mutation are
 listed in the [CLI reference](cli.md). The trust and credential boundary is
@@ -67,12 +71,15 @@ defined in the [security guide](security.md).
 
 The alpha verifier also accepts these pinned historical forms. Their scope is
 narrow: they are read for verification and incremental lineage, never emitted
-as the current format and never interpreted using current compiler semantics.
+as the current format. `v0alpha4` uses the same compiler-output versions as
+`v0alpha5` but has no policy-change metadata; `v0alpha1`/`v0alpha2` use their
+pinned historical compiler semantics.
 
 | Input position | Accepted version | Scope |
 | --- | --- | --- |
 | Generation Request (historical full) | `forma/generation-request/v0alpha1` | `verify` request and historical baseline |
 | Generation Request (historical incremental) | `forma/generation-request/v0alpha2` | `verify` request and historical baseline |
+| Generation Request (previous alpha) | `forma/generation-request/v0alpha4` | `verify` request and baseline; original canonical bytes preserved |
 | Generation Feedback (legacy pair) | `forma/generation-feedback/v0alpha1` | only with a `v0alpha1` request |
 | Resolved Intent (historical request) | `forma/resolved-intent/v0.4` | nested in the two historical request schemas |
 | Acceptance Facts (historical request) | `forma/acceptance-facts/v0alpha1` | nested in the two historical request schemas |

@@ -1,0 +1,100 @@
+{
+  "schema": "forma/generation-request/v0alpha5",
+  "resolvedIntent": {
+    "version": "forma/resolved-intent/v0.12",
+    "entities": [
+      {
+        "id": "entity/User",
+        "name": "User",
+        "fields": [
+          {
+            "id": "entity/User/field/name",
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "label": true
+          }
+        ],
+        "label": "name"
+      }
+    ]
+  },
+  "acceptanceFacts": {
+    "version": "forma/acceptance-facts/v0alpha11",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "facts": null
+  },
+  "reviewRequirements": {
+    "version": "forma/review-requirements/v0alpha6",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "requirements": []
+  },
+  "sourceMap": {
+    "version": "forma/source-map/v0.6",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "entries": [
+      {
+        "nodeId": "entity/User",
+        "kind": "entity",
+        "span": {
+          "file": "fixture.forma",
+          "start": {
+            "offset": 0,
+            "line": 1,
+            "column": 1
+          },
+          "end": {
+            "offset": 46,
+            "line": 3,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/name",
+        "kind": "field",
+        "span": {
+          "file": "fixture.forma",
+          "start": {
+            "offset": 18,
+            "line": 2,
+            "column": 5
+          },
+          "end": {
+            "offset": 45,
+            "line": 2,
+            "column": 32
+          }
+        }
+      }
+    ]
+  },
+  "implementationPolicy": {
+    "schema": "forma/implementation-policy/v0alpha1",
+    "policies": [
+      {
+        "id": "implementation/package-manager",
+        "policy": "required",
+        "value": "npm"
+      },
+      {
+        "id": "implementation/runtime",
+        "policy": "required",
+        "value": "node"
+      }
+    ],
+    "conventions": [
+      "Keep package boundaries",
+      "Use npm scripts"
+    ]
+  },
+  "requestedChange": {
+    "kind": "full"
+  },
+  "verification": {
+    "feedbackSchema": "forma/generation-feedback/v0alpha2",
+    "requiredFactIds": [],
+    "requireTestReference": true,
+    "rejectUnknownFacts": true
+  }
+}

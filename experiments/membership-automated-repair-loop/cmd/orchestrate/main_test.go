@@ -691,7 +691,7 @@ func TestIntentGapSnapshotIgnoresDeclaredBuildOutputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, directory := range []string{".git", ".forma-build", ".claude/skills", filepath.Dir(feedbackPath), "nested"} {
+	for _, directory := range []string{".git", ".forma-build", ".claude/skills", filepath.Dir(feedbackPath), "bin", "nested/bin"} {
 		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(directory)), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -701,6 +701,7 @@ func TestIntentGapSnapshotIgnoresDeclaredBuildOutputs(t *testing.T) {
 		".forma-build/repair.log": "build output",
 		".claude/skills/cache":    "tool cache",
 		"forma":                   "binary",
+		"bin/forma":               "development binary",
 		"coverage.out":            "coverage",
 		"nested/.DS_Store":        "finder",
 		feedbackPath:              `{"status":"blocked"}`,
@@ -716,6 +717,16 @@ func TestIntentGapSnapshotIgnoresDeclaredBuildOutputs(t *testing.T) {
 	if changes := compareSnapshots(before, after); len(changes) != 0 {
 		t.Fatalf("ignored outputs changed the repository snapshot: %v", changes)
 	}
+	if err := os.WriteFile(filepath.Join(root, "bin", "forma"), []byte("rebuilt binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rebuilt, err := snapshotRepository(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changes := compareSnapshots(after, rebuilt); len(changes) != 0 {
+		t.Fatalf("rebuilding bin/forma changed the repository snapshot: %v", changes)
+	}
 	if err := os.WriteFile(source, []byte("package fixture // changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -725,6 +736,18 @@ func TestIntentGapSnapshotIgnoresDeclaredBuildOutputs(t *testing.T) {
 	}
 	if changes := compareSnapshots(before, after); !reflect.DeepEqual(changes, []string{"modified implementation.go"}) {
 		t.Fatalf("source changes = %v", changes)
+	}
+	for _, relative := range []string{"bin/other", "nested/bin/forma"} {
+		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(relative)), []byte("tracked"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	withOtherFiles, err := snapshotRepository(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changes := compareSnapshots(after, withOtherFiles); !reflect.DeepEqual(changes, []string{"added bin/other", "added nested/bin/forma"}) {
+		t.Fatalf("bin/forma ignore rule hid unrelated paths: %v", changes)
 	}
 }
 
@@ -740,7 +763,7 @@ func TestSnapshotIgnoreListMatchesRepositoryIgnoreRules(t *testing.T) {
 			patterns = append(patterns, line)
 		}
 	}
-	want := []string{"/forma", "/coverage.out", "/.forma-build/", "/.claude/skills/", ".DS_Store"}
+	want := []string{"/forma", "/bin/forma", "/coverage.out", "/.forma-build/", "/.claude/skills/", ".DS_Store"}
 	if !reflect.DeepEqual(patterns, want) {
 		t.Fatalf(".gitignore patterns = %v; update the intent-gap snapshot rules for %v", patterns, want)
 	}

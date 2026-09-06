@@ -796,6 +796,10 @@ environment with no Codex installation, no API key, and no network.
   labeling. A pre-reviewed template is not mandatory.
 - `alpha.1` implements full-request generation only. Incremental `generate` is
   deferred while incremental `request` and `verify` remain supported.
+  The subsequent development extension now implements explicit
+  `generate --previous`, policy-only updates, and no-op without Codex; its
+  narrower shipped contract is described in [CLI reference](cli.md). The
+  published alpha.1 behavior above remains a historical release boundary.
 - Alpha rejects project `.codex` configuration before Codex starts. It also
   sends a path-keyed untrusted override as defense in depth, without claiming
   Codex confirmed that root, ignores user configuration and exec-policy rules,

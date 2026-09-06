@@ -593,7 +593,7 @@ func ignoredSnapshotDirectory(relative string) bool {
 func ignoredSnapshotFile(relative string) bool {
 	// Generation Feedback is the loop output. The other paths are the file
 	// entries currently ignored by the repository root .gitignore.
-	if relative == feedbackPath || relative == "forma" || relative == "coverage.out" {
+	if relative == feedbackPath || relative == "forma" || relative == "bin/forma" || relative == "coverage.out" {
 		return true
 	}
 	return filepath.Base(relative) == ".DS_Store"

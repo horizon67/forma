@@ -68,6 +68,9 @@ type historicalVerificationPolicy struct {
 }
 
 func marshalRequestForSchema(request Request) ([]byte, error) {
+	if request.Schema != RequestSchema && hasPolicyMetadata(request.RequestedChange) {
+		return nil, fmt.Errorf("marshal Generation Request: policy change metadata requires %s", RequestSchema)
+	}
 	switch request.Schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
 		var baseline *historicalBaseline
@@ -96,7 +99,7 @@ func marshalRequestForSchema(request Request) ([]byte, error) {
 			return nil, err
 		}
 		return removeHistoricalEmptyAccessKinds(content), nil
-	case RequestSchema:
+	case RequestSchema, PreviousRequestSchema:
 		return json.MarshalIndent(request, "", "  ")
 	default:
 		return nil, fmt.Errorf("marshal Generation Request: unsupported schema %q", request.Schema)
@@ -362,7 +365,7 @@ func compilerOutputsForDiff(request Request) (compilerOutputSet, error) {
 	switch request.Schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
 		return upgradeHistoricalCompilerOutputs(request)
-	case RequestSchema:
+	case RequestSchema, PreviousRequestSchema:
 		if request.ResolvedIntent == nil || request.AcceptanceFacts == nil || request.ReviewRequirements == nil || request.SourceMap == nil {
 			return compilerOutputSet{}, fmt.Errorf("index Generation Request: compiler output is incomplete")
 		}
@@ -385,7 +388,7 @@ func compilerVersionsForRequestSchema(schema string) (intent, facts, sourceMap, 
 	switch schema {
 	case LegacyRequestSchema, HistoricalIncrementalRequestSchema:
 		return HistoricalResolvedIntentVersion, HistoricalAcceptanceFactsVersion, HistoricalSourceMapVersion, noReviewRequirementsVersion, true
-	case RequestSchema:
+	case RequestSchema, PreviousRequestSchema:
 		return compiler.ResolvedIntentVersion, compiler.AcceptanceFactsVersion, compiler.SourceMapVersion, compiler.ReviewRequirementsVersion, true
 	default:
 		return "", "", "", "", false

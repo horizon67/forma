@@ -1,6 +1,6 @@
 # Agent Generation Model
 
-Status: architectural direction — historical lineage and current Generation Request implemented as `v0alpha4`
+Status: architectural direction — historical lineage, published alpha `v0alpha4`, development current `v0alpha5`
 
 Formaのend-to-end実行モデルでは、AI coding agentは任意のgenerator implementationではなく、
 application codeを作る主体である。
@@ -200,6 +200,13 @@ GenerationRequest
 表す。incremental requestはimmutableなprevious requestのcanonical SHA-256、schema version、added/changed
 node、unchanged件数を持つ。最初のsliceではremoved nodeを拒否し、rename/delete modelを推測しない。
 
+開発版の`generation-request/v0alpha5`は`policyChanges`（`kind`と`policyId`）、`unchangedPolicies`、
+`conventionChanges`（`kind: added | removed`と文言`value`、value昇順）も持つ。Policyのmode・value・instructionと正規化したconventionsを比較し、
+Manifestだけの変更でもincremental requestを作る。Policy削除・ID変更は未対応として拒否する。
+conventionsの文言編集は削除＋追加で表す。助言の削除はその助言の撤回であり、逆の動作への変更や
+コード削除・無関係なrefactoringを要求しない。助言だけの変更もincrementalで扱い、diffゼロを許容する。
+`v0alpha4`のcanonical bytesと検証契約は維持し、baselineとして引き続き読み込める。
+
 target repositoryそのものはrequestへ複製せず、agentへworkspaceとして渡す。architecture constraintや
 禁止事項は、正規化した`implementationPolicy`としてapplication intentと分離して格納する。最小の
 `required`、`preferred`、`forbidden`とcoverage規則は
@@ -294,6 +301,17 @@ build/test feedbackである。repository failureからFormaの意味が不足�
 新しいlanguage axisまたはsource変更として人間へ返す。
 
 ## Incremental update
+
+開発版の`forma generate --previous <request.json>`は`request --previous`と共通の差分判定を使う。
+Intent、Facts、Review Requirements、Policyに差分がなければ、Git preflight後にexit 0のno-opとなり、
+Codexの探索・認証確認も行わない。Source Mapの位置・path、promptやrequest履歴は更新判定に含めない。
+`request --previous`は従来どおり差分なしをerrorとし、no-opをGeneration Requestのkindへ追加しない。
+
+変更ありの場合もrequestは現在の全制約を保持する。編集は差分とその実現に必要な関連箇所に限定し、
+unchanged Factsは回帰検証から落とさない。実装が対応済みならdiffゼロで完了できる。無関係な既存不備は
+報告だけに留め、update中に修復・監査を暗黙開始しない。編集範囲の妥当性は実際のdiffの人間reviewに残る。
+no-opやagentのexit 0は検証成功を意味せず、build/testの未実行・skipを未検証として区別する。
+baselineは呼び出し側が保持したRequestを明示入力する。repositoryへの適用済み証明や自動保存・昇格は行わない。
 
 target codeは破棄専用artifactではなく、通常のapplication repositoryである。人間やagentが保守してよい。
 ただしFormaが所有するapplication intentをtarget codeだけで変更するとdriftするため、意味の変更は

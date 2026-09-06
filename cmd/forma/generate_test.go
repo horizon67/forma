@@ -96,7 +96,7 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 	}
 }
 
-func TestGenerateCommandSupportsExplicitDirtyAndManifestOptionsButRejectsIncrementalInput(t *testing.T) {
+func TestGenerateCommandSupportsExplicitDirtyAndManifestOptions(t *testing.T) {
 	previous := invokeGeneration
 	t.Cleanup(func() { invokeGeneration = previous })
 	manifest := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target", "forma.implementation.yaml")
@@ -126,14 +126,6 @@ func TestGenerateCommandSupportsExplicitDirtyAndManifestOptionsButRejectsIncreme
 		t.Fatalf("stdout = %q", stdout.String())
 	}
 
-	stdout.Reset()
-	stderr.Reset()
-	if exitCode := run([]string{"generate", "--repository", repository, "--previous", "old.json", source}, &stdout, &stderr); exitCode != 2 {
-		t.Fatalf("incremental generate exit code = %d", exitCode)
-	}
-	if !strings.Contains(stderr.String(), `unknown generate option "--previous"`) {
-		t.Fatalf("stderr = %q", stderr.String())
-	}
 }
 
 func TestGenerateCommandRejectsInvalidOptionsAndCompilerDiagnosticsBeforeCodex(t *testing.T) {

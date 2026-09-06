@@ -63,6 +63,13 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("build incremental request: %w", err)
 	}
+	// Keep the measured request reproducible under its original schema. This
+	// experiment inherits its policies and does not exercise policy updates.
+	if len(request.RequestedChange.PolicyChanges) != 0 || len(request.RequestedChange.ConventionChanges) != 0 {
+		return fmt.Errorf("recorded experiment must not introduce a policy change")
+	}
+	request.Schema = "forma/generation-request/v0alpha4"
+	request.RequestedChange.UnchangedPolicies = 0
 	if err := agentrequest.ValidateIncrementalBaseline(request, baseline); err != nil {
 		return fmt.Errorf("validate lineage: %w", err)
 	}

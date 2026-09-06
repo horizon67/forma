@@ -104,6 +104,60 @@ Only after review, run the build and test commands belonging to the generated
 repository. Their names depend on the framework Codex selected; Forma does not
 invent a universal command.
 
+## 7. Incremental updates and no-op (development builds)
+
+This section requires a current source build; the published
+`v0.1.0-alpha.1` executable does not support `generate --previous`. See the
+[source build instructions](install.md#build-the-current-development-version).
+The new binary can read the `v0alpha4` Request saved by the original alpha.
+
+Retain the Request from step 3 as the explicit baseline after reviewing and
+validating the generated implementation. Before editing the specification,
+copy that Request to durable storage outside the target and keep it immutable.
+If generation or validation failed, do not treat its Request as applied.
+
+After changing `app.forma`, run:
+
+```sh
+forma generate --repository ./my-forma-app \
+  --previous /tmp/forma-request.json app.forma
+```
+
+To change implementation technology, pass the updated Manifest as well:
+
+```sh
+forma generate --repository ./my-forma-app \
+  --previous /tmp/forma-request.json \
+  --manifest forma.implementation.yaml app.forma
+```
+
+The Manifest must exist and use the [Implementation Policy schema](implementation-policy-manifest-proposal.md).
+Omitting it inherits the baseline's policy. A policy-only change starts a
+bounded update; if hand-written changes already satisfy it, Codex can return
+without editing any files. Commit or stash target changes before generation,
+as for a full run.
+
+Identical application meaning and policy produce `no application or policy
+changes`, exit `0`, and no Codex invocation. This works without Codex installed
+or logged in, but the target must still pass Git preflight. No-op does not
+verify the existing code or repair a failed implementation.
+
+For a changed request, capture the next baseline candidate explicitly before
+generation, using exactly the same source selection, Manifest, and previous
+Request:
+
+```sh
+forma request --previous /tmp/forma-request.json \
+  --manifest forma.implementation.yaml app.forma > /tmp/forma-next-request.json
+```
+
+Keep these inputs unchanged between request capture and generation. The
+`request` command intentionally fails without JSON when there is no change;
+do not overwrite the prior baseline with that output. Retain the candidate as
+the next baseline only after reviewing and validating the update. Forma does
+not save or promote it automatically. Review build/test results separately:
+agent completion and a clean Git diff do not prove that tests ran or passed.
+
 ## What each layer guarantees
 
 | Layer | Guarantee |

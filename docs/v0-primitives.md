@@ -960,7 +960,7 @@ language semanticsをcoding agentへ渡すには、次のmachine-readableな境�
 | Source Map | intent nodeからsource spanへの対応 | `forma/source-map/v0.6`として実装済み |
 | Acceptance Facts | stable IDを持つ正常系・否定系のtarget-neutralな期待事実 | `forma/acceptance-facts/v0alpha11`。admin/Identity、entry、surface transition、view／interactionを持たないrole-restricted pageのaccess、self-only Invariant、action transition/confirmation、experimental Changesのexpression result／leaf binding／relation別unavailable、Action Preconditionの入力／不成立outcomeを含むatomic outcomeを導出 |
 | Review Requirements | 機械検査へ吸収しないstableな人間確認事項 | `forma/review-requirements/v0alpha6`。Identity、Invariant concurrency、experimental Changes atomicity/cross-entity write/value-read authorization、exact numeric enforcement、concurrent Action Precondition enforcementを実装 |
-| Generation Request | intent、facts、review requirements、source map、implementation policy、requested change、verification policy | historical `v0alpha1` / `v0alpha2`とcurrent `v0alpha4`を実装。中間schemaは、現在のbinaryが再導出できないAcceptance Factsを運ぶため受理しない |
+| Generation Request | intent、facts、review requirements、source map、implementation policy、requested change、verification policy | current `v0alpha5`はPolicy差分も運ぶ。previous `v0alpha4`とhistorical `v0alpha1` / `v0alpha2`を保持。`v0alpha3`は現在のbinaryが再導出できないAcceptance Factsを運ぶため受理しない |
 | Generation Feedback | stage、command、diagnostic、関連intent node、fact/policy coverage、status | `v0alpha2`型、`forma verify`、current membership 85 facts・3 policiesと最初のbounded automated repair loopを実装 |
 
 framework、library、route、database、test frameworkはtarget repositoryとcoding agentが所有し、この表の

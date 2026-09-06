@@ -64,6 +64,12 @@ func buildArtifacts(root string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("build full request: %w", err)
 	}
+	// Reproduce the recorded experiment's wire identity. The policy-delta
+	// extension did not change its compiler outputs or verification contract.
+	request.Schema = "forma/generation-request/v0alpha4"
+	if err := agentrequest.ValidateRequest(request); err != nil {
+		return nil, nil, fmt.Errorf("validate recorded request schema: %w", err)
+	}
 	if got := len(request.AcceptanceFacts.Facts); got != expectedFacts {
 		return nil, nil, fmt.Errorf("Acceptance Facts = %d, want %d", got, expectedFacts)
 	}

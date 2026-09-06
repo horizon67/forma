@@ -1,0 +1,127 @@
+{
+  "schema": "forma/generation-request/v0alpha5",
+  "resolvedIntent": {
+    "version": "forma/resolved-intent/v0.12",
+    "entities": [
+      {
+        "id": "entity/User",
+        "name": "User",
+        "fields": [
+          {
+            "id": "entity/User/field/name",
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "label": true
+          }
+        ],
+        "label": "name"
+      }
+    ]
+  },
+  "acceptanceFacts": {
+    "version": "forma/acceptance-facts/v0alpha11",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "facts": null
+  },
+  "reviewRequirements": {
+    "version": "forma/review-requirements/v0alpha6",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "requirements": []
+  },
+  "sourceMap": {
+    "version": "forma/source-map/v0.6",
+    "intentVersion": "forma/resolved-intent/v0.12",
+    "entries": [
+      {
+        "nodeId": "entity/User",
+        "kind": "entity",
+        "span": {
+          "file": "fixture.forma",
+          "start": {
+            "offset": 0,
+            "line": 1,
+            "column": 1
+          },
+          "end": {
+            "offset": 46,
+            "line": 3,
+            "column": 2
+          }
+        }
+      },
+      {
+        "nodeId": "entity/User/field/name",
+        "kind": "field",
+        "span": {
+          "file": "fixture.forma",
+          "start": {
+            "offset": 18,
+            "line": 2,
+            "column": 5
+          },
+          "end": {
+            "offset": 45,
+            "line": 2,
+            "column": 32
+          }
+        }
+      }
+    ]
+  },
+  "implementationPolicy": {
+    "schema": "forma/implementation-policy/v0alpha1",
+    "policies": [
+      {
+        "id": "implementation/package-manager",
+        "policy": "required",
+        "value": "bun",
+        "instruction": "Use Bun for frontend builds"
+      },
+      {
+        "id": "implementation/runtime",
+        "policy": "required",
+        "value": "node"
+      }
+    ],
+    "conventions": [
+      "Keep package boundaries",
+      "Use Bun scripts"
+    ]
+  },
+  "requestedChange": {
+    "kind": "incremental",
+    "baseline": {
+      "requestSha256": "5afa9d1f93157aa94b8862b6889886fc3db9642a4dd86b53ed1f7c1149db2fcd",
+      "requestSchema": "forma/generation-request/v0alpha5",
+      "resolvedIntentVersion": "forma/resolved-intent/v0.12",
+      "acceptanceFactsVersion": "forma/acceptance-facts/v0alpha11",
+      "sourceMapVersion": "forma/source-map/v0.6",
+      "reviewRequirementsVersion": "forma/review-requirements/v0alpha6"
+    },
+    "unchangedIntentNodes": 2,
+    "policyChanges": [
+      {
+        "kind": "changed",
+        "policyId": "implementation/package-manager"
+      }
+    ],
+    "unchangedPolicies": 1,
+    "conventionChanges": [
+      {
+        "kind": "added",
+        "value": "Use Bun scripts"
+      },
+      {
+        "kind": "removed",
+        "value": "Use npm scripts"
+      }
+    ]
+  },
+  "verification": {
+    "feedbackSchema": "forma/generation-feedback/v0alpha2",
+    "requiredFactIds": [],
+    "requireTestReference": true,
+    "rejectUnknownFacts": true
+  }
+}

@@ -30,7 +30,7 @@ func TestGeneratorPassesCanonicalRequestOnlyThroughCodexStdinAndStopsForReview(t
 		{requireLocked: locker, stdout: "Logged in using ChatGPT\n"},
 		{requireLocked: locker, stdout: "Implemented the application.\n"},
 	}}
-	request := []byte(`{"schema":"forma/generation-request/v0alpha4","resolvedIntent":{"version":"test"}}`)
+	request := []byte(`{"schema":"forma/generation-request/v0alpha5","resolvedIntent":{"version":"test"},"requestedChange":{"kind":"full"}}`)
 	environment := []string{"HOME=/trusted/home", "PATH=/trusted/bin"}
 
 	result, err := (Generator{
@@ -96,6 +96,8 @@ func TestGeneratorPassesCanonicalRequestOnlyThroughCodexStdinAndStopsForReview(t
 		t.Fatalf("implementation prompt omits the thin-runner boundary:\n%s", prompt)
 	}
 	for _, required := range []string{
+		"Implementation scope:",
+		"Implement and test each Acceptance Fact at its named subject boundary.",
 		"expected.enforcement=authoritative",
 		"the application's public boundary that presents or invokes the subject must enforce it",
 		"An anonymous principal means no authenticated identity and no roles",
@@ -124,7 +126,7 @@ func TestGeneratorDistinguishesMissingAuthenticationBeforeCodexExec(t *testing.T
 		Repository: RepositoryPreflight{Commands: git, Locks: locker},
 		Codex:      codex,
 	}).Run(context.Background(), GenerateOptions{
-		Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: []byte(`{"schema":"request"}`),
+		Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: []byte(`{"requestedChange":{"kind":"full"}}`),
 	})
 	if !errors.Is(err, ErrCodexAuthentication) || !strings.Contains(err.Error(), "codex login") {
 		t.Fatalf("error = %v", err)
@@ -149,7 +151,7 @@ func TestGeneratorCapturesPartialChangesWhenCodexFails(t *testing.T) {
 		Repository: RepositoryPreflight{Commands: git, Locks: locker},
 		Codex:      codex,
 	}).Run(context.Background(), GenerateOptions{
-		Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: []byte(`{"schema":"request"}`),
+		Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: []byte(`{"requestedChange":{"kind":"full"}}`),
 	})
 	if !errors.Is(err, ErrCodexFailed) || !strings.Contains(err.Error(), "exit 7") {
 		t.Fatalf("error = %v", err)
@@ -174,6 +176,45 @@ func TestGeneratorRequiresARequestBeforeRepositoryOrCodexWork(t *testing.T) {
 	}
 	if len(git.calls) != 0 || len(codex.calls) != 0 {
 		t.Fatalf("empty request reached commands: Git %d, Codex %d", len(git.calls), len(codex.calls))
+	}
+}
+
+func TestIncrementalRunnerUsesBoundedPromptAndAllowsZeroDiff(t *testing.T) {
+	target := t.TempDir()
+	locker := &recordingLocker{}
+	git := &scriptedCommandRunner{t: t, steps: cleanRepositorySteps(target, locker, true)}
+	codex := &scriptedCommandRunner{t: t, steps: []commandStep{
+		{requireLocked: locker, stdout: "Logged in\n"},
+		{requireLocked: locker, stdout: "Already satisfied. Tests not run.\n"},
+	}}
+	request := []byte(`{"requestedChange":{"kind":"incremental","policyChanges":[{"kind":"added","policyId":"implementation/package-manager"}]}}`)
+	result, err := (Generator{Repository: RepositoryPreflight{Commands: git, Locks: locker}, Codex: codex}).Run(context.Background(), GenerateOptions{
+		Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: request,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.FinalStatusKnown || result.FinalStatus != "" || locker.locked {
+		t.Fatalf("zero-diff result: %#v", result)
+	}
+	prompt := string(codex.calls[1].Stdin)
+	for _, required := range []string{"Apply only the incremental update", "policyChanges", "conventionChanges", "explicitly lists added/removed advisory text", "A removed convention only withdraws that advice", "does not require the opposite behavior or authorize code deletion", "including unchanged Facts", "zero-diff completion is valid", "Do not perform unrelated", "without fixing them", "Never describe unrun or skipped checks as verification success", string(request)} {
+		if !strings.Contains(prompt, required) {
+			t.Fatalf("incremental prompt missing %q", required)
+		}
+	}
+	if strings.Contains(prompt, "Implement every requested intent node") {
+		t.Fatal("full-generation instruction leaked into update")
+	}
+}
+
+func TestUnknownGenerationModeFailsBeforeCommands(t *testing.T) {
+	for _, input := range []string{`{`, `{}`, `{"requestedChange":{"kind":"repair"}}`, `{"requestedChange":{"kind":"no-op"}}`} {
+		git, codex := &scriptedCommandRunner{t: t}, &scriptedCommandRunner{t: t}
+		_, err := (Generator{Repository: RepositoryPreflight{Commands: git, Locks: &recordingLocker{}}, Codex: codex}).Run(context.Background(), GenerateOptions{Request: []byte(input)})
+		if err == nil || len(git.calls) != 0 || len(codex.calls) != 0 {
+			t.Fatalf("invalid mode reached execution: %q, %v", input, err)
+		}
 	}
 }
 
