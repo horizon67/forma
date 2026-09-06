@@ -32,13 +32,12 @@ type generateInvocation struct {
 	AllowDirty         bool
 	Request            []byte
 	ReviewRequirements *compiler.ReviewRequirements
+	State              *agentrunner.RepositoryState
+	GitExecutable      string
+	BeforeExecute      func() error
 }
 
 func invokeCodexGeneration(ctx context.Context, invocation generateInvocation) (agentrunner.GenerateResult, error) {
-	gitExecutable, err := absoluteExecutable("git")
-	if err != nil {
-		return agentrunner.GenerateResult{}, fmt.Errorf("%w: %v", errGitUnavailable, err)
-	}
 	codexExecutable, err := absoluteExecutable("codex")
 	if err != nil {
 		return agentrunner.GenerateResult{}, fmt.Errorf("%w: %v", errCodexUnavailable, err)
@@ -51,14 +50,16 @@ func invokeCodexGeneration(ctx context.Context, invocation generateInvocation) (
 		},
 		Codex: agentrunner.OSCommandRunner{ProcessGroup: true},
 	}
-	return runner.Run(ctx, agentrunner.GenerateOptions{
+	options := agentrunner.GenerateOptions{
 		Repository:      invocation.Repository,
-		GitExecutable:   gitExecutable,
+		GitExecutable:   invocation.GitExecutable,
 		CodexExecutable: codexExecutable,
 		AllowDirty:      invocation.AllowDirty,
 		Environment:     codexEnvironment(os.Environ()),
 		Request:         append([]byte(nil), invocation.Request...),
-	})
+		BeforeExecute:   invocation.BeforeExecute,
+	}
+	return runner.RunPrepared(ctx, options, invocation.State)
 }
 
 func absoluteExecutable(name string) (string, error) {
@@ -102,58 +103,28 @@ func codexEnvironment(environ []string) []string {
 	return result
 }
 
-func runGeneration(invocation generateInvocation, stdout, stderr io.Writer) int {
-	ctx, cancel := context.WithTimeout(context.Background(), alphaGenerationTimeout)
-	defer cancel()
-
+func runGenerationAttempt(ctx context.Context, invocation generateInvocation, stdout, stderr io.Writer) (agentrunner.GenerateResult, error) {
 	fmt.Fprintf(stdout, "starting Codex generation in %s (timeout %s)\n", invocation.Repository, alphaGenerationTimeout)
 	printReviewRequirements(stdout, invocation.ReviewRequirements)
 	result, err := invokeGeneration(ctx, invocation)
 	printGenerationResult(stdout, result)
 	if err != nil {
-		fmt.Fprintf(stderr, "forma: %v\n", err)
 		if len(result.CodexDiagnostics) > 0 {
 			fmt.Fprintln(stderr, "Codex diagnostics:")
 			fmt.Fprint(stderr, strings.TrimSpace(string(result.CodexDiagnostics)))
 			fmt.Fprintln(stderr)
 		}
-		if generationSetupError(err) {
-			return 2
-		}
-		return 1
 	}
-	return 0
+	return result, err
 }
 
-// No-op still checks the explicitly selected Git target, with the same clean
-// worktree policy as generation, but never looks up Codex or checks its login.
-func runNoOpGeneration(options generateCommandOptions, baseline *agentrequest.RequestBaseline, stdout, stderr io.Writer) int {
+func printNoOpGeneration(state *agentrunner.RepositoryState, baseline *agentrequest.RequestBaseline, stdout, stderr io.Writer) int {
 	if baseline == nil {
 		fmt.Fprintln(stderr, "forma: no-op plan has no baseline identity")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), alphaGenerationTimeout)
-	defer cancel()
-	gitExecutable, err := absoluteExecutable("git")
-	if err != nil {
-		fmt.Fprintf(stderr, "forma: %v: %v\n", errGitUnavailable, err)
-		return 2
-	}
-	preflight := agentrunner.RepositoryPreflight{
-		Commands: agentrunner.OSCommandRunner{}, Locks: agentrunner.WorktreeLocker{},
-	}
-	state, err := preflight.Prepare(ctx, agentrunner.RepositoryPreflightOptions{
-		Repository: options.repository, GitExecutable: gitExecutable, AllowDirty: options.allowDirty,
-	})
-	if err != nil {
-		fmt.Fprintf(stderr, "forma: %v\n", err)
-		if generationSetupError(err) {
-			return 2
-		}
-		return 1
-	}
-	if err := state.Close(); err != nil {
-		fmt.Fprintf(stderr, "forma: release Git worktree lock: %v\n", err)
+	if state == nil {
+		fmt.Fprintln(stderr, "forma: no-op plan has no repository preflight")
 		return 1
 	}
 	fmt.Fprintln(stdout, "no application or policy changes; Codex was not started")

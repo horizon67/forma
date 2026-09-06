@@ -107,27 +107,22 @@ invent a universal command.
 ## 7. Incremental updates and no-op (development builds)
 
 This section requires a current source build; the published
-`v0.1.0-alpha.1` executable does not support `generate --previous`. See the
+`v0.1.0-alpha.1` executable does not support automatic history or `generate --previous`. See the
 [source build instructions](install.md#build-the-current-development-version).
 The new binary can read the `v0alpha4` Request saved by the original alpha.
 
-Retain the Request from step 3 as the explicit baseline after reviewing and
-validating the generated implementation. Before editing the specification,
-copy that Request to durable storage outside the target and keep it immutable.
-If generation or validation failed, do not treat its Request as applied.
-
-After changing `app.forma`, run:
+When step 5 used the development binary, Forma already saved its exact agent
+input in local Git metadata. After reviewing, testing, and committing the target
+changes, use the same command again, whether or not `app.forma` changed:
 
 ```sh
-forma generate --repository ./my-forma-app \
-  --previous /tmp/forma-request.json app.forma
+forma generate --repository ./my-forma-app app.forma
 ```
 
 To change implementation technology, pass the updated Manifest as well:
 
 ```sh
 forma generate --repository ./my-forma-app \
-  --previous /tmp/forma-request.json \
   --manifest forma.implementation.yaml app.forma
 ```
 
@@ -142,21 +137,32 @@ changes`, exit `0`, and no Codex invocation. This works without Codex installed
 or logged in, but the target must still pass Git preflight. No-op does not
 verify the existing code or repair a failed implementation.
 
-For a changed request, capture the next baseline candidate explicitly before
-generation, using exactly the same source selection, Manifest, and previous
-Request:
+Forma saves a candidate just before editing starts and adopts it as the next
+comparison baseline only after the run and history save complete. This does
+not mark tests or human review as passed. A failed/interrupted attempt blocks
+automatic generation until deliberate recovery; rerunning unchanged source
+does not quietly repair or approve its output.
+
+If step 5 used the older alpha without history, keep its original Request from
+step 3. After reviewing the implementation and confirming it matches that
+Request, explicitly adopt it once, before changing your specification:
 
 ```sh
-forma request --previous /tmp/forma-request.json \
-  --manifest forma.implementation.yaml app.forma > /tmp/forma-next-request.json
+forma generate --repository ./my-forma-app \
+  --previous /tmp/forma-request.json app.forma
 ```
 
-Keep these inputs unchanged between request capture and generation. The
-`request` command intentionally fails without JSON when there is no change;
-do not overwrite the prior baseline with that output. Retain the candidate as
-the next baseline only after reviewing and validating the update. Forma does
-not save or promote it automatically. Review build/test results separately:
-agent completion and a clean Git diff do not prove that tests ran or passed.
+With unchanged meaning this imports the supplied baseline without calling
+Codex. If meaning already changed, it performs the corresponding incremental
+update and saves its actual input on completion. Subsequent normal commands
+need no `--previous`. Do not manufacture a baseline from today's specification
+and assume an existing repository already implements it.
+
+Use a directory source selector when an application will span multiple source
+files: that selection stays stable when files are added within the directory.
+Changing the selector itself requires explicit re-binding. See
+[generation history and recovery](generation-history.md) for branch changes,
+clones, failed runs, history backups, and manual imports.
 
 ## What each layer guarantees
 

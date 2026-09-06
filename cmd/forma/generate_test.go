@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,29 +14,23 @@ import (
 
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/agentrunner"
-	"github.com/horizon67/forma/internal/compiler"
 )
 
 func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 	previous := invokeGeneration
 	t.Cleanup(func() { invokeGeneration = previous })
 
-	repository := t.TempDir()
+	repository := newNoOpRepository(t)
 	var observed generateInvocation
 	var bounded bool
 	invokeGeneration = func(ctx context.Context, invocation generateInvocation) (agentrunner.GenerateResult, error) {
 		observed = invocation
 		deadline, ok := ctx.Deadline()
 		bounded = ok && !deadline.IsZero()
-		return agentrunner.GenerateResult{
-			Target:                     repository,
-			Worktree:                   repository,
-			InitialHead:                "head",
-			FinalStatusKnown:           true,
-			FinalStatus:                "?? internal/app.go\n M README.md\n",
-			ImplementationPromptSHA256: "0123456789abcdef",
-			CodexMessage:               []byte("Implemented the application.\n"),
-		}, nil
+		generated := beginTestGeneration(t, invocation)
+		generated.FinalStatus = "?? internal/app.go\n M README.md\n"
+		generated.CodexMessage = []byte("Implemented the application.\n")
+		return generated, nil
 	}
 
 	source := filepath.Join("..", "..", "examples", "users.forma")
@@ -101,11 +96,12 @@ func TestGenerateCommandSupportsExplicitDirtyAndManifestOptions(t *testing.T) {
 	t.Cleanup(func() { invokeGeneration = previous })
 	manifest := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "target", "forma.implementation.yaml")
 	source := filepath.Join("..", "..", "experiments", "admin-agent-e2e", "app.forma")
-	repository := t.TempDir()
+	repository := newNoOpRepository(t)
+	writeTestFile(t, filepath.Join(repository, "README.md"), "manual edit\n")
 	var observed generateInvocation
 	invokeGeneration = func(_ context.Context, invocation generateInvocation) (agentrunner.GenerateResult, error) {
 		observed = invocation
-		return agentrunner.GenerateResult{Target: repository, InitialDirty: true}, nil
+		return beginTestGeneration(t, invocation), nil
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -188,7 +184,7 @@ func TestGenerateCommandDistinguishesSetupFromAgentFailure(t *testing.T) {
 				return agentrunner.GenerateResult{}, test.err
 			}
 			var stdout, stderr bytes.Buffer
-			if exitCode := run([]string{"generate", "--repository", t.TempDir(), source}, &stdout, &stderr); exitCode != test.wantExit {
+			if exitCode := run([]string{"generate", "--repository", newNoOpRepository(t), source}, &stdout, &stderr); exitCode != test.wantExit {
 				t.Fatalf("exit code %d, want %d\nstderr:\n%s", exitCode, test.wantExit, stderr.String())
 			}
 		})
@@ -198,22 +194,32 @@ func TestGenerateCommandDistinguishesSetupFromAgentFailure(t *testing.T) {
 func TestGenerateCommandDisplaysHumanReviewRequirementsBeforeCodexRuns(t *testing.T) {
 	previous := invokeGeneration
 	t.Cleanup(func() { invokeGeneration = previous })
-	invokeGeneration = func(context.Context, generateInvocation) (agentrunner.GenerateResult, error) {
+	var stdout, stderr bytes.Buffer
+	calls := 0
+	invokeGeneration = func(_ context.Context, invocation generateInvocation) (agentrunner.GenerateResult, error) {
+		calls++
+		request, err := agentrequest.UnmarshalRequest(invocation.Request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if request.ReviewRequirements == nil || len(request.ReviewRequirements.Requirements) == 0 ||
+			!reflect.DeepEqual(request.ReviewRequirements, invocation.ReviewRequirements) {
+			t.Fatal("actual Generation Request lacks the displayed Review Requirements")
+		}
+		if !strings.Contains(stdout.String(), "human review required:") {
+			t.Fatal("review warning was not displayed before dispatch")
+		}
+		for _, requirement := range request.ReviewRequirements.Requirements {
+			line := fmt.Sprintf("%s [%s]: %s", requirement.ID, requirement.Kind, requirement.Instruction)
+			if !strings.Contains(stdout.String(), line) {
+				t.Fatalf("requirement was not displayed before dispatch: %s", line)
+			}
+		}
 		return agentrunner.GenerateResult{}, agentrunner.ErrCodexFailed
 	}
-	requirements := &compiler.ReviewRequirements{Requirements: []compiler.ReviewRequirement{{
-		ID: "review/example", Kind: "example-review", Instruction: "Inspect the authoritative boundary.",
-	}}}
-	var stdout, stderr bytes.Buffer
-	exitCode := runGeneration(generateInvocation{
-		Repository: "/absolute/repository", Request: []byte(`{"schema":"request"}`), ReviewRequirements: requirements,
-	}, &stdout, &stderr)
-	if exitCode != 1 {
-		t.Fatalf("exit code = %d", exitCode)
-	}
-	if !strings.Contains(stdout.String(), "human review required: 1 requirements are not machine-verified") ||
-		!strings.Contains(stdout.String(), "review/example [example-review]: Inspect the authoritative boundary.") {
-		t.Fatalf("stdout = %q", stdout.String())
+	source := filepath.Join("..", "..", "experiments", "membership-agent-e2e", "app.forma")
+	if code := run([]string{"generate", "--repository", newNoOpRepository(t), source}, &stdout, &stderr); code != 1 || calls != 1 {
+		t.Fatalf("exit code = %d; dispatches = %d; stderr: %s", code, calls, &stderr)
 	}
 }
 

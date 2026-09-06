@@ -328,6 +328,7 @@ func retryBaselineConfig(root string) retryintegrity.Config {
 			"cmd/forma",
 			"docs",
 			"internal/agentrunner",
+			"internal/generationhistory",
 			"internal/agentrequest",
 			"internal/compiler",
 			"internal/implementationpolicy",

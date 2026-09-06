@@ -218,6 +218,65 @@ func TestUnknownGenerationModeFailsBeforeCommands(t *testing.T) {
 	}
 }
 
+func TestPreparedGenerationAuthenticatesBeforeCandidateAndRetainsLock(t *testing.T) {
+	for _, failure := range []string{"none", "authentication", "candidate save"} {
+		t.Run(failure, func(t *testing.T) {
+			target := t.TempDir()
+			locker := &recordingLocker{}
+			git := &scriptedCommandRunner{t: t, steps: cleanRepositorySteps(target, locker, true)}
+			codex := &scriptedCommandRunner{t: t, steps: []commandStep{{requireLocked: locker, stdout: "Logged in"}, {requireLocked: locker}}}
+			if failure == "authentication" {
+				codex.steps[0].exitCode = 1
+			}
+			preflight := RepositoryPreflight{Commands: git, Locks: locker}
+			state, err := preflight.Prepare(context.Background(), RepositoryPreflightOptions{Repository: target, GitExecutable: "/absolute/git"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer state.Close()
+			calls := 0
+			options := GenerateOptions{Repository: target, GitExecutable: "/absolute/git", CodexExecutable: "/absolute/codex", Request: []byte(`{"requestedChange":{"kind":"full"}}`), BeforeExecute: func() error {
+				calls++
+				if !locker.locked || len(codex.calls) != 1 {
+					t.Fatal("candidate not saved between authentication and exec under lock")
+				}
+				if failure == "candidate save" {
+					return errors.New("disk full")
+				}
+				return nil
+			}}
+			runner := Generator{Repository: preflight, Codex: codex}
+			_, err = runner.RunPrepared(context.Background(), options, state)
+			if (err != nil) != (failure != "none") {
+				t.Fatalf("result: %v", err)
+			}
+			want := 1
+			if failure == "authentication" {
+				want = 0
+			}
+			if calls != want {
+				t.Fatalf("candidate calls %d", calls)
+			}
+			want = 2
+			if failure != "none" {
+				want = 1
+			}
+			if len(codex.calls) != want {
+				t.Fatal("Codex exec ran after pre-dispatch failure")
+			}
+			if !locker.locked || locker.calls != 1 {
+				t.Fatal("prepared runner released or reacquired worktree lock")
+			}
+			if err := state.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := runner.RunPrepared(context.Background(), options, state); err == nil {
+				t.Fatal("closed preflight accepted")
+			}
+		})
+	}
+}
+
 func cleanRepositorySteps(target string, locker *recordingLocker, includeFinal bool) []commandStep {
 	canonicalTarget, err := canonicalDirectory(target)
 	if err != nil {

@@ -65,7 +65,7 @@ gateより先に走ってbaselineを貼り直せる、という順序の問題�
 gateは、retry開始前にtrusted側が固定したsnapshotとの比較だけを見る。agentが返した
 hashは一切読まない。
 
-固定するもの（105 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
+固定するもの（110 paths、`experiments/membership-agent-e2e/cmd/feedback -snapshot-out`が導出）:
 
 | reason | 何を守るか | 件数 |
 | --- | --- | --- |
@@ -76,9 +76,9 @@ hashは一切読まない。
 | `coverage-map` | `coverage.go` | 1 |
 | `referenced-test` | coverage mapが参照する全test file | 7 |
 | `verification-build-input` | 次runのtrusted toolsをbuildする`go.mod` / `go.sum` | 2 |
-| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file／embedded input | 91 |
+| `verification-rule` | feedback generator、guard、verifier、orchestratorと依存するlocal packageのGo file／embedded input | 96 |
 
-さらに、`verification-rule`の10 directoryは**Go file一覧そのもの**をsnapshotへ記録する。`go:embed` inputは
+さらに、`verification-rule`の11 directoryは**Go file一覧そのもの**をsnapshotへ記録する。`go:embed` inputは
 `go list -deps -json`の`EmbedFiles`から別途導出し、同じreasonでbytesを固定する。
 byte比較だけでは、snapshot後に追加されたfileが見えないためである（A4）。
 
@@ -374,7 +374,7 @@ faultとweakening patchから決まるので、再実行で動かない。
 
 `retry-baseline.json`はrepositoryへcommitしない。trusted側が持つものをtree内へ置けば
 agentが書き換えられるためである。generator、gate、verifier、orchestratorと次runのbuild inputを含む
-105 pathのdigestから毎回導出し、compilerやembedded authoring contextを編集すれば変わる。READMEには
+110 pathのdigestから毎回導出し、compilerやembedded authoring contextを編集すれば変わる。READMEには
 path／directory／reason countだけを固定し、working tree固有のsnapshot hashは固定しない。
 
 ## 追加したnegative test

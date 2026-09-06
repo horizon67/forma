@@ -169,35 +169,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 	if command == "generate" {
-		plan, err := buildGenerationPlan(result, generationRequestOptions{
-			manifestPath: generateOptions.manifestPath, previousPath: generateOptions.previousPath,
-		})
-		if err != nil {
-			fmt.Fprintf(stderr, "forma: build Generation Request: %v\n", err)
-			if errors.Is(err, os.ErrNotExist) {
-				return 2
-			}
-			return 1
-		}
-		if plan.NoOp {
-			return runNoOpGeneration(generateOptions, plan.Baseline, stdout, stderr)
-		}
-		request := plan.Request
-		fmt.Fprintf(stdout, "generation request: %s\n", request.RequestedChange.Kind)
-		if plan.Baseline != nil {
-			fmt.Fprintf(stdout, "baseline request SHA-256: %s\n", plan.Baseline.RequestSHA256)
-		}
-		content, err := agentrequest.Marshal(request)
-		if err != nil {
-			fmt.Fprintf(stderr, "forma: marshal Generation Request: %v\n", err)
-			return 1
-		}
-		return runGeneration(generateInvocation{
-			Repository:         generateOptions.repository,
-			AllowDirty:         generateOptions.allowDirty,
-			Request:            content,
-			ReviewRequirements: request.ReviewRequirements,
-		}, stdout, stderr)
+		return runManagedGeneration(generateOptions, result, sourceArguments, paths, stdout, stderr)
 	}
 	label := "files"
 	if len(paths) == 1 {
@@ -429,30 +401,38 @@ func buildGenerationRequest(result compiler.Result, options generationRequestOpt
 }
 
 func buildGenerationPlan(result compiler.Result, options generationRequestOptions) (agentrequest.GenerationPlan, error) {
+	previous, manifest, err := loadGenerationInputs(options)
+	if err != nil {
+		return agentrequest.GenerationPlan{}, err
+	}
+	return agentrequest.PlanGeneration(previous, result, manifest)
+}
+
+func loadGenerationInputs(options generationRequestOptions) (*agentrequest.Request, *implementationpolicy.Manifest, error) {
 	var manifest *implementationpolicy.Manifest
 	if options.manifestPath != "" {
 		content, err := os.ReadFile(options.manifestPath)
 		if err != nil {
-			return agentrequest.GenerationPlan{}, fmt.Errorf("read Implementation Policy Manifest %s: %w", options.manifestPath, err)
+			return nil, nil, fmt.Errorf("read Implementation Policy Manifest %s: %w", options.manifestPath, err)
 		}
 		parsed, err := implementationpolicy.ParseYAML(content)
 		if err != nil {
-			return agentrequest.GenerationPlan{}, err
+			return nil, nil, err
 		}
 		manifest = &parsed
 	}
 	if options.previousPath == "" {
-		return agentrequest.PlanGeneration(nil, result, manifest)
+		return nil, manifest, nil
 	}
 	content, err := os.ReadFile(options.previousPath)
 	if err != nil {
-		return agentrequest.GenerationPlan{}, fmt.Errorf("read previous Generation Request %s: %w", options.previousPath, err)
+		return nil, nil, fmt.Errorf("read previous Generation Request %s: %w", options.previousPath, err)
 	}
 	previous, err := agentrequest.UnmarshalRequest(content)
 	if err != nil {
-		return agentrequest.GenerationPlan{}, err
+		return nil, nil, err
 	}
-	return agentrequest.PlanGeneration(&previous, result, manifest)
+	return &previous, manifest, nil
 }
 
 type verifyOptions struct {

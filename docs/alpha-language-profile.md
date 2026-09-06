@@ -63,6 +63,11 @@ The development compiler extends the alpha language profile with Request
 `v0alpha5` policy-change metadata. The published `v0.1.0-alpha.1` binary emits
 `v0alpha4`; its compiler-output schemas above are unchanged by this extension.
 
+The development CLI also stores local comparison state as
+`forma/generation-history/v0alpha1`. This is worktree-local orchestration
+metadata, not a language artifact or verification result. Its contract is in
+[Generation history](generation-history.md).
+
 Command output, exit codes, process execution, and filesystem mutation are
 listed in the [CLI reference](cli.md). The trust and credential boundary is
 defined in the [security guide](security.md).

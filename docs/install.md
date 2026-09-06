@@ -99,6 +99,12 @@ not install a Forma runtime or persistent external evidence store. Generated
 application files remain part of the target repository and are never removed
 by uninstalling Forma.
 
+Development builds additionally retain local generation comparison history in
+the per-worktree Git directory under `forma/`. It is not removed by uninstalling
+the binary, committed, or transferred by clone. See
+[generation history](generation-history.md) for exact paths, retention, and
+safe adoption/recovery. Automatic no-op does not require Codex authentication.
+
 ## AI setup
 
 `forma authoring-context`, `check`, `resolve`, `project`, `request`, and

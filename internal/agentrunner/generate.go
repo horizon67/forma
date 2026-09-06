@@ -31,6 +31,9 @@ type GenerateOptions struct {
 	AllowDirty      bool
 	Environment     []string
 	Request         []byte
+	// BeforeExecute persists the candidate after authentication but before any
+	// editing process starts. An error prevents Codex exec entirely.
+	BeforeExecute func() error
 }
 
 // GenerateResult reports what Codex said and the Git-visible state left for a
@@ -85,6 +88,27 @@ func (generator Generator) Run(ctx context.Context, options GenerateOptions) (re
 			returnErr = errors.Join(returnErr, fmt.Errorf("release Git worktree lock: %w", closeErr))
 		}
 	}()
+	return generator.runPrepared(ctx, options, state, prompt)
+}
+
+// RunPrepared leaves ownership of the worktree lock with the caller, allowing
+// history selection, execution and durable completion to share one lock.
+func (generator Generator) RunPrepared(ctx context.Context, options GenerateOptions, state *RepositoryState) (GenerateResult, error) {
+	if state == nil || state.lock == nil || generator.Codex == nil || generator.Repository.Commands == nil {
+		return GenerateResult{}, errors.New("prepared generation requires a locked repository and command runners")
+	}
+	target, err := canonicalDirectory(options.Repository)
+	if err != nil || target != state.Target {
+		return GenerateResult{}, errors.New("prepared generation target differs from locked repository")
+	}
+	prompt, err := implementationPrompt(options.Request)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	return generator.runPrepared(ctx, options, state, prompt)
+}
+
+func (generator Generator) runPrepared(ctx context.Context, options GenerateOptions, state *RepositoryState, prompt []byte) (result GenerateResult, returnErr error) {
 	result.Target = state.Target
 	result.Worktree = state.Worktree
 	result.InitialHead = state.Head
@@ -108,6 +132,11 @@ func (generator Generator) Run(ctx context.Context, options GenerateOptions) (re
 
 	promptDigest := sha256.Sum256(prompt)
 	result.ImplementationPromptSHA256 = fmt.Sprintf("%x", promptDigest)
+	if options.BeforeExecute != nil {
+		if err := options.BeforeExecute(); err != nil {
+			return result, fmt.Errorf("prepare generation history: %w", err)
+		}
+	}
 	codex, codexErr := generator.Codex.Run(ctx, Command{
 		Executable: options.CodexExecutable,
 		Arguments: []string{
@@ -207,6 +236,7 @@ Implementation scope:
 - Preserve existing repository conventions and do not weaken or delete existing tests to make the task appear complete.
 - Do not modify .forma source files or invent requirements that are absent from the request.
 - Do not modify the Implementation Manifest or any baseline request.
+- Do not commit, switch branches, reset Git state, or modify Git metadata or Forma generation history.
 - Human Review Requirements are not machine-verified; make the relevant implementation visible for later human review.
 - You may inspect files and run relevant non-destructive build or test commands inside your workspace sandbox.
 - Do not create Generation Feedback. Forma stops after your repository edits so a person can review the diff and explicitly run commands.

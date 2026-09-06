@@ -302,7 +302,7 @@ build/test feedbackである。repository failureからFormaの意味が不足�
 
 ## Incremental update
 
-開発版の`forma generate --previous <request.json>`は`request --previous`と共通の差分判定を使う。
+開発版の`forma generate`はlocal履歴からbaselineを自動選択し、`request --previous`と共通の差分判定を使う。
 Intent、Facts、Review Requirements、Policyに差分がなければ、Git preflight後にexit 0のno-opとなり、
 Codexの探索・認証確認も行わない。Source Mapの位置・path、promptやrequest履歴は更新判定に含めない。
 `request --previous`は従来どおり差分なしをerrorとし、no-opをGeneration Requestのkindへ追加しない。
@@ -311,7 +311,10 @@ Codexの探索・認証確認も行わない。Source Mapの位置・path、prom
 unchanged Factsは回帰検証から落とさない。実装が対応済みならdiffゼロで完了できる。無関係な既存不備は
 報告だけに留め、update中に修復・監査を暗黙開始しない。編集範囲の妥当性は実際のdiffの人間reviewに残る。
 no-opやagentのexit 0は検証成功を意味せず、build/testの未実行・skipを未検証として区別する。
-baselineは呼び出し側が保持したRequestを明示入力する。repositoryへの適用済み証明や自動保存・昇格は行わない。
+比較用baselineは正常終了した実行の正確なRequestから保存するが、検証済み・Human Review完了とは扱わない。
+target・worktree・branch・source選択を識別し、同じworktree lock内で履歴の選択から結果保存まで行う。
+`--previous`は明示的なbaseline導入・復旧用に残す。履歴がない既存実装や未完了の試行をfull生成やno-opへ
+黙ってfallbackさせない。保存場所、状態遷移、branch変更と復旧の契約は[Generation history](generation-history.md)を参照。
 
 target codeは破棄専用artifactではなく、通常のapplication repositoryである。人間やagentが保守してよい。
 ただしFormaが所有するapplication intentをtarget codeだけで変更するとdriftするため、意味の変更は

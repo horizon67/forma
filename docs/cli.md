@@ -2,8 +2,8 @@
 
 Status: command contract for the `v0.1.0-alpha.1` release candidate.
 
-Development extension: baseline-aware `generate --previous` and Generation
-Request `v0alpha5` are available in the current source build, not the published
+Development extension: automatic generation history, explicit `generate --previous`,
+and Generation Request `v0alpha5` are available in the current source build, not the published
 `v0.1.0-alpha.1` binary. Existing `v0alpha4` requests remain valid inputs.
 
 Forma has one installed executable, `forma`. It compiles one explicitly
@@ -35,8 +35,9 @@ Artifact schema mismatches and unsuccessful Generation Feedback fail with exit
 | `project` | deterministic read-only projection | no | no | no |
 | `request` | Generation Request JSON | no | no | no |
 | `verify` | verification and human-review summary | no | no | no |
-| `generate` (full/update) | Codex summary, prompt digest, Git status, review instructions | trusted Git and Codex executables | yes, through Codex | yes, through Codex |
-| `generate` (no-op) | no-change message, baseline digest, Git preflight result | trusted Git only | no | no |
+| `generate` (full/update) | Codex summary, prompt digest, Git status, history, review instructions | trusted Git and Codex executables | yes, through Codex | application edits through Codex; local Git metadata through Forma |
+| `generate` (automatic no-op) | no-change message, baseline digest, Git preflight result | trusted Git only | no | no |
+| `generate --previous` (no-op/import) | no-change message, explicit baseline adoption | trusted Git only | no | local Git metadata only; application files unchanged |
 
 `generate` is the only compiler command that asks an AI to edit code. Forma
 does not run the generated application's build, tests, server, or feedback
@@ -118,12 +119,25 @@ forma generate --repository <directory> \
   [--allow-dirty] <source...>
 ```
 
-Without `--previous`, builds a full canonical request in memory. With
-`--previous`, validates the supplied baseline and compares canonical Resolved
-Intent, Acceptance Facts, Review Requirements, and Implementation Policy.
-An omitted `--manifest` inherits the baseline's Manifest; an explicit one
-replaces it for comparison. Policy additions and changes are supported.
+Without `--previous`, selects the last completed comparison baseline from local
+per-worktree history for this target, branch, and source selection. A genuinely
+fresh target without history uses full generation; otherwise canonical Resolved
+Intent, Acceptance Facts, Review Requirements, and Implementation Policy select
+incremental update or no-op. An omitted `--manifest` inherits the selected
+baseline's Manifest; an explicit one replaces it for comparison.
+Policy additions and changes are supported.
 Policy removal/ID replacement and unsupported semantic removals fail closed.
+
+An existing target without history, invalid history, an unfinished generation,
+or incompatible checkout history stops with exit `1`, not full generation or
+normal no-op. `--previous` explicitly selects a validated baseline in preference
+to automatic history and can adopt/re-bind an existing application or recover
+an unfinished attempt. Corrupt history is never silently discarded, even with
+`--previous`. See [history identity, state transitions, and recovery](generation-history.md).
+The failure output identifies the history file and current key; branch/selector
+mismatches also list existing keys. Invalid catalogs must be restored or backed
+up and moved aside with their pending marker **before** explicit re-import;
+`--previous` alone does not repair them.
 
 Policy `instruction` and advisory `conventions` changes select an update even
 though Forma does not interpret their prose. YAML comments, formatting, and
@@ -139,8 +153,12 @@ select an incremental update, which may legitimately finish with zero diff.
 
 If there are no changes, prints `no application or policy changes` and exits
 `0` after Git preflight. It never looks up Codex, checks authentication, or
-starts an agent. It does not write a Request or modify the target. No-op means
-no update was applied, not that repository behavior or tests passed.
+starts an agent. Automatic no-op does not write history or modify application
+files. An explicit `--previous` no-op imports that supplied Request into local
+history, with no agent run recorded, and explicitly warns that the caller is
+asserting the target already implements that Request. This is adoption, not
+initial generation: it does not generate missing code. No-op means no application
+update was applied, not that repository behavior or tests passed.
 
 If there are changes, sends an incremental request to Codex with the complete
 current constraints and explicit change sets. Instructions limit edits to
@@ -156,18 +174,20 @@ hidden-index state unless the documented explicit exception applies. This
 preflight also applies to no-op: invalid targets or a dirty worktree without
 `--allow-dirty` fail with exit `2`, even if the request has no changes.
 
-The command prints the SHA-256 of the complete prompt, including the canonical
-request, but does not write that prompt or request into the target. After Codex
-returns it prints Git status and stops. Review the diff and confirm that
+The command prints the SHA-256 of the complete prompt. It saves the exact
+canonical Request in the worktree's Git metadata, not in application files.
+After Codex returns it prints Git status and stops. Review the diff and confirm that
 boundary assertions actually ran before executing repository commands.
 Codex completion (exit `0`) is not verification success. Unrun/skipped checks
 must be reported as unverified, and Human Review Requirements remain open.
 
-The canonical baseline digest proves Request lineage, not that the baseline
-was previously applied to this target. No persistent application state or
-automatic baseline promotion is introduced. Supply the reviewed prior Request
-explicitly. Repair and audit are separate future workflows: `generate` never
-switches to them automatically, even when earlier verification failed.
+The canonical baseline digest proves Request lineage, not repository correctness.
+The comparison baseline advances only after successful execution, complete Git
+evidence, unchanged checkout identity, and durable history completion. It is not
+a verified baseline: history retains `unverified` tests and `pending` human review.
+Agent-reported checks and separate `forma verify` runs do not automatically
+upgrade those fields. Repair and audit remain separate future workflows;
+`generate` never switches to them automatically.
 
 `--allow-dirty` bypasses only the ordinary dirty-worktree rejection. It does
 not bypass worktree locking, unsafe ownership, or hidden-index checks, and the

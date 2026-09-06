@@ -40,6 +40,14 @@ Before Codex starts, Forma:
 The dirty check protects a person's visible uncommitted work. It is not a
 tamper-proof measurement of repository contents against a previous agent run.
 
+Development builds also retain the lock through local generation history
+selection and durable result storage. History lives in the per-worktree Git
+metadata directory; it is comparison state, not signed evidence or proof of
+repository correctness. No-op does not contact Codex or run tests. Existing
+targets without history and interrupted/invalid history stop for explicit
+adoption or recovery. See [generation history](generation-history.md) for
+identity, retention, and failure handling.
+
 ## Generated code and tests
 
 Forma passes a canonical request to Codex in a `workspace-write` sandbox and

@@ -40,7 +40,7 @@ func TestNoOpRejectsMissingBaselineBeforePreflight(t *testing.T) {
 		return "", nil
 	}
 	var stdout, stderr bytes.Buffer
-	if code := runNoOpGeneration(generateCommandOptions{}, nil, &stdout, &stderr); code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "no-op plan has no baseline identity") {
+	if code := printNoOpGeneration(nil, nil, &stdout, &stderr); code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "no-op plan has no baseline identity") {
 		t.Fatalf("exit %d, stdout %q, stderr %q", code, stdout.String(), stderr.String())
 	}
 }
@@ -79,7 +79,11 @@ func newNoOpRepository(t *testing.T) string {
 	writeTestFile(t, filepath.Join(repo, "README.md"), "hand-written implementation\n")
 	testGitCommand(t, repo, "add", "README.md")
 	testGitCommand(t, repo, "-c", "user.name=Forma Test", "-c", "user.email=forma@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "Initial target")
-	return repo
+	canonical, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return canonical
 }
 
 func TestGenerateNoOpSkipsCodexAndLeavesRepositoryUntouched(t *testing.T) {
@@ -177,6 +181,7 @@ func TestGenerateIncrementalSourceAndPolicyChangesPermitZeroDiff(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			inputs := t.TempDir()
+			repo := newNoOpRepository(t)
 			source, manifest := filepath.Join(inputs, "app.forma"), filepath.Join(inputs, "policy.yaml")
 			writeTestFile(t, source, updateSource)
 			writeTestFile(t, manifest, updateManifest)
@@ -207,10 +212,12 @@ func TestGenerateIncrementalSourceAndPolicyChangesPermitZeroDiff(t *testing.T) {
 				if !tc.policyOnly && len(request.RequestedChange.IntentChanges) == 0 {
 					t.Fatal("source delta missing")
 				}
-				return agentrunner.GenerateResult{Target: invocation.Repository, FinalStatusKnown: true, CodexMessage: []byte("Requirements already satisfied. Tests not run.")}, nil
+				generated := beginTestGeneration(t, invocation)
+				generated.CodexMessage = []byte("Requirements already satisfied. Tests not run.")
+				return generated, nil
 			}
 			var stdout, stderr bytes.Buffer
-			args := []string{"generate", "--repository", inputs, "--previous", baselinePath, "--manifest", manifest, source}
+			args := []string{"generate", "--repository", repo, "--previous", baselinePath, "--manifest", manifest, source}
 			if code := run(args, &stdout, &stderr); code != 0 {
 				t.Fatalf("exit %d: %s", code, &stderr)
 			}

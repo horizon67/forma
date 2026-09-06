@@ -35,7 +35,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | v0言語仕様 | design draft | 10 primitives、modifier、EBNF、静的検査を定義。未実装項目が残る |
 | Go front-end | 部分実装 | Lexer、Parser、AST、Checker、stable identity、Resolved Intent、Source Mapを実装 |
 | Acceptance Facts | admin slice実装 | list/detail/editの正常系・拒否系をstable ID付きで導出 |
-| Generation Request | Policy差分まで実装 | current `v0alpha5`はPolicy差分を持ち、`generate --previous`とno-opに対応。previous `v0alpha4`とhistorical `v0alpha1` / `v0alpha2`のbyte identityを保持 |
+| Generation Request | Policy差分・local履歴まで実装 | current `v0alpha5`はPolicy差分を持ち、`generate`はlocal履歴からfull／incremental／no-opを選択。`--previous`で明示導入・復旧できる。previous `v0alpha4`とhistorical `v0alpha1` / `v0alpha2`のbyte identityを保持 |
 | agent E2E | 初回・incremental実測済み | 既存Go targetを更新し、43/43 facts、2 satisfied policies、1 preferred deviationを確認 |
 | incremental update | 最初のprobe完了 | added/changed diffを適用済み。rename、削除、migrationは未検証 |
 | Implementation Policy Manifest | experimental `v0alpha1` | required、preferred deviation、forbidden scanを実測済み |
