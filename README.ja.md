@@ -211,7 +211,10 @@ Formaへ反映します。Formaはapplication codeのbyte-identicalな再生成�
 
 ## 現在地
 
-Formaは不安定な`v0.1.0-alpha.1`配布を準備中です。現在のGo front-endはdesign draft v0.4のgrammar、
+Formaの不安定な`v0.1.0-alpha.2`配布では、baseline-awareな差分更新、生成履歴の自動管理、
+AI共通の進捗表示とCodex adapterを追加しています。alpha.1で生成済みのapplicationは明示的な
+履歴の引き継ぎが必要です。[upgrade guide](docs/install.md#upgrade-from-alpha1)を参照してください。
+他AIへの実接続はまだ含みません。現在のGo front-endはdesign draft v0.4のgrammar、
 parser、名前解決、型検査、semantic validation、stable identity、Resolved Intent、Source Mapを部分実装し、
 管理画面flow向けの最小Acceptance Facts／Generation Request sliceも実装しています。v0外のself-only
 Invariant、bounded Changes、one-hop relation value、exact numeric addition、named Action Preconditionも実験的に含みます。
@@ -240,7 +243,7 @@ runtime adapterを作る予定はありません。
 GitHub Releasesでtagを公開後、次でinstallします。
 
 ```bash
-go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
+go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.2
 forma version
 ```
 
@@ -308,13 +311,14 @@ bounded Changes、required relation value、field reference 2個のexact binary 
 通常のGo applicationによる280/280 repository E2Eまで接続しました。複数operandはExpression treeとruntime subject bindingで
 保持し、integer overflowは部分commitなしの`failure`になります。Action Preconditionはsource state、exactなpre-state predicate、
 post-state Invariantを分離し、false時のauthoritativeな無変更拒否とconcurrent enforcementまで実測しました。
-6 Review Requirementsは人間確認待ちです。この実行可能baselineを最速`v0.1.0-alpha.1`のscopeとしてfreezeします。
+6 Review Requirementsは人間確認待ちです。この実行可能baselineは`v0.1.0-alpha.1`でfreezeし、alpha.2でも言語scopeを維持しています。
 review済みのmultiple assignment設計は未実装のまま保存し、collection、record creation、Occurrence、Effectとともにpost-alphaへ送ります。
 alphaではversion一致済みの`forma authoring-context`と、Codexによる編集後に人のdiff reviewで停止する薄い`forma generate`を実装済みです。
 最初のfresh repository dogfoodでは通常のアプリ生成と実行まで確認済みです。そこで見つかったpage accessの欠落はcompilerで修正しました。
 同じ220-Fact requestの再dogfoodでは、Factだけではpure helperへ矮小化されたrunと、authoritative access／anonymous principalの
 一般instructionによりHTTP／browser境界まで実装されたrunを比較しました。page access blockerは閉じ、
-clean-environment release gateとmacOS／Linux release workflowは実装済みです。残る優先事項はexternal document-only dogfoodとtag qualificationです。
+clean-environment release gateとmacOS／Linuxのqualificationを経てalpha.1を公開しました。alpha.2ではbounded incremental update、
+自動履歴、AI共通の進捗表示を追加しています。signupのpackage manager移行は別途実証が必要です。
 projectionの人間評価は独立して進めます。
 
 ## 設計資料

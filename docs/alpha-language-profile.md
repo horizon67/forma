@@ -1,8 +1,8 @@
-# Forma `v0.1.0-alpha.1` Language Profile
+# Forma `v0.1.0-alpha.2` Language Profile
 
-Status: release-candidate profile. This document defines the language and
-artifact subset intended for the first public alpha. The tag has not yet been
-published.
+Status: release-candidate profile for the second public alpha. This document
+defines its language and artifact subset. Alpha.2 retains alpha.1's accepted
+language semantics and extends the generation workflow.
 
 ## Contract
 
@@ -59,14 +59,17 @@ repository evidence and are not installed as alpha commands or runtimes.
 Schema version strings are semantic boundaries, not decorative metadata.
 Unknown or unsupported versions must fail validation.
 
-The development compiler extends the alpha language profile with Request
+Alpha.2 extends the alpha language profile with Request
 `v0alpha5` policy-change metadata. The published `v0.1.0-alpha.1` binary emits
 `v0alpha4`; its compiler-output schemas above are unchanged by this extension.
 
-The development CLI also stores local comparison state as
+The CLI also stores local comparison state as
 `forma/generation-history/v0alpha1`. This is worktree-local orchestration
 metadata, not a language artifact or verification result. Its contract is in
 [Generation history](generation-history.md).
+
+Progress uses `forma/generation-progress/v0alpha1`, independently of language
+artifacts, Request identity, and history. See [Generation progress](generation-progress.md).
 
 Command output, exit codes, process execution, and filesystem mutation are
 listed in the [CLI reference](cli.md). The trust and credential boundary is

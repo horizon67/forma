@@ -1,6 +1,6 @@
 # Forma Language Reference
 
-Status: public reference entry for the `v0.1.0-alpha.1` release candidate.
+Status: public reference entry for the `v0.1.0-alpha.2` release candidate.
 
 Forma has two intentionally different specification levels:
 

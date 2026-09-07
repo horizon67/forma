@@ -1,8 +1,8 @@
 # Forma Alpha Security and Trust Boundary
 
-Status: security contract for the `v0.1.0-alpha.1` thin runner.
+Status: security contract for the `v0.1.0-alpha.2` thin runner.
 
-Development extension: [generation progress](generation-progress.md) accepts only
+[Generation progress](generation-progress.md) accepts only
 fixed provider-independent activity categories and diagnostics, never raw AI
 payloads or stderr. Numeric CLI exit status and fixed failure observations remain
 available in human diagnostics, without exposing raw provider errors. The final
@@ -20,7 +20,7 @@ do not invoke an AI, repository command, or network service. `forma generate`
 is different: it invokes the installed Git executable for repository preflight
 and the installed Codex CLI to edit one target worktree.
 
-Alpha.1 is for a fresh repository or another repository the invoking user owns
+Alpha.2 is for a fresh repository or another repository the invoking user owns
 and trusts. It is not containment for hostile repositories, plugins, build
 scripts, dependencies, or generated code.
 
@@ -51,7 +51,7 @@ Before Codex starts, Forma:
 The dirty check protects a person's visible uncommitted work. It is not a
 tamper-proof measurement of repository contents against a previous agent run.
 
-Development builds also retain the lock through local generation history
+Forma also retains the lock through local generation history
 selection and durable result storage. History lives in the per-worktree Git
 metadata directory; it is comparison state, not signed evidence or proof of
 repository correctness. No-op does not contact Codex or run tests. Existing

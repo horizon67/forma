@@ -85,7 +85,7 @@ func TestPathOptionsRejectMissingValuesConsistently(t *testing.T) {
 
 func TestVersionCommand(t *testing.T) {
 	previous := versionOverride
-	versionOverride = "v0.1.0-alpha.1"
+	versionOverride = "v0.1.0-alpha.2"
 	t.Cleanup(func() { versionOverride = previous })
 
 	for _, command := range []string{"version", "--version"} {
@@ -94,7 +94,7 @@ func TestVersionCommand(t *testing.T) {
 			if exitCode := run([]string{command}, &stdout, &stderr); exitCode != 0 {
 				t.Fatalf("exit code %d\nstderr:\n%s", exitCode, stderr.String())
 			}
-			if got, want := stdout.String(), "forma v0.1.0-alpha.1\n"; got != want {
+			if got, want := stdout.String(), "forma v0.1.0-alpha.2\n"; got != want {
 				t.Fatalf("stdout = %q, want %q", got, want)
 			}
 			if stderr.Len() != 0 {
@@ -123,7 +123,7 @@ func TestVersionCommandRejectsArguments(t *testing.T) {
 
 func TestAuthoringContextCommandUsesTheInstalledBinaryVersion(t *testing.T) {
 	previous := versionOverride
-	versionOverride = "v0.1.0-alpha.1"
+	versionOverride = "v0.1.0-alpha.2"
 	t.Cleanup(func() { versionOverride = previous })
 
 	var stdout, stderr bytes.Buffer
@@ -132,8 +132,8 @@ func TestAuthoringContextCommandUsesTheInstalledBinaryVersion(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Context schema: `forma/authoring-context/v0alpha1`",
-		"Forma binary: `v0.1.0-alpha.1`",
-		"Language profile: `v0.1.0-alpha.1`",
+		"Forma binary: `v0.1.0-alpha.2`",
+		"Language profile: `v0.1.0-alpha.2`",
 		"## Authoring protocol",
 		"## Bundled complete example",
 		"entry Welcome",
@@ -169,6 +169,7 @@ func TestVersionFromBuildInfoDistinguishesReleasesAndSourceBuilds(t *testing.T) 
 		want     string
 	}{
 		{name: "tagged module", version: "v0.1.0-alpha.1", want: "v0.1.0-alpha.1"},
+		{name: "second alpha", version: "v0.1.0-alpha.2", want: "v0.1.0-alpha.2"},
 		{name: "development", version: "(devel)", want: "devel"},
 		{
 			name:    "proxy-installed pseudo version",

@@ -12,7 +12,7 @@ import (
 
 const (
 	AuthoringContextSchema = "forma/authoring-context/v0alpha1"
-	AlphaLanguageProfile   = "v0.1.0-alpha.1"
+	AlphaLanguageProfile   = "v0.1.0-alpha.2"
 )
 
 //go:embed language-guide.md

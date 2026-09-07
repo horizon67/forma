@@ -1,6 +1,6 @@
 # Forma Alpha End-to-End Quickstart
 
-Status: reviewed workflow for `v0.1.0-alpha.1`.
+Status: reviewed workflow for `v0.1.0-alpha.2`.
 
 This path goes from a person's application request to Forma source, a
 deterministic Generation Request, and ordinary application code written by
@@ -11,14 +11,14 @@ Codex. Forma stops before running generated code so a person can review it.
 After the alpha tag is published:
 
 ```sh
-go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
+go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.2
 forma version
 ```
 
 The expected output is:
 
 ```text
-forma v0.1.0-alpha.1
+forma v0.1.0-alpha.2
 ```
 
 See [installation](install.md) for prebuilt binaries, PATH, source builds, and
@@ -40,7 +40,7 @@ download the source pinned to the same tag:
 
 ```sh
 curl -fsSLo app.forma \
-  https://raw.githubusercontent.com/horizon67/forma/v0.1.0-alpha.1/docs/examples/alpha-quickstart.forma
+  https://raw.githubusercontent.com/horizon67/forma/v0.1.0-alpha.2/docs/examples/alpha-quickstart.forma
 ```
 
 From a tagged repository checkout, the equivalent command is
@@ -71,12 +71,12 @@ git -c user.name=Forma -c user.email=forma@example.invalid \
 cd ..
 ```
 
-Alpha.1 is intended for a fresh repository, or another repository the invoking
+Alpha.2 is intended for a fresh repository, or another repository the invoking
 user owns and trusts. Commit or stash existing work before generation.
 
 ## 5. Authenticate Codex and generate
 
-Current source builds display progress automatically on stderr. Optional
+Alpha.2 displays progress automatically on stderr. Optional
 `--progress=json` reserves stderr for progress JSONL, while the final result
 stays on stdout. `--verbose` adds safe activity categories, and
 `--heartbeat-interval 10s` changes the default 30-second heartbeat. These options
@@ -89,8 +89,8 @@ forma generate --repository ./my-forma-app app.forma
 ```
 
 Forma prints the exact implementation-prompt SHA-256, Codex's summary, and the
-final Git status. It does not write the request into the target and does not run
-the generated application on the host.
+final Git status. It saves the canonical request in local Git metadata, not in
+application files, and does not run the generated application on the host.
 
 ## 6. Review before executing
 
@@ -110,14 +110,13 @@ Only after review, run the build and test commands belonging to the generated
 repository. Their names depend on the framework Codex selected; Forma does not
 invent a universal command.
 
-## 7. Incremental updates and no-op (development builds)
+## 7. Incremental updates and no-op
 
-This section requires a current source build; the published
-`v0.1.0-alpha.1` executable does not support automatic history or `generate --previous`. See the
-[source build instructions](install.md#build-the-current-development-version).
-The new binary can read the `v0alpha4` Request saved by the original alpha.
+This section requires alpha.2 or newer; the older `v0.1.0-alpha.1` executable
+does not support automatic history or `generate --previous`. Alpha.2 can read
+the `v0alpha4` Request saved by the original alpha.
 
-When step 5 used the development binary, Forma already saved its exact agent
+When step 5 used alpha.2, Forma already saved its exact agent
 input in local Git metadata. After reviewing, testing, and committing the target
 changes, use the same command again, whether or not `app.forma` changed:
 

@@ -2,6 +2,11 @@
 
 Status: living roadmap — non-normative
 
+2026-09-07更新: alpha.1は公開済み。現在は#4のbounded update／no-op、#5の自動履歴、
+#6のAI共通進捗＋Codex adapterをalpha.2へまとめる。#3のsignup npm→Bun移行は公開後の実証対象。
+後半の「Fastest alpha cut」はalpha.1の計画記録として保持し、現行release契約は
+[alpha.2 release notes](releases/v0.1.0-alpha.2.md)と[alpha profile](alpha-language-profile.md)を正とする。
+
 ## 1. 中心仮説と責任境界
 
 Formaの中心仮説は、coding agentへ渡す自然言語promptを、型付き・検査可能・review可能なapplication
@@ -43,7 +48,7 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 | automated repair | **P2 first bounded loop完了** | fresh agent processでtest/build failure → repair → current 85/85と、intent gap → human handoffを自動実行 |
 | Navigation semantics | **P1 follow-up完了** | page-localな`entry`と`continue`を実装し、`flow`をread-only projectionに維持した |
 | Expression以降 | **P3 alpha cut到達** | self-only Invariant、bounded Changes、required relation value、exact binary numeric `+`、named Action Preconditionを通常のGo applicationで280/280 Factsまで実測。multiple assignmentはdesign review反映済み・未実装でpost-alphaへ保留 |
-| 最速alpha | **current priority** | current executable semanticsをfreezeし、install、quickstart、clean-environment E2E、external dogfood、`v0.1.0-alpha.1` releaseへ進む |
+| alpha distribution | **alpha.2 release** | alpha.1は公開済み。言語scopeを維持して差分更新・自動履歴・進捗を配布し、#3の実移行を検証する |
 | 旧Go generator/conformance | 凍結prototype | 正式なgenerator/profile architectureにはしない |
 
 管理画面の初回E2Eによって、次の問いにはかなり明確な「はい」が得られた。
@@ -54,8 +59,8 @@ coding agentはこの3つを統合してrepository-nativeな実装を作る。
 applicationを継続的に保守するsourceとして一段強い根拠を得た。public IdentityのStage Dと最初のbounded
 repair loopと、membership flowで確認したdefault entry / surface-only transitionのbounded probeも完了した。
 CRUD/state transitionを越えるcurrent executable semanticsはAction Preconditionまででalpha cutに十分なE2E根拠を得た。
-次は言語研究を一時freezeし、第三者が実際にinstallして使える最速alphaを作る。projectionの人間評価とpost-alpha P3は
-alpha releaseをblockしない。
+alpha.1で第三者がinstallできる配布を作った。次は言語scopeを維持し、alpha.2の反復生成workflowを
+実利用で検証する。projectionの人間評価とpost-alpha P3はこのreleaseをblockしない。
 
 ## 3. 優先順位
 
@@ -68,7 +73,7 @@ alpha releaseをblockしない。
 | **P2 / first bounded loop completed** | Automated repair loop | build/test failureから意味を弱めず実装を修正できるか |
 | **P1 follow-up / completed** | Entry + surface-only transition | application entryとoperationを伴わないnavigationを一意に記述できるか |
 | **P3 / alpha cut reached** | Expression → Changes → Precondition | CRUD/state transitionを越える最初のdomain behaviorを記述できるか |
-| **Alpha / current** | `v0.1.0-alpha.1` distribution cut | current subsetを第三者がclean environmentでinstall・実行・検証できるか |
+| **Alpha / current** | `v0.1.0-alpha.2` iterative generation | 同じgenerateでManifest差分更新・no-opを運用し、安全に中断・復旧できるか |
 | **P3 / post-alpha** | multiple assignment → collection → Occurrence → Effect | 実利用で表面化した不足をbounded sliceで追加できるか |
 | **P4** | v0 hardening/release | front-endとschemaを第三者が再現可能なtoolとして完成できるか |
 

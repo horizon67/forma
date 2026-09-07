@@ -2,6 +2,9 @@
 
 Status: current design decision — language grammar remains experimental
 
+Release note (2026-09-07): alpha.1は公開済み。alpha.2は言語grammarを変更せず、差分更新・自動履歴・
+AI共通進捗を配布する。後述のalpha.1公開までの期間見積もりは当時の計画記録であり、現在の予定ではない。
+
 この文書は、これまでのForma実験、会員登録flow probe、外部design research（DR）を踏まえ、
 「何を検証したか」「何が決まったか」「次に何を言語へ入れるか」を一か所にまとめる。
 現行releaseが受理するsyntaxとsemanticsの契約は[`alpha-language-profile.md`](alpha-language-profile.md)、

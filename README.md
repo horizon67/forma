@@ -240,7 +240,11 @@ require byte-identical application-code regeneration.
 
 ## Current status
 
-Forma is preparing the unstable `v0.1.0-alpha.1` distribution. The current Go
+Forma's unstable `v0.1.0-alpha.2` distribution adds baseline-aware updates,
+automatic generation history, and provider-independent progress with a Codex
+adapter. Existing alpha.1 applications require deliberate history adoption;
+see the [upgrade guide](docs/install.md#upgrade-from-alpha1). Other live AI
+providers are not included yet. The current Go
 front end partially implements the design draft v0.4 grammar, parser, name
 resolution, type checking, semantic validation, stable identities, Resolved
 Intent, and Source Maps. It also implements a minimal admin-flow Acceptance
@@ -283,7 +287,7 @@ next step.
 After the tag is available on GitHub Releases:
 
 ```bash
-go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.1
+go install github.com/horizon67/forma/cmd/forma@v0.1.0-alpha.2
 forma version
 ```
 
@@ -367,11 +371,11 @@ value, one exact binary numeric addition on a Changes RHS, and one named Action 
 Generation Request, and a 280/280 repository E2E in an ordinary Go application.
 The addition and Precondition slices carry the full expression trees and runtime-bound operands into Facts, reject unsupported type bounds and named-type chains, and detect repository integer overflow without partial commit. Six human Review Requirements
 remain pending. Action Precondition now separates source-state rejection,
-an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline is now frozen for the fastest `v0.1.0-alpha.1` cut. The reviewed multiple-assignment design remains unimplemented and moves,
+an exact consistent-pre-state predicate, and post-state Invariant rejection in the compiler and repository E2E. This executable baseline was frozen for `v0.1.0-alpha.1` and remains the language scope of alpha.2. The reviewed multiple-assignment design remains unimplemented and moves,
 together with collection binding, record creation, Occurrence, and Effect, to post-alpha work. The alpha track now includes a version-matched
 `forma authoring-context` and a thin Codex-backed `forma generate` runner that stops for human diff review. A controlled rerun of the same
 220-Fact request now observes anonymous denial and member/manager access at the HTTP and browser boundaries; it also established the general
-authoritative-access and anonymous-principal translation rules used by the runner. The clean-environment release gate and macOS/Linux release workflows are now implemented; external documentation-only dogfood and tag qualification remain. Projection
+authoritative-access and anonymous-principal translation rules used by the runner. Alpha.1 was published with macOS/Linux qualification; alpha.2 adds bounded incremental updates, automatic history, and provider-independent progress. Live signup package-manager migration remains a separate validation item. Projection
 readability evaluation runs independently.
 
 ## Design documents

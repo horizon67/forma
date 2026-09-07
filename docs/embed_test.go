@@ -11,10 +11,10 @@ import (
 )
 
 func TestAuthoringContextContainsTheEmbeddedGuideExampleAndVersion(t *testing.T) {
-	got := AuthoringContext("v0.1.0-alpha.1")
+	got := AuthoringContext("v0.1.0-alpha.2")
 	for _, want := range []string{
 		"Context schema: `" + AuthoringContextSchema + "`",
-		"Forma binary: `v0.1.0-alpha.1`",
+		"Forma binary: `v0.1.0-alpha.2`",
 		"Language profile: `" + AlphaLanguageProfile + "`",
 		strings.TrimSpace(languageGuide),
 		"```forma\n" + strings.TrimSpace(alphaQuickstart) + "\n```",
@@ -27,7 +27,7 @@ func TestAuthoringContextContainsTheEmbeddedGuideExampleAndVersion(t *testing.T)
 	if !strings.HasSuffix(got, "\n") {
 		t.Fatal("authoring context must end with one newline")
 	}
-	if got != AuthoringContext("v0.1.0-alpha.1") {
+	if got != AuthoringContext("v0.1.0-alpha.2") {
 		t.Fatal("authoring context is not deterministic for one binary version")
 	}
 	if strings.Contains(got, "https://") || strings.Contains(got, "http://") {

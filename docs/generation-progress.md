@@ -1,6 +1,6 @@
-# Generation progress and agent adapters (development)
+# Generation progress and agent adapters
 
-Status: Issue #6 development CLI contract; not shipped in `v0.1.0-alpha.1`.
+Status: CLI contract introduced in `v0.1.0-alpha.2`; not shipped in `v0.1.0-alpha.1`.
 
 ## Normal use
 

@@ -3,7 +3,7 @@
 Status: design draft 0.4 (reference implementation: partial; Resolved Intent schema under revision)
 
 > 本書はより大きいForma v0 design targetの規範であり、現行binaryがすべてを実装しているというrelease契約ではない。
-> `v0.1.0-alpha.1`で受理・検証する範囲は
+> `v0.1.0-alpha.2`で受理・検証する範囲は
 > [`alpha-language-profile.md`](alpha-language-profile.md)を正とする。
 
 > Forma is a high-level application programming language for expressing what

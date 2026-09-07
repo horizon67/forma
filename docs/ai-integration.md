@@ -1,20 +1,13 @@
 # AI Integration and Credentials
 
-Status: alpha.1 thin-runner contract. `forma authoring-context` and the first
-full-request-only `forma generate` path are implemented. The first
-fresh-repository dogfood created and ran an application. Its page-access
-finding is fixed in the compiler and the repeated generation now enforces it at
-the HTTP and browser boundaries. The clean-environment gate is implemented and
-locally qualified; GitHub's macOS/Linux tag workflow remains before release.
-
-Development builds extend this historical alpha.1 contract with automatic
-full/incremental/no-op history and an AI-neutral execution/progress boundary.
+Status: alpha.2 thin-runner contract, with automatic full/incremental/no-op
+history and an AI-neutral execution/progress boundary.
 `internal/agentrunner` owns execution evidence; `internal/agentbackend/codex` is
 the first adapter, selected only in CLI assembly. Provider selection and other
 real AI integrations remain future work, not assumptions in Forma semantics.
 See [generation history](generation-history.md) and
 [generation progress and adapters](generation-progress.md) for the current
-source-build contract. The progress flags and backend identity never enter a
+release contract. The progress flags and backend identity never enter a
 Generation Request or its semantic/baseline comparison.
 
 Forma uses AI at two separate boundaries:
@@ -61,20 +54,23 @@ boundary.
 
 ## Generate application code
 
-The first alpha supports one implementation agent: Codex CLI in
+Alpha.2 connects one implementation agent: Codex CLI in
 non-interactive mode:
 
 ```sh
 forma generate --repository ./target app.forma
 ```
 
-Forma compiles a full canonical Generation Request and passes it through stdin
-to a 30-minute-bounded `codex exec --ephemeral` process with the target as its
-working repository and a `workspace-write` sandbox. The request is not written
-into the target. The alpha invocation also ignores user config and user/project
-execution-policy rules; it does not add another writable directory. It does
-not implement an incremental generation command, provider abstraction, or raw
-Responses API loop. OpenAI documents
+Forma compiles a canonical Generation Request and uses local comparison history
+to select full generation, a bounded incremental update, or no-op. No-op does
+not prepare or authenticate an agent. An editing attempt passes its request
+through stdin to a 30-minute-bounded `codex exec --ephemeral --json` process with
+the target as its working repository and a `workspace-write` sandbox. The
+request is saved in local Git metadata, not application files. The invocation
+also ignores user config and user/project execution-policy rules; it does not
+add another writable directory. The provider-neutral backend boundary currently
+has only the Codex adapter; provider selection and direct API integrations are
+not included. OpenAI documents
 [`codex exec` as the non-interactive interface](https://developers.openai.com/codex/non-interactive-mode).
 
 The target must be inside a Git worktree with an existing commit. Generation
@@ -106,7 +102,7 @@ identity, session, or role state must not be converted into an allowed default
 role. These are general request-translation rules, not application-specific
 Welcome-page behavior.
 
-Alpha.1 is for a fresh repository, or another repository the invoking user
+Alpha.2 is for a fresh repository, or another repository the invoking user
 owns and trusts. Running untrusted repository code automatically, publishing a
 tamper-resistant external evidence store, and automatic repair are post-alpha
 work preserved in the hardened-runner research document.

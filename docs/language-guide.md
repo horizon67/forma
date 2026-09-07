@@ -1,7 +1,7 @@
 # Writing Forma for the Alpha
 
 This guide teaches an AI or a person to write source accepted by the
-`v0.1.0-alpha.1` reference front-end. The alpha language profile is the
+`v0.1.0-alpha.2` reference front-end. The alpha language profile is the
 normative boundary. If this guide and that profile differ, the profile and the
 installed compiler win.
 

@@ -1,6 +1,6 @@
 # Forma Documentation
 
-Forma is preparing its first public pre-release, `v0.1.0-alpha.1`. The alpha
+The current pre-release contract is `v0.1.0-alpha.2`. The alpha
 exists to exercise a deliberately bounded language and AI-generation workflow
 in real repositories. It is not a compatibility promise for the complete v0
 design.
@@ -14,11 +14,14 @@ design.
 - [Alpha language profile](alpha-language-profile.md)
 - [Language reference](language-reference.md)
 - [AI integration and credentials](ai-integration.md)
+- [Automatic generation history and recovery](generation-history.md)
+- [Generation progress and AI adapters](generation-progress.md)
 - [Security and trust boundary](security.md)
 - [Current language direction](current-language-direction.md)
 
-The release-candidate process and its remaining external qualification are
-tracked in the [roadmap](roadmap.md).
+Release changes and limitations are recorded in the
+[alpha.2 release notes](releases/v0.1.0-alpha.2.md). Future work and historical
+qualification plans are tracked in the [roadmap](roadmap.md).
 
 ## Language design and reference
 
@@ -45,6 +48,7 @@ An experimental construct is supported by the alpha only when the
 - [First alpha quickstart dogfood](evaluations/alpha-dogfood-2026-08-23.md)
 - [Post-alpha hardened runner research](reference-agent-runner-proposal.md)
 - [Alpha.1 release notes](releases/v0.1.0-alpha.1.md)
+- [Alpha.2 release notes](releases/v0.1.0-alpha.2.md)
 
 ## Document ownership
 

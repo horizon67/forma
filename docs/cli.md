@@ -1,12 +1,12 @@
 # Forma CLI Reference
 
-Status: command contract for the `v0.1.0-alpha.1` release candidate.
+Status: command contract for the `v0.1.0-alpha.2` release candidate.
 
-Development extension: automatic generation history, explicit `generate --previous`,
-and Generation Request `v0alpha5` are available in the current source build, not the published
+New in alpha.2: automatic generation history, explicit `generate --previous`,
+and Generation Request `v0alpha5`. These are not available in the older
 `v0.1.0-alpha.1` binary. Existing `v0alpha4` requests remain valid inputs.
 
-Development builds also include [provider-independent generation progress](generation-progress.md)
+Alpha.2 also includes [provider-independent generation progress](generation-progress.md)
 and a Codex adapter. Progress is automatic; `--progress=text|json`, `--verbose`,
 and `--heartbeat-interval <1s..5m>` customize observation only. JSON mode reserves
 stderr for progress JSONL, including errors; human result output stays on stdout.
