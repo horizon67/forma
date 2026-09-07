@@ -7,6 +7,16 @@ finding is fixed in the compiler and the repeated generation now enforces it at
 the HTTP and browser boundaries. The clean-environment gate is implemented and
 locally qualified; GitHub's macOS/Linux tag workflow remains before release.
 
+Development builds extend this historical alpha.1 contract with automatic
+full/incremental/no-op history and an AI-neutral execution/progress boundary.
+`internal/agentrunner` owns execution evidence; `internal/agentbackend/codex` is
+the first adapter, selected only in CLI assembly. Provider selection and other
+real AI integrations remain future work, not assumptions in Forma semantics.
+See [generation history](generation-history.md) and
+[generation progress and adapters](generation-progress.md) for the current
+source-build contract. The progress flags and backend identity never enter a
+Generation Request or its semantic/baseline comparison.
+
 Forma uses AI at two separate boundaries:
 
 ```text

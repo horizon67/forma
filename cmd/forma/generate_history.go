@@ -14,10 +14,24 @@ import (
 	"github.com/horizon67/forma/internal/agentrunner"
 	"github.com/horizon67/forma/internal/compiler"
 	"github.com/horizon67/forma/internal/generationhistory"
+	"github.com/horizon67/forma/internal/generationprogress"
 )
 
-func runManagedGeneration(options generateCommandOptions, result compiler.Result, selectors, paths []string, stdout, stderr io.Writer) (exit int) {
+func runManagedGeneration(parent context.Context, options *generateCommandOptions, result compiler.Result, selectors, paths []string, stdout, stderr io.Writer) (exit int) {
+	p := options.progress
+	begun := false
+	var finalResult agentrunner.GenerateResult
+	// Registered before lock acquisition: all final free-form output is emitted
+	// only after history finalization and release of the containing worktree.
+	defer func() { printGenerationResult(stdout, finalResult) }()
 	fail := func(err error) int {
+		options.outcome = generationprogress.Outcome(err)
+		if begun && options.outcome == generationprogress.Failed {
+			p.Diagnostic(generationprogress.GenerationError)
+		}
+		if options.outcome == generationprogress.Cancelled || options.outcome == generationprogress.TimedOut {
+			p.Diagnostic(generationprogress.PartialMutation)
+		}
 		fmt.Fprintf(stderr, "forma: %v\n", err)
 		if generationSetupError(err) {
 			return 2
@@ -39,8 +53,15 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 		return fail(err)
 	}
 	explicitPrevious := previous
-	ctx, cancel := context.WithTimeout(context.Background(), alphaGenerationTimeout)
+	ctx, cancel := context.WithTimeout(parent, alphaGenerationTimeout)
 	defer cancel()
+	if deadline, ok := ctx.Deadline(); ok {
+		p.Deadline(deadline)
+	}
+	if err := ctx.Err(); err != nil {
+		return fail(err)
+	}
+	p.Phase(generationprogress.RepositoryValidation)
 	git, err := absoluteExecutable("git")
 	if err != nil {
 		return fail(fmt.Errorf("%w: %v", errGitUnavailable, err))
@@ -54,8 +75,10 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 		if err := state.Close(); err != nil {
 			fmt.Fprintf(stderr, "forma: release Git worktree lock: %v\n", err)
 			exit = 1
+			options.outcome = generationprogress.Failed
 		}
 	}()
+	p.Phase(generationprogress.HistorySelection)
 	location, err := preflight.HistoryContext(ctx, state, git)
 	if err != nil {
 		return fail(err)
@@ -119,14 +142,22 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 	}
 	fmt.Fprintln(stdout, "history verification: unverified; human review: pending (tracked separately from execution completion)")
 	if plan.NoOp {
+		if err := ctx.Err(); err != nil {
+			return fail(err)
+		}
 		if options.previousPath != "" {
+			p.Phase(generationprogress.HistorySave)
 			fmt.Fprintln(stdout, "explicit no-op adoption: you are asserting that the target already implements the supplied Request; no application code was generated or verified; this is not initial generation")
 			if err := history.Import(identity, *previous, state.Head); err != nil {
 				return fail(fmt.Errorf("import baseline history: %w", err))
 			}
 			fmt.Fprintln(stdout, "explicit baseline imported into local history; no agent execution was recorded")
 		}
-		return printNoOpGeneration(state, plan.Baseline, stdout, stderr)
+		code := printNoOpGeneration(state, plan.Baseline, stdout, stderr)
+		if code == 0 {
+			options.outcome = generationprogress.NoOp
+		}
+		return code
 	}
 	fmt.Fprintf(stdout, "generation request: %s\n", plan.Request.RequestedChange.Kind)
 	if plan.Baseline != nil {
@@ -136,10 +167,13 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 	if err != nil {
 		return fail(err)
 	}
-	begun := false
 	invocation := generateInvocation{Repository: state.Target, AllowDirty: options.allowDirty, Request: content,
 		ReviewRequirements: plan.Request.ReviewRequirements, State: state, GitExecutable: git,
+		Progress: p,
 		BeforeExecute: func() error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if begun {
 				return errors.New("generation candidate was already recorded")
 			}
@@ -150,18 +184,23 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 			return nil
 		},
 	}
-	generated, runErr := runGenerationAttempt(ctx, invocation, stdout, stderr)
+	generated, runErr := runGenerationAttempt(ctx, invocation, stdout)
+	finalResult = generated
+	if ctx.Err() != nil {
+		runErr = errors.Join(runErr, ctx.Err())
+	}
 	if !begun {
 		if runErr != nil {
 			return fail(runErr)
 		}
 		return fail(errors.New("generation returned without recording its candidate; no baseline was promoted"))
 	}
-	if runErr == nil && (!generated.FinalStatusKnown || generated.ImplementationPromptSHA256 == "" || generated.Target != state.Target || generated.Worktree != state.Worktree || generated.InitialHead != state.Head) {
+	if runErr == nil && (!generated.CleanupComplete || !generated.FinalStatusKnown || generated.ImplementationPromptSHA256 == "" || generated.Target != state.Target || generated.Worktree != state.Worktree || generated.InitialHead != state.Head) {
 		runErr = errors.New("generation did not return complete matching repository evidence")
 	}
 	// Re-check branch and HEAD even on cancellation using a bounded cleanup
 	// context. An agent checkout/commit cannot silently promote a stale baseline.
+	p.Phase(generationprogress.FinalStatus)
 	checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer checkCancel()
 	after, err := preflight.HistoryContext(checkCtx, state, git)
@@ -170,12 +209,20 @@ func runManagedGeneration(options generateCommandOptions, result compiler.Result
 	} else if after != location {
 		runErr = errors.Join(runErr, errors.New("Git identity changed during generation; history was not promoted"))
 	}
-	if err := history.Finish(identity, runErr == nil, generated.ImplementationPromptSHA256); err != nil {
+	p.Phase(generationprogress.HistorySave)
+	if err := ctx.Err(); err != nil {
+		runErr = errors.Join(runErr, err)
+	}
+	// Git inspection cannot consume the history persistence budget.
+	saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer saveCancel()
+	if err := history.FinishContext(saveCtx, identity, runErr == nil, generated.ImplementationPromptSHA256); err != nil {
 		return fail(errors.Join(runErr, fmt.Errorf("save generation result: %w; history remains pending, inspect the repository before explicit recovery", err)))
 	}
 	if runErr != nil {
 		return fail(runErr)
 	}
+	options.outcome = generationprogress.Completed
 	fmt.Fprintln(stdout, "comparison baseline saved from the exact completed agent input; tests remain unverified and human review remains pending")
 	return 0
 }

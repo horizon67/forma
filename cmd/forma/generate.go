@@ -12,16 +12,19 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
+	"github.com/horizon67/forma/internal/agentbackend/codex"
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/agentrunner"
 	"github.com/horizon67/forma/internal/compiler"
+	"github.com/horizon67/forma/internal/generationprogress"
 )
 
 const alphaGenerationTimeout = 30 * time.Minute
 
 var (
-	errCodexUnavailable = errors.New("Codex CLI is unavailable")
+	errCodexUnavailable = agentrunner.ErrBackendUnavailable
 	errGitUnavailable   = errors.New("Git is unavailable")
 	invokeGeneration    = invokeCodexGeneration
 	findExecutable      = exec.LookPath
@@ -35,29 +38,18 @@ type generateInvocation struct {
 	State              *agentrunner.RepositoryState
 	GitExecutable      string
 	BeforeExecute      func() error
+	Progress           *generationprogress.Reporter
 }
 
 func invokeCodexGeneration(ctx context.Context, invocation generateInvocation) (agentrunner.GenerateResult, error) {
-	codexExecutable, err := absoluteExecutable("codex")
-	if err != nil {
-		return agentrunner.GenerateResult{}, fmt.Errorf("%w: %v", errCodexUnavailable, err)
-	}
-
 	runner := agentrunner.Generator{
-		Repository: agentrunner.RepositoryPreflight{
-			Commands: agentrunner.OSCommandRunner{},
-			Locks:    agentrunner.WorktreeLocker{},
-		},
-		Codex: agentrunner.OSCommandRunner{ProcessGroup: true},
+		Repository: agentrunner.RepositoryPreflight{Commands: agentrunner.OSCommandRunner{}, Locks: agentrunner.WorktreeLocker{}},
+		Backend:    codex.Backend{LookPath: findExecutable, Environment: os.Environ()},
 	}
 	options := agentrunner.GenerateOptions{
-		Repository:      invocation.Repository,
-		GitExecutable:   invocation.GitExecutable,
-		CodexExecutable: codexExecutable,
-		AllowDirty:      invocation.AllowDirty,
-		Environment:     codexEnvironment(os.Environ()),
-		Request:         append([]byte(nil), invocation.Request...),
-		BeforeExecute:   invocation.BeforeExecute,
+		Repository: invocation.Repository, GitExecutable: invocation.GitExecutable,
+		AllowDirty: invocation.AllowDirty, Request: append([]byte(nil), invocation.Request...),
+		BeforeExecute: invocation.BeforeExecute, Progress: invocation.Progress,
 	}
 	return runner.RunPrepared(ctx, options, invocation.State)
 }
@@ -74,48 +66,11 @@ func absoluteExecutable(name string) (string, error) {
 	return filepath.Clean(absolute), nil
 }
 
-// codexEnvironment is deliberately smaller than the caller environment. The
-// thin runner reuses Codex's saved login and basic host/network settings, but
-// never forwards arbitrary application secrets or API-key values.
-func codexEnvironment(environ []string) []string {
-	values := map[string]string{}
-	for _, entry := range environ {
-		name, value, found := strings.Cut(entry, "=")
-		if found {
-			values[name] = value
-		}
-	}
-	allowed := []string{
-		"PATH", "HOME", "CODEX_HOME",
-		"TMPDIR", "TMP", "TEMP",
-		"USER", "LOGNAME", "SHELL", "TERM", "COLORTERM",
-		"LANG", "LC_ALL", "LC_CTYPE", "NO_COLOR",
-		"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
-		"http_proxy", "https_proxy", "all_proxy", "no_proxy",
-		"CODEX_CA_CERTIFICATE", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_EXTRA_CA_CERTS",
-	}
-	result := make([]string, 0, len(allowed))
-	for _, name := range allowed {
-		if value, ok := values[name]; ok {
-			result = append(result, name+"="+value)
-		}
-	}
-	return result
-}
-
-func runGenerationAttempt(ctx context.Context, invocation generateInvocation, stdout, stderr io.Writer) (agentrunner.GenerateResult, error) {
-	fmt.Fprintf(stdout, "starting Codex generation in %s (timeout %s)\n", invocation.Repository, alphaGenerationTimeout)
+func runGenerationAttempt(ctx context.Context, invocation generateInvocation, stdout io.Writer) (agentrunner.GenerateResult, error) {
+	fmt.Fprintf(stdout, "preparing agent generation in %s (timeout %s)\n", invocation.Repository, alphaGenerationTimeout)
+	fmt.Fprintln(stdout, "Press Ctrl+C to cancel safely; cancellation is not rollback, so review the diff before retrying.")
 	printReviewRequirements(stdout, invocation.ReviewRequirements)
-	result, err := invokeGeneration(ctx, invocation)
-	printGenerationResult(stdout, result)
-	if err != nil {
-		if len(result.CodexDiagnostics) > 0 {
-			fmt.Fprintln(stderr, "Codex diagnostics:")
-			fmt.Fprint(stderr, strings.TrimSpace(string(result.CodexDiagnostics)))
-			fmt.Fprintln(stderr)
-		}
-	}
-	return result, err
+	return invokeGeneration(ctx, invocation)
 }
 
 func printNoOpGeneration(state *agentrunner.RepositoryState, baseline *agentrequest.RequestBaseline, stdout, stderr io.Writer) int {
@@ -127,7 +82,7 @@ func printNoOpGeneration(state *agentrunner.RepositoryState, baseline *agentrequ
 		fmt.Fprintln(stderr, "forma: no-op plan has no repository preflight")
 		return 1
 	}
-	fmt.Fprintln(stdout, "no application or policy changes; Codex was not started")
+	fmt.Fprintln(stdout, "no application or policy changes; agent was not started")
 	fmt.Fprintf(stdout, "baseline request SHA-256: %s\n", baseline.RequestSHA256)
 	fmt.Fprintf(stdout, "repository preflight passed: %s\n", state.Target)
 	if state.Dirty {
@@ -141,9 +96,9 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 	if result.Target == "" {
 		return
 	}
-	if len(bytes.TrimSpace(result.CodexMessage)) > 0 {
-		fmt.Fprintln(writer, "Codex summary:")
-		fmt.Fprintln(writer, strings.TrimSpace(string(result.CodexMessage)))
+	if len(bytes.TrimSpace(result.Summary)) > 0 {
+		fmt.Fprintln(writer, "AI summary (unverified text; may contain sensitive information):")
+		fmt.Fprintln(writer, safeSummary(string(result.Summary)))
 	}
 	fmt.Fprintf(writer, "repository: %s\n", result.Target)
 	if result.ImplementationPromptSHA256 != "" {
@@ -165,7 +120,7 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 		}
 	}
 	fmt.Fprintln(writer, "Forma did not run generated application code or repository tests.")
-	fmt.Fprintln(writer, "Codex completion is not verification success; unrun or skipped checks remain unverified.")
+	fmt.Fprintln(writer, "Agent completion is not verification success; unrun or skipped checks remain unverified.")
 	fmt.Fprintln(writer, "Next: review the Git diff, then explicitly run the repository's build and test commands.")
 	fmt.Fprintln(writer, "Confirm that boundary tests actually ran and did not skip assertions because the sandbox lacked a runtime capability.")
 }
@@ -173,7 +128,7 @@ func printGenerationResult(writer io.Writer, result agentrunner.GenerateResult) 
 func generationSetupError(err error) bool {
 	return errors.Is(err, errCodexUnavailable) ||
 		errors.Is(err, errGitUnavailable) ||
-		errors.Is(err, agentrunner.ErrCodexAuthentication) ||
+		errors.Is(err, agentrunner.ErrAuthentication) ||
 		errors.Is(err, agentrunner.ErrInvalidRepository) ||
 		errors.Is(err, agentrunner.ErrNotGitWorktree) ||
 		errors.Is(err, agentrunner.ErrRepositoryHasNoCommit) ||
@@ -182,4 +137,18 @@ func generationSetupError(err error) bool {
 		errors.Is(err, agentrunner.ErrDirtyWorktree) ||
 		errors.Is(err, agentrunner.ErrHiddenIndexState) ||
 		errors.Is(err, agentrunner.ErrUnsafeRepositoryOwnership)
+}
+
+// Preserve readable text/newlines/tabs, but remove terminal controls, Unicode
+// format controls (including bidi overrides), and implicit line separators.
+func safeSummary(summary string) string {
+	return strings.TrimSpace(strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\t' {
+			return r
+		}
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			return -1
+		}
+		return r
+	}, summary))
 }

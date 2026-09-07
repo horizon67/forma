@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,18 +10,29 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	formadocs "github.com/horizon67/forma/docs"
 	"github.com/horizon67/forma/internal/agentrequest"
 	"github.com/horizon67/forma/internal/compiler"
+	"github.com/horizon67/forma/internal/generationprogress"
 	"github.com/horizon67/forma/internal/implementationpolicy"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "generate" {
+		ctx, stop := generationSignalContext()
+		code := runGenerateCommand(ctx, os.Args[2:], os.Stdout, os.Stderr)
+		stop()
+		os.Exit(code)
+	}
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "generate" {
+		return runGenerateCommand(context.Background(), args[1:], stdout, stderr)
+	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 		printUsage(stdout)
 		if len(args) == 0 {
@@ -63,7 +75,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 	}
-	if command != "check" && command != "resolve" && command != "request" && command != "project" && command != "generate" {
+	if command != "check" && command != "resolve" && command != "request" && command != "project" {
 		fmt.Fprintf(stderr, "unknown command %q\n\n", args[0])
 		printUsage(stderr)
 		return 2
@@ -76,15 +88,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if command == "request" {
 		var err error
 		requestOptions, sourceArguments, err = parseGenerationRequestOptions(sourceArguments)
-		if err != nil {
-			fmt.Fprintf(stderr, "forma: %v\n", err)
-			return 2
-		}
-	}
-	generateOptions := generateCommandOptions{}
-	if command == "generate" {
-		var err error
-		generateOptions, sourceArguments, err = parseGenerateOptions(sourceArguments)
 		if err != nil {
 			fmt.Fprintf(stderr, "forma: %v\n", err)
 			return 2
@@ -167,9 +170,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
-	}
-	if command == "generate" {
-		return runManagedGeneration(generateOptions, result, sourceArguments, paths, stdout, stderr)
 	}
 	label := "files"
 	if len(paths) == 1 {
@@ -294,10 +294,15 @@ type generationRequestOptions struct {
 }
 
 type generateCommandOptions struct {
-	repository   string
-	manifestPath string
-	previousPath string
-	allowDirty   bool
+	repository        string
+	manifestPath      string
+	previousPath      string
+	allowDirty        bool
+	progressMode      string
+	verbose           bool
+	heartbeatInterval time.Duration
+	progress          *generationprogress.Reporter
+	outcome           generationprogress.Status
 }
 
 // Reject the next option as a missing path value. A literal path starting with
@@ -309,8 +314,45 @@ func missingPathOptionValue(arguments []string, index int) bool {
 func parseGenerateOptions(arguments []string) (generateCommandOptions, []string, error) {
 	var options generateCommandOptions
 	var sources []string
+	var expanded []string
+	for _, arg := range arguments {
+		name, value, hasValue := strings.Cut(arg, "=")
+		if hasValue && (name == "--progress" || name == "--heartbeat-interval") {
+			expanded = append(expanded, name, value)
+		} else {
+			expanded = append(expanded, arg)
+		}
+	}
+	arguments = expanded
 	for index := 0; index < len(arguments); index++ {
 		switch arguments[index] {
+		case "--progress":
+			if options.progressMode != "" {
+				return options, nil, fmt.Errorf("generate option --progress was repeated")
+			}
+			index++
+			if missingPathOptionValue(arguments, index) || (arguments[index] != "text" && arguments[index] != "json") {
+				return options, nil, fmt.Errorf("--progress requires text or json")
+			}
+			options.progressMode = arguments[index]
+		case "--heartbeat-interval":
+			if options.heartbeatInterval != 0 {
+				return options, nil, fmt.Errorf("generate option --heartbeat-interval was repeated")
+			}
+			index++
+			if missingPathOptionValue(arguments, index) {
+				return options, nil, fmt.Errorf("--heartbeat-interval requires a duration from 1s to 5m")
+			}
+			duration, err := time.ParseDuration(arguments[index])
+			if err != nil || duration < time.Second || duration > 5*time.Minute {
+				return options, nil, fmt.Errorf("--heartbeat-interval requires a duration from 1s to 5m")
+			}
+			options.heartbeatInterval = duration
+		case "--verbose":
+			if options.verbose {
+				return options, nil, fmt.Errorf("generate option --verbose was repeated")
+			}
+			options.verbose = true
 		case "--repository":
 			if options.repository != "" {
 				return generateCommandOptions{}, nil, fmt.Errorf("generate option --repository was repeated")
@@ -562,6 +604,7 @@ func printUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "  forma project flow <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma request [--previous <request.json>] [--manifest <policy.yaml>] <file.forma | directory>...")
 	fmt.Fprintln(writer, "  forma generate --repository <directory> [--previous <request.json>] [--manifest <policy.yaml>] [--allow-dirty] <file.forma | directory>...")
+	fmt.Fprintln(writer, "                 [--progress=text|json] [--verbose] [--heartbeat-interval <1s..5m>]")
 	fmt.Fprintln(writer, "  forma verify [--repository <directory>] [--baseline <request.json>] <request.json> <feedback.json>")
 	fmt.Fprintln(writer)
 	fmt.Fprintln(writer, "Commands:")

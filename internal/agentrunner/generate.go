@@ -3,168 +3,215 @@ package agentrunner
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/horizon67/forma/internal/generationprogress"
 )
 
 var (
-	// ErrCodexAuthentication identifies a Codex installation that has no
-	// usable saved login. The caller can direct the user to `codex login`
-	// without conflating setup with an implementation failure.
-	ErrCodexAuthentication = errors.New("Codex CLI is not authenticated")
-	// ErrCodexFailed identifies a completed Codex process that rejected or
-	// failed the implementation task.
-	ErrCodexFailed = errors.New("Codex generation failed")
+	ErrAuthentication     = errors.New("agent authentication is unavailable")
+	ErrBackendUnavailable = errors.New("agent backend is unavailable")
+	ErrAgentFailed        = errors.New("agent generation failed")
 )
 
-// GenerateOptions are the complete inputs to one thin alpha generation run.
-// Request contains canonical Generation Request JSON and is passed through
-// stdin; it is never materialized in the target repository.
+// Backend prepares immutable input without editing the target. Neither this
+// boundary nor Prepared requires a process, command line, or output stream.
+type Backend interface {
+	Prepare(context.Context, Input) (Prepared, error)
+}
+type Input struct {
+	Repository string
+	Request    []byte
+}
+
+// Prepared owns private resources until Close. Run must use exactly the input
+// identified by InputSHA256, without rebuilding it from mutable files.
+type Prepared interface {
+	InputSHA256() string
+	Run(context.Context, Notify) (ExecutionResult, error)
+	Close() error
+}
+type Notification struct {
+	Started    bool
+	Activity   generationprogress.Activity
+	Diagnostic generationprogress.Code
+}
+
+// Notify returns promptly. Notifications are optional, not completion evidence.
+type Notify func(Notification)
+type ExecutionResult struct {
+	Summary         []byte // Untrusted AI text, never a progress field.
+	Status          generationprogress.Status
+	CleanupComplete bool
+}
 type GenerateOptions struct {
-	Repository      string
-	GitExecutable   string
-	CodexExecutable string
-	AllowDirty      bool
-	Environment     []string
-	Request         []byte
-	// BeforeExecute persists the candidate after authentication but before any
-	// editing process starts. An error prevents Codex exec entirely.
+	Repository    string
+	GitExecutable string
+	AllowDirty    bool
+	Request       []byte
 	BeforeExecute func() error
+	Progress      *generationprogress.Reporter
 }
-
-// GenerateResult reports what Codex said and the Git-visible state left for a
-// person to review. FinalStatus is the repository's complete current status;
-// when InitialDirty is true it cannot be attributed solely to Codex.
 type GenerateResult struct {
-	Target           string
-	Worktree         string
-	InitialHead      string
-	InitialDirty     bool
-	FinalStatusKnown bool
-	FinalStatus      string
-	// ImplementationPromptSHA256 identifies the exact instructions and
-	// canonical request bytes passed to Codex without retaining either in the
-	// target repository.
+	Target                     string
+	Worktree                   string
+	InitialHead                string
+	InitialDirty               bool
+	FinalStatusKnown           bool
+	FinalStatus                string
 	ImplementationPromptSHA256 string
-	CodexMessage               []byte
-	CodexDiagnostics           []byte
+	Summary                    []byte
+	Status                     generationprogress.Status
+	CleanupComplete            bool
 }
-
-// Generator connects the existing repository preflight to one Codex process.
-// It never runs target application code, tests, or a feedback adapter.
 type Generator struct {
 	Repository RepositoryPreflight
-	Codex      CommandRunner
+	Backend    Backend
 }
 
-// Run performs one full or incremental alpha generation and keeps the containing
-// worktree lock for authentication, Codex execution, and final status capture.
-func (generator Generator) Run(ctx context.Context, options GenerateOptions) (result GenerateResult, returnErr error) {
-	if generator.Codex == nil {
-		return result, errors.New("generation requires a Codex command runner")
+func validateGenerationInput(request []byte) error {
+	if len(bytes.TrimSpace(request)) == 0 {
+		return errors.New("generation requires canonical Generation Request JSON")
 	}
-	if len(bytes.TrimSpace(options.Request)) == 0 {
-		return result, errors.New("generation requires canonical Generation Request JSON")
+	var envelope struct {
+		RequestedChange struct {
+			Kind string `json:"kind"`
+		} `json:"requestedChange"`
 	}
-	prompt, err := implementationPrompt(options.Request)
-	if err != nil {
+	if err := json.Unmarshal(request, &envelope); err != nil {
+		return errors.New("invalid Generation Request JSON")
+	}
+	if envelope.RequestedChange.Kind != "full" && envelope.RequestedChange.Kind != "incremental" {
+		return errors.New("unsupported generation mode")
+	}
+	return nil
+}
+
+func (g Generator) Run(ctx context.Context, options GenerateOptions) (result GenerateResult, returnErr error) {
+	defer func() {
+		if returnErr != nil {
+			result.Status = generationprogress.Outcome(returnErr)
+		}
+	}()
+	if err := validateGenerationInput(options.Request); err != nil {
 		return result, err
 	}
-
-	state, err := generator.Repository.Prepare(ctx, RepositoryPreflightOptions{
-		Repository:    options.Repository,
-		GitExecutable: options.GitExecutable,
-		AllowDirty:    options.AllowDirty,
-	})
+	state, err := g.Repository.Prepare(ctx, RepositoryPreflightOptions{Repository: options.Repository, GitExecutable: options.GitExecutable, AllowDirty: options.AllowDirty})
 	if err != nil {
 		return result, err
 	}
 	defer func() {
-		if closeErr := state.Close(); closeErr != nil {
-			returnErr = errors.Join(returnErr, fmt.Errorf("release Git worktree lock: %w", closeErr))
+		if err := state.Close(); err != nil {
+			returnErr = errors.Join(returnErr, err)
+			result.Status = generationprogress.Failed
+			result.CleanupComplete = false
 		}
 	}()
-	return generator.runPrepared(ctx, options, state, prompt)
+	return g.RunPrepared(ctx, options, state)
 }
 
-// RunPrepared leaves ownership of the worktree lock with the caller, allowing
-// history selection, execution and durable completion to share one lock.
-func (generator Generator) RunPrepared(ctx context.Context, options GenerateOptions, state *RepositoryState) (GenerateResult, error) {
-	if state == nil || state.lock == nil || generator.Codex == nil || generator.Repository.Commands == nil {
-		return GenerateResult{}, errors.New("prepared generation requires a locked repository and command runners")
+// RunPrepared leaves the lock with its caller for durable history finalization.
+func (g Generator) RunPrepared(ctx context.Context, options GenerateOptions, state *RepositoryState) (result GenerateResult, returnErr error) {
+	defer func() {
+		if returnErr != nil {
+			result.Status = generationprogress.Outcome(returnErr)
+		}
+	}()
+	if state == nil || state.lock == nil || g.Backend == nil || g.Repository.Commands == nil {
+		return result, errors.New("prepared generation requires a locked repository and backend")
+	}
+	if err := validateGenerationInput(options.Request); err != nil {
+		return result, err
 	}
 	target, err := canonicalDirectory(options.Repository)
 	if err != nil || target != state.Target {
-		return GenerateResult{}, errors.New("prepared generation target differs from locked repository")
+		return result, errors.New("prepared generation target differs from locked repository")
 	}
-	prompt, err := implementationPrompt(options.Request)
+	result = GenerateResult{Target: state.Target, Worktree: state.Worktree, InitialHead: state.Head, InitialDirty: state.Dirty, Status: generationprogress.Failed}
+	p := options.Progress
+	p.Phase(generationprogress.AgentPreparation)
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	prepared, err := g.Backend.Prepare(ctx, Input{Repository: target, Request: append([]byte(nil), options.Request...)})
 	if err != nil {
-		return GenerateResult{}, err
+		return result, err
 	}
-	return generator.runPrepared(ctx, options, state, prompt)
-}
-
-func (generator Generator) runPrepared(ctx context.Context, options GenerateOptions, state *RepositoryState, prompt []byte) (result GenerateResult, returnErr error) {
-	result.Target = state.Target
-	result.Worktree = state.Worktree
-	result.InitialHead = state.Head
-	result.InitialDirty = state.Dirty
-
-	auth, err := generator.Codex.Run(ctx, Command{
-		Executable:  options.CodexExecutable,
-		Arguments:   []string{"login", "status"},
-		Directory:   state.Target,
-		Environment: append([]string(nil), options.Environment...),
-	})
-	if err != nil {
-		return result, fmt.Errorf("check Codex authentication: %w", err)
+	if prepared == nil {
+		return result, errors.New("backend returned no prepared input")
 	}
-	if auth.StdoutTruncated || auth.StderrTruncated || auth.WaitDelayed {
-		return result, fmt.Errorf("check Codex authentication: output was truncated before status could be established")
+	closed := false
+	closePrepared := func() error {
+		if closed {
+			return nil
+		}
+		closed = true
+		return prepared.Close()
 	}
-	if auth.ExitCode != 0 {
-		return result, fmt.Errorf("%w; run `codex login` and retry: %s", ErrCodexAuthentication, commandFailure(auth))
+	defer func() {
+		if err := closePrepared(); err != nil {
+			returnErr = errors.Join(returnErr, errors.New("agent private resource cleanup failed"))
+			result.CleanupComplete = false
+		}
+		result.Status = generationprogress.Outcome(returnErr)
+	}()
+	result.ImplementationPromptSHA256 = prepared.InputSHA256()
+	digest, err := hex.DecodeString(result.ImplementationPromptSHA256)
+	if err != nil || len(digest) != 32 || fmt.Sprintf("%x", digest) != result.ImplementationPromptSHA256 {
+		return result, errors.New("backend returned an invalid input SHA-256")
 	}
-
-	promptDigest := sha256.Sum256(prompt)
-	result.ImplementationPromptSHA256 = fmt.Sprintf("%x", promptDigest)
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
 	if options.BeforeExecute != nil {
 		if err := options.BeforeExecute(); err != nil {
 			return result, fmt.Errorf("prepare generation history: %w", err)
 		}
 	}
-	codex, codexErr := generator.Codex.Run(ctx, Command{
-		Executable: options.CodexExecutable,
-		Arguments: []string{
-			"exec",
-			"--ephemeral",
-			"--ignore-user-config",
-			"--ignore-rules",
-			"--sandbox", "workspace-write",
-			"--color", "never",
-			"-C", state.Target,
-			"-",
-		},
-		Directory:   state.Target,
-		Environment: append([]string(nil), options.Environment...),
-		Stdin:       prompt,
+	p.Phase(generationprogress.AgentStarting)
+	// Without a Started notification we do not invent evidence of liveness.
+	execution, runErr := prepared.Run(ctx, func(n Notification) {
+		if n.Started {
+			p.AgentStarted()
+		}
+		if n.Activity != "" {
+			p.Activity(n.Activity)
+		}
+		if n.Diagnostic != "" {
+			p.Diagnostic(n.Diagnostic)
+		}
 	})
-	result.CodexMessage = append([]byte(nil), codex.Stdout...)
-	result.CodexDiagnostics = append([]byte(nil), codex.Stderr...)
-
-	statusContext := ctx
-	cancelStatus := func() {}
-	if ctx.Err() != nil {
-		statusContext, cancelStatus = context.WithTimeout(context.Background(), 5*time.Second)
+	p.Phase(generationprogress.Cleanup)
+	result.Summary = append([]byte(nil), execution.Summary...)
+	result.CleanupComplete = execution.CleanupComplete
+	if err := closePrepared(); err != nil {
+		runErr = errors.Join(runErr, errors.New("agent private resource cleanup failed"))
+		result.CleanupComplete = false
 	}
-	defer cancelStatus()
-	status, statusErr := generator.Repository.runGit(statusContext, RepositoryPreflightOptions{
-		GitExecutable: options.GitExecutable,
-	}, state.Worktree, "status", "--porcelain=v1", "--untracked-files=normal")
+	if !result.CleanupComplete {
+		runErr = errors.Join(runErr, errors.New("agent cleanup did not complete"))
+	}
+	if execution.Status != generationprogress.Completed && runErr == nil {
+		switch execution.Status {
+		case generationprogress.Cancelled:
+			runErr = context.Canceled
+		case generationprogress.TimedOut:
+			runErr = context.DeadlineExceeded
+		default:
+			runErr = ErrAgentFailed
+		}
+	}
+	if ctx.Err() != nil {
+		runErr = errors.Join(runErr, ctx.Err())
+	}
+	p.Phase(generationprogress.FinalStatus)
+	statusCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	status, statusErr := g.Repository.runGit(statusCtx, RepositoryPreflightOptions{GitExecutable: options.GitExecutable}, state.Worktree, "status", "--porcelain=v1", "--untracked-files=normal")
 	if statusErr == nil {
 		statusErr = rejectTruncatedGitOutput("read final Git status", status)
 	}
@@ -175,77 +222,7 @@ func (generator Generator) runPrepared(ctx context.Context, options GenerateOpti
 		result.FinalStatusKnown = true
 		result.FinalStatus = string(status.Stdout)
 	}
-
-	if codexErr != nil {
-		return result, fmt.Errorf("run Codex generation: %w", codexErr)
-	}
-	if codex.StdoutTruncated || codex.StderrTruncated || codex.WaitDelayed {
-		return result, fmt.Errorf("run Codex generation: output was truncated; inspect the repository before retrying")
-	}
-	if codex.ExitCode != 0 {
-		return result, fmt.Errorf("%w with exit %d: %s", ErrCodexFailed, codex.ExitCode, commandFailure(codex))
-	}
-	if statusErr != nil {
-		return result, statusErr
-	}
-	return result, nil
-}
-
-func implementationPrompt(request []byte) ([]byte, error) {
-	// The CLI validates the canonical request. Read the mode from those exact
-	// bytes so an independently supplied flag cannot select a different scope.
-	var envelope struct {
-		RequestedChange struct {
-			Kind string `json:"kind"`
-		} `json:"requestedChange"`
-	}
-	if err := json.Unmarshal(request, &envelope); err != nil {
-		return nil, fmt.Errorf("read generation mode: %w", err)
-	}
-	kind := envelope.RequestedChange.Kind
-	if kind != "full" && kind != "incremental" {
-		return nil, fmt.Errorf("unsupported generation mode %q", kind)
-	}
-	var prompt strings.Builder
-	if kind == "incremental" {
-		prompt.WriteString(`Apply only the incremental update described by requestedChange in the authoritative Forma Generation Request below.
-
-Incremental scope:
-- The complete current Intent, Acceptance Facts, Review Requirements, and Implementation Policy remain constraints. Limit edits to the intentChanges, factChanges, reviewRequirementChanges, policyChanges, and conventionChanges indicated by requestedChange.
-- conventionChanges explicitly lists added/removed advisory text; an edit is a removal plus an addition. A removed convention only withdraws that advice. It does not require the opposite behavior or authorize code deletion, refactoring, or migration. Apply added advice only within the requested delta; a convention-only update may finish with zero diff.
-- Preserve unchanged Intent, existing implementation, and hand-written code. Retain all Acceptance Facts, including unchanged Facts, for regression verification; do not weaken expectations or remove coverage. Use existing tests for unchanged behavior; unrelated missing coverage is a separate finding, not permission to broaden the update.
-- Inspect whether the repository already satisfies the changed requirements. If it does, make no edits; a zero-diff completion is valid. Explain the evidence and any unverified checks without manufacturing a change.
-- Make only changes necessary to implement the requested delta, including directly affected dependencies, build/CI configuration, test commands, and documentation. Do not perform unrelated refactoring, documentation updates, or test rewrites.
-- This is an update, not a repair or audit. Report unrelated pre-existing failures or review findings separately without fixing them. If they block the update, report the blocker instead of broadening scope.
-- Do not infer unsupported removals, renames, deletions, or migrations. Do not edit the baseline request, Implementation Manifest, or Forma source to make the implementation fit.
-
-`)
-	} else {
-		prompt.WriteString(`Implement the application described by the authoritative Forma Generation Request below in the current repository.
-
-Implementation scope:
-- Implement every requested intent node and Acceptance Fact in ordinary application code appropriate for this repository.
-- Implement and test each Acceptance Fact at its named subject boundary.
-
-`)
-	}
-	prompt.WriteString(`Rules:
-- Treat the request as structured application intent, not as repository-specific implementation instructions.
-- Verify each Acceptance Fact at its named subject boundary. For an access Fact with expected.enforcement=authoritative, the application's public boundary that presents or invokes the subject must enforce it; a UI visibility check or direct call to a pure role helper is insufficient.
-- An anonymous principal means no authenticated identity and no roles. Never turn missing identity, session, or role state into an allowed default role.
-- Preserve existing repository conventions and do not weaken or delete existing tests to make the task appear complete.
-- Do not modify .forma source files or invent requirements that are absent from the request.
-- Do not modify the Implementation Manifest or any baseline request.
-- Do not commit, switch branches, reset Git state, or modify Git metadata or Forma generation history.
-- Human Review Requirements are not machine-verified; make the relevant implementation visible for later human review.
-- You may inspect files and run relevant non-destructive build or test commands inside your workspace sandbox.
-- Do not create Generation Feedback. Forma stops after your repository edits so a person can review the diff and explicitly run commands.
-- Distinguish implementation completion from verification: report each build/test check as passed, failed, or not run (including skipped assertions and the reason). Never describe unrun or skipped checks as verification success.
-- Finish with a concise summary of changed files, validation you ran, and remaining human review items.
-
-BEGIN FORMA GENERATION REQUEST JSON
-`)
-	prompt.Write(bytes.TrimSpace(request))
-	prompt.WriteString("\nEND FORMA GENERATION REQUEST JSON\n")
-	return []byte(prompt.String()), nil
+	returnErr = errors.Join(runErr, statusErr)
+	result.Status = generationprogress.Outcome(returnErr)
+	return result, returnErr
 }

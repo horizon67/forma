@@ -4,6 +4,7 @@ package generationhistory
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -343,10 +344,15 @@ func (s *Store) Begin(i Identity, request agentrequest.Request, explicitPrevious
 	return s.save(i.Key(), r)
 }
 
-// Finish leaves a durable pending marker on every failure, even when replacing
-// the catalog succeeded but directory fsync failed. Thus an ambiguous save must
-// never become an automatic successful no-op on the next invocation.
-func (s *Store) Finish(i Identity, success bool, promptSHA string) error {
+// FinishContext uses the caller's independent cleanup budget. Filesystem
+// syscalls themselves are not cancellable, so check before persistence begins.
+// A successful durable write commits the outcome even if the context expires
+// during the write; finish marker cleanup rather than inventing an ambiguity.
+// Actual write/fsync/marker errors still retain the conservative recovery guard.
+func (s *Store) FinishContext(ctx context.Context, i Identity, success bool, promptSHA string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	r := s.Record(i)
 	if r.LastAttempt == nil || r.LastAttempt.Status != "running" {
 		return errors.New("no running generation attempt")
@@ -366,7 +372,7 @@ func (s *Store) Finish(i Identity, success bool, promptSHA string) error {
 		baseline.Origin = "completed"
 		r.Baseline = &baseline
 	}
-	if err := s.save(i.Key(), r); err != nil {
+	if err := s.saveContext(ctx, i.Key(), r); err != nil {
 		return err
 	}
 	if success {
@@ -376,6 +382,10 @@ func (s *Store) Finish(i Identity, success bool, promptSHA string) error {
 }
 
 func (s *Store) save(key string, r Record) error {
+	return s.saveContext(context.Background(), key, r)
+}
+
+func (s *Store) saveContext(ctx context.Context, key string, r Record) error {
 	c := s.data
 	c.Records = make(map[string]Record, len(s.data.Records)+1)
 	for k, v := range s.data.Records {
@@ -400,6 +410,9 @@ func (s *Store) save(key string, r Record) error {
 		return err
 	}
 	b = append(b, '\n')
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err := s.write(s.Path, b); err != nil {
 		return err
 	}

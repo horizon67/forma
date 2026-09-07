@@ -2,6 +2,17 @@
 
 Status: security contract for the `v0.1.0-alpha.1` thin runner.
 
+Development extension: [generation progress](generation-progress.md) accepts only
+fixed provider-independent activity categories and diagnostics, never raw AI
+payloads or stderr. Numeric CLI exit status and fixed failure observations remain
+available in human diagnostics, without exposing raw provider errors. The final
+AI summary remains explicitly unverified free text
+and is not covered by that non-disclosure boundary. It is obtained from a bounded
+private file outside the target, without granting the agent another sandbox
+writable directory. Cancellation uses process-group teardown, bounded Git
+cleanup, and pending history; it is not rollback. Progress sink failure does not
+prevent execution cleanup or cause an automatic retry.
+
 ## Trust model
 
 Compiler-only commands operate on user-selected Forma source and artifacts and

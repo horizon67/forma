@@ -76,7 +76,7 @@ func (state *RepositoryState) Close() error {
 
 // RepositoryPreflight resolves a target through Git, locks the canonical
 // containing worktree before inspecting its status, and enforces the clean
-// tree policy. It intentionally performs no Codex or target executable work.
+// tree policy. It intentionally performs no agent or target executable work.
 type RepositoryPreflight struct {
 	Commands CommandRunner
 	Locks    DirectoryLocker

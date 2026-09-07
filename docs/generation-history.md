@@ -4,6 +4,12 @@ Status: development CLI contract for Issue #5; not part of `v0.1.0-alpha.1`.
 Generation Requests remain `v0alpha5`, with published `v0alpha4` baselines readable.
 History has its own schema, `forma/generation-history/v0alpha1`.
 
+Development progress and cancellation are described in
+[generation progress](generation-progress.md). Preparation/authentication is an
+adapter responsibility; history selection, candidate persistence, completion,
+and lock release remain Forma responsibilities. No history schema or comparison
+identity changes are introduced by progress or adapter selection.
+
 ## Normal operation
 
 Repeat the same command; there is no full/update/no-op mode flag:

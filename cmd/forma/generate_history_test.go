@@ -25,7 +25,8 @@ func beginTestGeneration(t *testing.T, invocation generateInvocation) agentrunne
 		t.Fatal(err)
 	}
 	return agentrunner.GenerateResult{Target: invocation.State.Target, Worktree: invocation.State.Worktree,
-		InitialHead: invocation.State.Head, InitialDirty: invocation.State.Dirty, FinalStatusKnown: true,
+		CleanupComplete: true,
+		InitialHead:     invocation.State.Head, InitialDirty: invocation.State.Dirty, FinalStatusKnown: true,
 		ImplementationPromptSHA256: strings.Repeat("0123456789abcdef", 4)}
 }
 
@@ -268,9 +269,9 @@ func TestAutomaticHistoryFailureBlocksNoOpAndExplicitRecoveryPreservesFailure(t 
 	writeTestFile(t, baselineFile, before.Baseline.Request)
 	writeTestFile(t, manifest, strings.Replace(updateManifest, "value: bun", "value: pnpm", 1))
 	invokeGeneration = func(_ context.Context, in generateInvocation) (agentrunner.GenerateResult, error) {
-		return beginTestGeneration(t, in), agentrunner.ErrCodexFailed
+		return beginTestGeneration(t, in), agentrunner.ErrAgentFailed
 	}
-	runHistoryCommand(t, args, 1, "Codex generation failed")
+	runHistoryCommand(t, args, 1, "agent generation failed")
 	store, identity, failed := readHistoryRecord(t, repo, repo, source)
 	if store.PendingKey == "" || !failed.Pending || failed.LastAttempt.Status != "failed" || failed.Baseline.Request != before.Baseline.Request {
 		t.Fatal("failure replaced the valid comparison baseline")
@@ -519,7 +520,10 @@ func TestManagedGenerationThroughRealRunnerWithCodexStandIn(t *testing.T) {
 		return oldFind(name)
 	}
 	args = append(args, "--allow-dirty")
-	runHistoryCommand(t, args, 0, "Deterministic stand-in completed", "comparison baseline saved")
+	output := runHistoryCommand(t, args, 0, "Deterministic stand-in completed", "comparison baseline saved")
+	if strings.Contains(output, "SECRET-stream-payload") {
+		t.Fatal("raw stream escaped into final output")
+	}
 	_, _, record := readHistoryRecord(t, repo, repo, source)
 	if record.LastAttempt.Status != "completed" || record.LastAttempt.PromptSHA256 == "" {
 		t.Fatal("real runner did not record completed execution")
@@ -574,6 +578,20 @@ func TestHistoryCodexHelperProcess(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "generated.txt"), []byte("stand-in output\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("Deterministic stand-in completed; tests not run.")
+	for i, arg := range args {
+		if arg == "--output-last-message" && i+1 < len(args) {
+			if err := os.WriteFile(args[i+1], []byte("Deterministic stand-in completed; tests not run."), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	fmt.Println(`{"type":"turn.started"}`)
+	// Exercise real pipe draining beyond the old 1 MiB retained-output limit.
+	unknown := `{"type":"future","payload":"` + strings.Repeat("SECRET-stream-payload", 100) + `"}`
+	for i := 0; i < 1024; i++ {
+		fmt.Println(unknown)
+		fmt.Fprintln(os.Stderr, unknown)
+	}
+	fmt.Println(`{"type":"item.completed","item":{"type":"agent_message","text":"not the final summary"}}`)
 	os.Exit(0)
 }

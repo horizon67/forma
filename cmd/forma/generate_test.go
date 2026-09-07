@@ -29,7 +29,7 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 		bounded = ok && !deadline.IsZero()
 		generated := beginTestGeneration(t, invocation)
 		generated.FinalStatus = "?? internal/app.go\n M README.md\n"
-		generated.CodexMessage = []byte("Implemented the application.\n")
+		generated.Summary = []byte("Implemented the application.\n")
 		return generated, nil
 	}
 
@@ -74,8 +74,9 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 	}
 	output := stdout.String()
 	for _, want := range []string{
-		"starting Codex generation",
-		"Codex summary:\nImplemented the application.",
+		"preparing agent generation",
+		"Press Ctrl+C to cancel safely; cancellation is not rollback",
+		"AI summary (unverified text; may contain sensitive information):\nImplemented the application.",
 		"implementation prompt SHA-256: 0123456789abcdef",
 		"current Git status:\n   M README.md\n  ?? internal/app.go",
 		"Forma did not run generated application code or repository tests.",
@@ -86,7 +87,7 @@ func TestGenerateCommandBuildsAFullRequestAndStopsForHumanReview(t *testing.T) {
 			t.Fatalf("stdout does not contain %q:\n%s", want, output)
 		}
 	}
-	if stderr.Len() != 0 {
+	if !strings.Contains(stderr.String(), "completed") {
 		t.Fatalf("stderr = %q", stderr.String())
 	}
 }
@@ -174,9 +175,9 @@ func TestGenerateCommandDistinguishesSetupFromAgentFailure(t *testing.T) {
 		err      error
 		wantExit int
 	}{
-		{name: "authentication", err: agentrunner.ErrCodexAuthentication, wantExit: 2},
+		{name: "authentication", err: agentrunner.ErrAuthentication, wantExit: 2},
 		{name: "missing CLI", err: errCodexUnavailable, wantExit: 2},
-		{name: "agent failure", err: agentrunner.ErrCodexFailed, wantExit: 1},
+		{name: "agent failure", err: agentrunner.ErrAgentFailed, wantExit: 1},
 		{name: "timeout", err: context.DeadlineExceeded, wantExit: 1},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -215,34 +216,11 @@ func TestGenerateCommandDisplaysHumanReviewRequirementsBeforeCodexRuns(t *testin
 				t.Fatalf("requirement was not displayed before dispatch: %s", line)
 			}
 		}
-		return agentrunner.GenerateResult{}, agentrunner.ErrCodexFailed
+		return agentrunner.GenerateResult{}, agentrunner.ErrAgentFailed
 	}
 	source := filepath.Join("..", "..", "experiments", "membership-agent-e2e", "app.forma")
 	if code := run([]string{"generate", "--repository", newNoOpRepository(t), source}, &stdout, &stderr); code != 1 || calls != 1 {
 		t.Fatalf("exit code = %d; dispatches = %d; stderr: %s", code, calls, &stderr)
-	}
-}
-
-func TestCodexEnvironmentAllowsRuntimeInputsWithoutForwardingCredentialsOrApplicationSecrets(t *testing.T) {
-	got := codexEnvironment([]string{
-		"PATH=/usr/bin",
-		"HOME=/Users/person",
-		"CODEX_HOME=/Users/person/.codex",
-		"OPENAI_API_KEY=must-not-leak",
-		"CODEX_ACCESS_TOKEN=must-not-leak",
-		"DATABASE_URL=must-not-leak",
-		"HTTPS_PROXY=http://proxy.invalid",
-		"CODEX_CA_CERTIFICATE=/cert.pem",
-	})
-	want := []string{
-		"PATH=/usr/bin",
-		"HOME=/Users/person",
-		"CODEX_HOME=/Users/person/.codex",
-		"HTTPS_PROXY=http://proxy.invalid",
-		"CODEX_CA_CERTIFICATE=/cert.pem",
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("environment = %#v, want %#v", got, want)
 	}
 }
 

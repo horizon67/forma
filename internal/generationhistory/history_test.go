@@ -2,6 +2,7 @@ package generationhistory
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -80,7 +81,7 @@ func TestHistoryRecordsExactInputAndKeepsVerificationUnverified(t *testing.T) {
 	if r.Baseline != nil || !r.Pending || r.LastAttempt.Input.Request != string(wire) || r.LastAttempt.Input.SHA256 != digest(wire) {
 		t.Fatal("pending request differs from actual candidate")
 	}
-	if err := s.Finish(i, true, strings.Repeat("a", 64)); err != nil {
+	if err := s.FinishContext(context.Background(), i, true, strings.Repeat("a", 64)); err != nil {
 		t.Fatal(err)
 	}
 	s = reopen(t, s)
@@ -91,7 +92,7 @@ func TestHistoryRecordsExactInputAndKeepsVerificationUnverified(t *testing.T) {
 	if err := s.Begin(i, next, &full, testHead); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Finish(i, true, strings.Repeat("b", 64)); err != nil {
+	if err := s.FinishContext(context.Background(), i, true, strings.Repeat("b", 64)); err != nil {
 		t.Fatal(err)
 	}
 	s = reopen(t, s)
@@ -115,6 +116,54 @@ func TestHistoryRecordsExactInputAndKeepsVerificationUnverified(t *testing.T) {
 	}
 }
 
+func TestCleanupExpiryBeforeWriteRejectsButDurableWriteCompletes(t *testing.T) {
+	for _, duringWrite := range []bool{false, true} {
+		s, i, full, next := historyFixture(t)
+		if err := s.Import(i, full, testHead); err != nil {
+			t.Fatal(err)
+		}
+		prior := s.Record(i).Baseline.Request
+		if err := s.Begin(i, next, nil, testHead); err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		if duringWrite {
+			s.write = func(path string, b []byte) error {
+				if err := atomicWrite(path, b); err != nil {
+					return err
+				}
+				cancel()
+				return nil
+			}
+		} else {
+			cancel()
+		}
+		err := s.FinishContext(ctx, i, true, "")
+		cancel()
+		reopened := reopen(t, s)
+		r := reopened.Record(i)
+		if duringWrite {
+			if err != nil || reopened.PendingKey != "" || r.Pending || r.LastAttempt.Status != "completed" || r.Baseline.Request == prior {
+				t.Fatalf("durable success downgraded: %v %#v", err, r)
+			}
+			if s.Record(i).Baseline.Request != r.Baseline.Request || s.PendingKey != "" {
+				t.Fatal("in-memory store differs from durable completion")
+			}
+			wire, readErr := os.ReadFile(s.Path)
+			if readErr != nil || !bytes.Equal(wire, s.wire) {
+				t.Fatal("in-memory wire was not advanced")
+			}
+		} else {
+			if !errors.Is(err, context.Canceled) || reopened.PendingKey != i.Key() || !r.Pending || r.Baseline.Request != prior {
+				t.Fatalf("expired cleanup began a save: %v %#v", err, r)
+			}
+		}
+		if r.LastAttempt.PriorBaseline.Request != prior {
+			t.Fatal("prior baseline lost")
+		}
+	}
+}
+
 func TestFailedAndInterruptedAttemptsNeverReplaceValidBaseline(t *testing.T) {
 	for _, interrupted := range []bool{false, true} {
 		s, i, full, next := historyFixture(t)
@@ -126,7 +175,7 @@ func TestFailedAndInterruptedAttemptsNeverReplaceValidBaseline(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !interrupted {
-			if err := s.Finish(i, false, ""); err != nil {
+			if err := s.FinishContext(context.Background(), i, false, ""); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -157,7 +206,7 @@ func TestBeginPreservesAutomaticBaselineProvenanceAndExplicitOverride(t *testing
 					if err := s.Begin(i, full, nil, testHead); err != nil {
 						t.Fatal(err)
 					}
-					if err := s.Finish(i, true, ""); err != nil {
+					if err := s.FinishContext(context.Background(), i, true, ""); err != nil {
 						t.Fatal(err)
 					}
 				} else if err := s.Import(i, full, testHead); err != nil {
@@ -218,7 +267,7 @@ func TestSaveFailuresRemainBlockedIncludingAfterRename(t *testing.T) {
 				if phase == "import-after-rename" {
 					err = s.Import(i, full, testHead)
 				} else {
-					err = s.Finish(i, true, "")
+					err = s.FinishContext(context.Background(), i, true, "")
 				}
 				if !errors.Is(err, injected) {
 					t.Fatalf("finish failure %v", err)
@@ -312,7 +361,7 @@ func TestHistoryDetectsChangesDuringExecutionAndRefusesSymlinks(t *testing.T) {
 	if err := os.WriteFile(s.Path, changed, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Finish(i, true, ""); err == nil {
+	if err := s.FinishContext(context.Background(), i, true, ""); err == nil {
 		t.Fatal("overwrote concurrently modified history")
 	}
 	got, err := os.ReadFile(s.Path)

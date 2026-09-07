@@ -126,12 +126,12 @@ func TestGenerateNoOpSkipsCodexAndLeavesRepositoryUntouched(t *testing.T) {
 			if code := run(args, &stdout, &stderr); code != 0 {
 				t.Fatalf("exit %d: %s", code, &stderr)
 			}
-			for _, message := range []string{"no application or policy changes", "Codex was not started", "baseline request SHA-256:", "tests were not verified"} {
+			for _, message := range []string{"no application or policy changes", "agent was not started", "baseline request SHA-256:", "tests were not verified"} {
 				if !strings.Contains(stdout.String(), message) {
 					t.Fatalf("missing %q: %s", message, &stdout)
 				}
 			}
-			if strings.Contains(stdout.String(), "starting Codex") || stderr.Len() != 0 {
+			if strings.Contains(stdout.String(), "preparing agent") || !strings.Contains(stderr.String(), "no_op") {
 				t.Fatalf("output: %s / %s", &stdout, &stderr)
 			}
 			if testGitCommand(t, repo, "status", "--porcelain=v1", "--untracked-files=all") != "" || testGitCommand(t, repo, "rev-parse", "HEAD") != beforeHead {
@@ -213,7 +213,7 @@ func TestGenerateIncrementalSourceAndPolicyChangesPermitZeroDiff(t *testing.T) {
 					t.Fatal("source delta missing")
 				}
 				generated := beginTestGeneration(t, invocation)
-				generated.CodexMessage = []byte("Requirements already satisfied. Tests not run.")
+				generated.Summary = []byte("Requirements already satisfied. Tests not run.")
 				return generated, nil
 			}
 			var stdout, stderr bytes.Buffer

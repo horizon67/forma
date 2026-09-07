@@ -21,6 +21,11 @@ type Command struct {
 	Directory   string
 	Environment []string
 	Stdin       []byte
+	// Internal process adapters may stream stdout to a bounded, nonblocking
+	// parser instead of retaining it. The parser must never perform terminal I/O.
+	StdoutSink    io.Writer
+	DiscardStderr bool
+	OnStarted     func()
 }
 
 // CommandResult contains the captured result of a process that was started.
@@ -34,6 +39,7 @@ type CommandResult struct {
 	TimedOut        bool
 	WaitDelayed     bool
 	ExitCode        int
+	CleanupFailed   bool
 }
 
 // CommandRunner is the process boundary used by the reference agent runner.
@@ -111,11 +117,22 @@ func (runner OSCommandRunner) Run(ctx context.Context, command Command) (Command
 		closePipes()
 		return CommandResult{}, fmt.Errorf("start %s: %w", command.Executable, err)
 	}
+	if command.OnStarted != nil {
+		command.OnStarted()
+	}
 	_ = stdoutWriter.Close()
 	_ = stderrWriter.Close()
 	captureDone := make(chan struct{}, 2)
-	go captureOutput(stdoutReader, &stdout, captureDone)
-	go captureOutput(stderrReader, &stderr, captureDone)
+	var stdoutSink io.Writer = &stdout
+	if command.StdoutSink != nil {
+		stdoutSink = command.StdoutSink
+	}
+	var stderrSink io.Writer = &stderr
+	if command.DiscardStderr {
+		stderrSink = io.Discard
+	}
+	go captureOutput(stdoutReader, stdoutSink, captureDone)
+	go captureOutput(stderrReader, stderrSink, captureDone)
 
 	err = process.Wait()
 	var groupErr error
@@ -130,6 +147,7 @@ func (runner OSCommandRunner) Run(ctx context.Context, command Command) (Command
 		StderrTruncated: stderr.Truncated(),
 		WaitDelayed:     waitDelayed,
 		ExitCode:        0,
+		CleanupFailed:   groupErr != nil || waitDelayed,
 	}
 	var exitError *exec.ExitError
 	if errors.As(err, &exitError) {
@@ -167,7 +185,7 @@ func commandContextOrGroupError(ctx context.Context, executable string, groupErr
 	return nil
 }
 
-func captureOutput(reader *os.File, buffer *boundedBuffer, done chan<- struct{}) {
+func captureOutput(reader *os.File, buffer io.Writer, done chan<- struct{}) {
 	_, _ = io.Copy(buffer, reader)
 	_ = reader.Close()
 	done <- struct{}{}

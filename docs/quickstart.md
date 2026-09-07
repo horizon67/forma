@@ -76,6 +76,12 @@ user owns and trusts. Commit or stash existing work before generation.
 
 ## 5. Authenticate Codex and generate
 
+Current source builds display progress automatically on stderr. Optional
+`--progress=json` reserves stderr for progress JSONL, while the final result
+stays on stdout. `--verbose` adds safe activity categories, and
+`--heartbeat-interval 10s` changes the default 30-second heartbeat. These options
+do not change what is generated. See [generation progress](generation-progress.md).
+
 ```sh
 codex login
 codex login status

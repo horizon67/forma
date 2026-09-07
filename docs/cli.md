@@ -6,6 +6,12 @@ Development extension: automatic generation history, explicit `generate --previo
 and Generation Request `v0alpha5` are available in the current source build, not the published
 `v0.1.0-alpha.1` binary. Existing `v0alpha4` requests remain valid inputs.
 
+Development builds also include [provider-independent generation progress](generation-progress.md)
+and a Codex adapter. Progress is automatic; `--progress=text|json`, `--verbose`,
+and `--heartbeat-interval <1s..5m>` customize observation only. JSON mode reserves
+stderr for progress JSONL, including errors; human result output stays on stdout.
+Cancellation and timeout exit `1` and are distinguished in the terminal result.
+
 Forma has one installed executable, `forma`. It compiles one explicitly
 selected source set as one application. Separate examples are separate
 applications and must not be passed to one command merely because they share a
@@ -116,7 +122,8 @@ exit `1` and no JSON output; a no-op is not a Generation Request wire kind.
 ```sh
 forma generate --repository <directory> \
   [--previous <request.json>] [--manifest <policy.yaml>] \
-  [--allow-dirty] <source...>
+  [--allow-dirty] [--progress=text|json] [--verbose] \
+  [--heartbeat-interval <duration>] <source...>
 ```
 
 Without `--previous`, selects the last completed comparison baseline from local
